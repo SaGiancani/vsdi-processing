@@ -472,7 +472,7 @@ if __name__=="__main__":
     assert args.strategy in ['mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'], "Insert a valid name strategy: 'mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'"    
     start_time = datetime.datetime.now().replace(microsecond=0)
     session = Session(**vars(args))
-    session.autoselection(70)
+    session.autoselection()
     print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     utils.inputs_save(session, 'session_prova')
     print(np.shape(session.df_fz))
