@@ -307,8 +307,8 @@ class Session:
             + '_dtrnd' + str(self.header['detrend'])\
             + '_tol' + str(self.header['tolerance'])\
             + '_mov' + str(self.header['mov_switch'])\
-            + '_demean' + str(self.header['demean_switch']\
-            + '_strategy' + str(self.header['strategy']))
+            + '_demean' + str(self.header['demean_switch'])\
+            + '_strategy' + str(self.header['strategy'])
         folder_path = session_path + 'derivatives/'+folder_name              
         if not os.path.exists(folder_path):
         #if not os.path.exists( path_session+'/'+session_name):
