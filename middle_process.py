@@ -179,10 +179,10 @@ class Session:
         meas_dict = {key: meas_dict[key] for key in m if key in meas_dict}
     '''
 
-    def autoselection(self, strategy = 'roi'):
+    def autoselection(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
         self.session_builder()
-
+        strategy = self.header['strategy']
         if strategy in ['roi', 'roi_signals', 'ROI']:
             self.auto_selected = roi_strategy(self.roi_signals, self.header['tolerance'])
 
