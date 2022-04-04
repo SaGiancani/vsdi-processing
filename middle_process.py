@@ -184,7 +184,7 @@ class Session:
         self.session_builder()
         strategy = self.header['strategy']
         if strategy in ['roi', 'roi_signals', 'ROI']:
-            self.auto_selected = roi_strategy(self.roi_signals, self.header['tolerance'])
+            self.auto_selected = roi_strategy(self.roi_signals, self.header['tolerance'], self.header['zero_frames'])
 
         elif strategy in ['mse', 'mae']:
             self.auto_selected = overlap_strategy(self.roi_signals, n_chunks=self.header['chunks'], loss = strategy)
@@ -307,7 +307,8 @@ class Session:
             + '_dtrnd' + str(self.header['detrend'])\
             + '_tol' + str(self.header['tolerance'])\
             + '_mov' + str(self.header['mov_switch'])\
-            + '_demean' + str(self.header['demean_switch'])
+            + '_demean' + str(self.header['demean_switch']\
+            + '_strategy' + str(self.header['strategy']))
         folder_path = session_path + 'derivatives/'+folder_name              
         if not os.path.exists(folder_path):
         #if not os.path.exists( path_session+'/'+session_name):
@@ -315,7 +316,7 @@ class Session:
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
 
-def roi_strategy(matrix, tolerance):
+def roi_strategy(matrix, tolerance, zero_frames):
     # framesOK=abs(signalROI-mat_meanSigROI)>toleranceLevel*mat_semSigROI;
     size = np.shape(matrix)
     tmp = np.zeros(size)
@@ -329,7 +330,7 @@ def roi_strategy(matrix, tolerance):
     # Debug print
     print('Has to be magnitude around 10-5'+str(np.std(tmp, axis=0)/np.sqrt(np.shape(tmp)[0])))
     #This could be tricky: not on all the frames. All the frames SUBTRACTED the zero_frames probably better
-    autoselect = np.sum(selected_frames_mask, axis=1)<(size[1]/2)
+    autoselect = np.sum(selected_frames_mask, axis=1)<((size[1]-zero_frames)/2)
     return autoselect
 
 def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25):
