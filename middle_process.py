@@ -242,43 +242,10 @@ class Session:
             blank_cdi = list(set(indeces_select).intersection(set(blank_cdi)))
             blank_sig = np.mean(self.roi_signals[blank_cdi, :], axis=0)
             return blank_sig
-
         else:
-            print('Loaded blks were not found: blank blks are loaded.')
+            print('Loaded blks were not found: blank blks will be loaded.')
             blank_id = self.get_blank_id()
-            blank_blks = [f for f in self.all_blks \
-            if (int(f.split('vsd_C')[1][0:2])==blank_id)]
-            path_rawdata = self.header['path_session'] + 'rawdata/'
-            for i, blk_name in enumerate(blank_blks):
-                start_time = datetime.datetime.now().replace(microsecond=0)
-                # If first BLK file, than the header is stored
-                if i == 0:
-                    BLK = blk_file.BlkFile(
-                        path_rawdata+blk_name,
-                        self.header['spatial_bin'],
-                        self.header['temporal_bin'],
-                        self.header['zero_frames'],
-                        self.header['detrend'], 
-                        motion_switch = self.header['mov_switch'],
-                        dmn = self.header['demean_switch'])
-                    header = BLK.header
-                    blank_sig = np.zeros((len(blank_blks), header['nframesperstim']))
-                    roi_mask = blk_file.mask_roi(header['framewidth']//self.header['spatial_bin'], header['frameheight']//self.header['spatial_bin'])
-                else:
-                    BLK = blk_file.BlkFile(
-                        path_rawdata+blk_name, 
-                        self.header['spatial_bin'], 
-                        self.header['temporal_bin'], 
-                        self.header['zero_frames'],
-                        self.header['detrend'], 
-                        header = header, 
-                        motion_switch = self.header['mov_switch'], 
-                        roi_mask = roi_mask,
-                        dmn = self.header['demean_switch'])
-
-                print('Trial n. '+str(i+1)+'/'+ str(len(blank_blks))+' loaded succesfully in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-                blank_sig[i, :] = BLK.roi_sign
-            blank_sig = np.mean(blank_sig, axis=0)
+            blank_sig, _ = signal_for_condition(self.header, self.all_blks, blank_id)
             return blank_sig
 
     def roi_plots(self):
@@ -362,6 +329,47 @@ class Session:
             os.makedirs(folder_path)
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
+
+def signal_for_condition(header, all_blks, condition):
+    blks = [f for f in all_blks \
+    if (int(f.split('vsd_C')[1][0:2])==condition)]
+    path_rawdata = header['path_session'] + 'rawdata/'
+    for i, blk_name in enumerate(blks):
+        start_time = datetime.datetime.now().replace(microsecond=0)
+        # If first BLK file, than the header is stored
+        if i == 0:
+            BLK = blk_file.BlkFile(
+                path_rawdata+blk_name,
+                header['spatial_bin'],
+                header['temporal_bin'],
+                header['zero_frames'],
+                header['detrend'], 
+                motion_switch = header['mov_switch'],
+                dmn = header['demean_switch'])
+            header = BLK.header
+            delta_f = np.zeros((len(blks), header['nframesperstim'], header['frameheight']//header['spatial_bin'], header['framewidth']//header['spatial_bin']))
+            sig = np.zeros((len(blks), header['nframesperstim']))
+            roi_mask = blk_file.mask_roi(header['framewidth']//header['spatial_bin'], header['frameheight']//header['spatial_bin'])
+        else:
+            BLK = blk_file.BlkFile(
+                path_rawdata+blk_name, 
+                header['spatial_bin'], 
+                header['temporal_bin'], 
+                header['zero_frames'],
+                header['detrend'], 
+                header = header, 
+                motion_switch = header['mov_switch'], 
+                roi_mask = roi_mask,
+                dmn = header['demean_switch'])
+
+        sig[i, :] = BLK.roi_sign
+        #at the end something like (nblks, 70, 1)
+        # The deltaF computing could be avoidable, since ROI signal at the end is plotted
+        delta_f[i, :, :, :] = BLK.df_fz
+        print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded succesfully in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+    return sig, delta_f
+    #sig = np.mean(sig, axis=0)
+
 
 def roi_strategy(matrix, tolerance, zero_frames):
     # framesOK=abs(signalROI-mat_meanSigROI)>toleranceLevel*mat_semSigROI;
