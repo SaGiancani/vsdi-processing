@@ -230,6 +230,57 @@ class Session:
         print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
     
+    def blank_roi_signal(self):
+        
+        if (self.auto_selected is not None) and (self.conditions is not None):
+            print('Already loaded blank blks are used.')
+            indeces_select = np.where(self.auto_selected==1)
+            indeces_select = indeces_select[0].tolist()        
+            t = self.get_blank_id()
+            blank_cdi = np.where(np.array(self.conditions) == t)
+            blank_cdi = blank_cdi[0].tolist()
+            blank_cdi = list(set(indeces_select).intersection(set(blank_cdi)))
+            blank_sig = np.mean(self.roi_signals[blank_cdi, :], axis=0)
+            return blank_sig
+
+        else:
+            print('Loaded blks were not found: blank blks are loaded.')
+            blank_id = self.get_blank_id()
+            blank_blks = [f for f in self.all_blks \
+            if (int(f.split('vsd_C')[1][0:2])==blank_id)]
+            path_rawdata = self.header['path_session'] + 'rawdata/'
+            for i, blk_name in enumerate(blank_blks):
+                start_time = datetime.datetime.now().replace(microsecond=0)
+                # If first BLK file, than the header is stored
+                if i == 0:
+                    BLK = blk_file.BlkFile(
+                        path_rawdata+blk_name,
+                        self.header['spatial_bin'],
+                        self.header['temporal_bin'],
+                        self.header['zero_frames'],
+                        self.header['detrend'], 
+                        motion_switch = self.header['mov_switch'],
+                        dmn = self.header['demean_switch'])
+                    header = BLK.header
+                    blank_sig = np.zeros((len(blank_blks), header['nframesperstim']))
+                    roi_mask = blk_file.mask_roi(header['framewidth']//self.header['spatial_bin'], header['frameheight']//self.header['spatial_bin'])
+                else:
+                    BLK = blk_file.BlkFile(
+                        path_rawdata+blk_name, 
+                        self.header['spatial_bin'], 
+                        self.header['temporal_bin'], 
+                        self.header['zero_frames'],
+                        self.header['detrend'], 
+                        header = header, 
+                        motion_switch = self.header['mov_switch'], 
+                        roi_mask = roi_mask,
+                        dmn = self.header['demean_switch'])
+
+                print('Trial n. '+str(i+1)+'/'+ str(len(blank_blks))+' loaded succesfully in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+                blank_sig[i, :] = BLK.roi_sign
+            blank_sig = np.mean(blank_sig, axis=0)
+            return blank_sig
+
     def roi_plots(self):
         sig = self.roi_signals
         indeces_select = np.where(self.auto_selected==1)
@@ -237,11 +288,7 @@ class Session:
         
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         conditions = np.unique(self.conditions)
-        
-        t = self.get_blank_id()
-        blank_cdi = np.where(np.array(self.conditions) == t)
-        blank_cdi = blank_cdi[0].tolist()
-        blank_cdi = list(set(indeces_select).intersection(set(blank_cdi)))
+        blank_sign = self.blank_roi_signal()
 
         for cd_i in conditions:
             indeces_cdi = np.where(np.array(self.conditions) == cd_i)
@@ -289,7 +336,7 @@ class Session:
                         for id_trial in cdi_select:
                             ax_.plot(list(range(0,np.shape(sig)[1])), sig[id_trial, :], 'lightsteelblue')
                         ax_.plot(list(range(0,np.shape(sig)[1])), np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Condition Signal', linewidth = 5)
-                        ax_.plot(list(range(0,np.shape(sig)[1])), np.mean(sig[blank_cdi, :], axis=0), color='m', label = 'Average Blank Signal' ,linewidth = 5)
+                        ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
                         ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     
             tmp = self.set_md_folder()
