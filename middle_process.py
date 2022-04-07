@@ -40,7 +40,7 @@ class Session:
             self.header['conditions_id'] = self.get_condition_ids()
         else:
             self.header['conditions_id'] = list(set(self.header['conditions_id']+[self.blank_id]))
-        
+
         self.session_blks = self.get_blks()
 
         if self.header['mov_switch']:
@@ -71,19 +71,19 @@ class Session:
         '''
         The .BLKs filenames corresponding to the choosen id conditions, from the considered path_session, are picked.        
         '''
-        if self.session_blks is None:
-            #This condition check is an overkill
-            if ((self.header['conditions_id'] is None) or (len(self.header['conditions_id']) == len(self.cond_names))): 
-                return self.all_blks
-            else:
-                return [f for f in self.all_blks \
-                    if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+#        if self.session_blks is None:
+        #This condition check is an overkill
+        if ((self.header['conditions_id'] is None) or (len(self.header['conditions_id']) == len(self.cond_names))): 
+            return self.all_blks
         else:
-            print('Warning: session_blks was not None')
-            id_check = list(set([f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]))]))
-            if len(id_check) == 1 and self.blank_id in id_check:
-                b = np.array(self.header['conditions_id']).tolist()
-                return self.session_blks + [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])) in b.remove(self.blank_id)]
+            return [f for f in self.all_blks \
+                if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+        # else:
+        #     print('Warning: session_blks was not None')
+        #     id_check = list(set([f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]))]))
+        #     if len(id_check) == 1 and self.blank_id in id_check:
+        #         b = np.array(self.header['conditions_id']).tolist()
+        #         return self.session_blks + [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])) in b.remove(self.blank_id)]
 
     def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, detrend, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy):
         header = {}
@@ -370,7 +370,7 @@ def signal_extraction(header, blks, blank_s):
                 motion_switch = header['mov_switch'],
                 dblnk = header['deblank_switch'],
                 blank_signal= blank_s)
-                
+
             header_blk = BLK.header
             delta_f = np.zeros((len(blks), header_blk['nframesperstim'], header_blk['frameheight']//header['spatial_bin'], header_blk['framewidth']//header['spatial_bin']))
             sig = np.zeros((len(blks), header_blk['nframesperstim']))
@@ -521,7 +521,7 @@ if __name__=="__main__":
     parser.add_argument('--dblnk', 
                         dest='deblank_switch',
                         action='store_true')
-    parser.add_argument('--no-dmn', 
+    parser.add_argument('--no-dblnk', 
                         dest='deblank_switch', 
                         action='store_false')
     parser.set_defaults(deblank_switch=False)
