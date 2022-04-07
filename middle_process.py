@@ -152,7 +152,7 @@ class Session:
             blks = [f for f in self.all_blks \
                 if (int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
             print('Trials loading starts:')
-            roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
+            roi_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
             self.session_blks = self.session_blks + blks
             shapes = np.shape(delta_f)
             
@@ -255,7 +255,7 @@ class Session:
             if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
             # Blank signal extraction
             print('Blank trials loading starts:')
-            blank_sig, blank_df_f0, blank_conditions, _ = signal_extraction(self.header, blks, None, False)
+            blank_sig, blank_df_f0, blank_conditions= signal_extraction(self.header, blks, None, False)
             size_df_f0 = np.shape(blank_df_f0)
             
             blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mse', up=85, bottom=15)
