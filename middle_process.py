@@ -566,9 +566,9 @@ if __name__=="__main__":
     utils.inputs_save(session, 'session_prova')
     print(np.shape(session.df_fz))
     session.roi_plots()
-    session.deltaf_visualization(session.header['zero_frames'], 20, 60)
     print(session.session_blks)
     print(session.conditions)
+    session.deltaf_visualization(session.header['zero_frames'], 20, 60)
     #print(session.trials_name)
 
 # 38, 18, 38
