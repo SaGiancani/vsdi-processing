@@ -209,9 +209,7 @@ class BlkFile:
 		header['username'] = fid.read(32)
 
 		recordingdate = fid.read(16)
-		print(recordingdate)
 		header['recordingdate'] = unpack(str(int(self.p[0:-1])*16)+self.p[-1],recordingdate)
-		#print(header['recordingdate'])
 
 		x1roi = fid.read(4)
 		header['x1roi'] = unpack(self.i,x1roi)[0]
@@ -293,7 +291,6 @@ class BlkFile:
 		header['interstiminterval'] = unpack(self.i,interstiminterval)[0]
 
 		header['creationdate'] = fid.read(16)
-		print(header['creationdate'])
 
 		header['datafilename'] = fid.read(64)
 
