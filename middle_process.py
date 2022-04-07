@@ -119,69 +119,17 @@ class Session:
             print('Blank id: ' + str(tmp))
             return tmp
 
-    def session_builder(self):
-        motion_indeces, conditions = [], []
-        path_rawdata = self.header['path_session'] + 'rawdata/'
-        for i, blk_name in enumerate(self.session_blks):
-            start_time = datetime.datetime.now().replace(microsecond=0)
-            # If first BLK file, than the header is stored
-            if i == 0:
-                BLK = blk_file.BlkFile(
-                    path_rawdata+blk_name,
-                    self.header['spatial_bin'],
-                    self.header['temporal_bin'],
-                    self.header['zero_frames'],
-                    self.header['detrend'], 
-                    motion_switch = self.header['mov_switch'],
-                    dmn = self.header['demean_switch'])
-                header = BLK.header
-                roi_signals = np.zeros((len(self.session_blks), header['nframesperstim']))
-                delta_f = np.zeros((len(self.session_blks), header['nframesperstim'], header['frameheight']//self.header['spatial_bin'], header['framewidth']//self.header['spatial_bin']))
-                roi_mask = blk_file.mask_roi(header['framewidth']//self.header['spatial_bin'], header['frameheight']//self.header['spatial_bin'])
-            # Otherwise the old header is used: the feature extracted from the header 
-            # have to be the same all over the BLKs in a same session
-            else:
-                BLK = blk_file.BlkFile(
-                    path_rawdata+blk_name, 
-                    self.header['spatial_bin'], 
-                    self.header['temporal_bin'], 
-                    self.header['zero_frames'],
-                    self.header['detrend'], 
-                    header = header, 
-                    motion_switch = self.header['mov_switch'], 
-                    roi_mask = roi_mask,
-                    dmn = self.header['demean_switch'])
-            print('Trial n. '+str(i+1)+'/'+ str(len(self.session_blks))+' loaded succesfully in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')
-            if self.header['mov_switch']:
-                motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
-            conditions.append(BLK.condition)
-            roi_signals[i, :] = BLK.roi_sign
-            #at the end something like (nblks, 70, 1)
-            # The deltaF computing could be avoidable, since ROI signal at the end is plotted
-            delta_f[i, :, :, :] = BLK.df_fz
+    def get_session(self):
+        roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, self.session_blks)
         self.conditions = conditions
         self.df_fz = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
         self.roi_signals = roi_signals
         self.motion_indeces = np.array(motion_indeces)
         return
 
-    '''
-    # Building the dictionary for the measure, in place of the switch-case logic
-    meas_dict = {'add': [measures.cos3add, args.k_most_similar],
-                 'mul': [measures.cos3mul, args.eps], 
-                 'pair': [measures.pair_direction, args.eps]}
-    
-    if 'all' in args.measure:
-        meas_dict = meas_dict
-        
-    else:
-        m = np.sort(args.measure).tolist()
-        meas_dict = {key: meas_dict[key] for key in m if key in meas_dict}
-    '''
-
     def autoselection(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
-        self.session_builder()
+        self.get_session()
         strategy = self.header['strategy']
         if strategy in ['roi', 'roi_signals', 'ROI']:
             self.auto_selected = roi_strategy(self.roi_signals, self.header['tolerance'], self.header['zero_frames'])
@@ -245,7 +193,9 @@ class Session:
         else:
             print('Loaded blks were not found: blank blks will be loaded.')
             blank_id = self.get_blank_id()
-            blank_sig, _ = signal_for_condition(self.header, self.all_blks, blank_id)
+            blks = [f for f in self.all_blks \
+            if (int(f.split('vsd_C')[1][0:2])==blank_id)]
+            blank_sig, _, _ = signal_extraction(self.header, blks)
             return blank_sig
 
     def roi_plots(self):
@@ -302,7 +252,7 @@ class Session:
                         ax_ = subfig.subplots(1, 1)
                         for id_trial in cdi_select:
                             ax_.plot(list(range(0,np.shape(sig)[1])), sig[id_trial, :], 'lightsteelblue')
-                        ax_.plot(list(range(0,np.shape(sig)[1])), np.mean(sig[cdi_select, :], axis=0) - blank_sign, 'k', label = 'Average Condition Signal', linewidth = 5)
+                        ax_.plot(list(range(0,np.shape(sig)[1])), np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Condition Signal', linewidth = 5)
                         ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
                         ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     
@@ -330,9 +280,9 @@ class Session:
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
 
-def signal_for_condition(header, all_blks, condition):
-    blks = [f for f in all_blks \
-    if (int(f.split('vsd_C')[1][0:2])==condition)]
+
+def signal_extraction(header, blks):
+    motion_indeces, conditions = [], []
     path_rawdata = header['path_session'] + 'rawdata/'
     for i, blk_name in enumerate(blks):
         start_time = datetime.datetime.now().replace(microsecond=0)
@@ -361,17 +311,21 @@ def signal_for_condition(header, all_blks, condition):
                 motion_switch = header['mov_switch'], 
                 roi_mask = roi_mask,
                 dmn = header['demean_switch'])
-
+        if header['mov_switch']:
+            motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
+        conditions.append(BLK.condition)
         sig[i, :] = BLK.roi_sign
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
         delta_f[i, :, :, :] = BLK.df_fz
         print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded succesfully in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-    return sig, delta_f
-    #sig = np.mean(sig, axis=0)
+    return sig, delta_f, conditions, motion_indeces
 
 
 def roi_strategy(matrix, tolerance, zero_frames):
+    '''
+    The method works.
+    '''
     # framesOK=abs(signalROI-mat_meanSigROI)>toleranceLevel*mat_semSigROI;
     size = np.shape(matrix)
     tmp = np.zeros(size)
@@ -382,9 +336,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     # The 0 shape is the number of trials
     selected_frames_mask = np.abs(tmp - np.mean(tmp, axis=0))>\
         tolerance*(np.std(tmp, axis=0)/np.sqrt(np.shape(tmp)[0]))
-    # Debug print
-    print('Has to be magnitude around 10-5'+str(np.std(tmp, axis=0)/np.sqrt(np.shape(tmp)[0])))
-    #This could be tricky: not on all the frames. All the frames SUBTRACTED the zero_frames probably better
+    #This could be tricky: not on all the frames.
     autoselect = np.sum(selected_frames_mask, axis=1)<((size[1]-zero_frames)/2)
     return autoselect
 
