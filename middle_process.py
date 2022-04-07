@@ -1,4 +1,4 @@
-import argparse, blk_file, datetime
+import argparse, blk_file, datetime, random
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -129,15 +129,32 @@ class Session:
 
     def autoselection(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
-        self.get_session()
         strategy = self.header['strategy']
+        path_rawdata = self.header['path_session'] + 'rawdata/'
+        # Loading a blk just for meta information useful -framesperstim-
+        BLK = blk_file.BlkFile(
+            path_rawdata+self.session_blks[random.randint(0, len(self.session_blks))],
+            self.header['spatial_bin'],
+            self.header['temporal_bin'],
+            self.header['zero_frames'],
+            self.header['detrend'], 
+            motion_switch = self.header['mov_switch'],
+            dmn = self.header['demean_switch'])
+
+        if strategy in ['mse', 'mae'] and (BLK.header['nframesperstim']%self.header['chunks']==0):
+            self.get_session()
+            self.auto_selected = overlap_strategy(self.roi_signals, n_chunks=self.header['chunks'], loss = strategy)
+        
+        elif strategy in ['mse', 'mae'] and not (BLK.header['nframesperstim']%self.header['chunks']==0):
+            print('Number of chunks incompatible with number of frames, roi strategy automatically picked')
+            strategy = 'roi'
+
         if strategy in ['roi', 'roi_signals', 'ROI']:
+            self.get_session()
             self.auto_selected = roi_strategy(self.roi_signals, self.header['tolerance'], self.header['zero_frames'])
 
-        elif strategy in ['mse', 'mae']:
-            self.auto_selected = overlap_strategy(self.roi_signals, n_chunks=self.header['chunks'], loss = strategy)
-
         elif strategy in ['statistic', 'statistical', 'quartiles']:
+            self.get_session()
             self.auto_selected = statistical_strategy(self.roi_signals)
         
         print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
@@ -318,7 +335,7 @@ def signal_extraction(header, blks):
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
         delta_f[i, :, :, :] = BLK.df_fz
-        print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded succesfully in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+        print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     return sig, delta_f, conditions, motion_indeces
 
 
@@ -375,6 +392,7 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25):
         mask_array[autoselect] = 1
         return mask_array
     else:
+        # This check has to be done before running the script
         print('Use a proper number of chunks: exact division for the number of frames required')
         return
 
@@ -459,7 +477,7 @@ if __name__=="__main__":
     parser.add_argument('--chunks', 
                         dest='chunks',
                         type=int,
-                        default = 7,
+                        default = 5,
                         required=False,
                         help='Number of elements value for autoselection') 
 
