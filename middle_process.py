@@ -296,10 +296,10 @@ def signal_extraction(header, blks):
                 header['detrend'], 
                 motion_switch = header['mov_switch'],
                 dmn = header['demean_switch'])
-            header = BLK.header
-            delta_f = np.zeros((len(blks), header['nframesperstim'], header['frameheight']//header['spatial_bin'], header['framewidth']//header['spatial_bin']))
-            sig = np.zeros((len(blks), header['nframesperstim']))
-            roi_mask = blk_file.mask_roi(header['framewidth']//header['spatial_bin'], header['frameheight']//header['spatial_bin'])
+            header_blk = BLK.header
+            delta_f = np.zeros((len(blks), header_blk['nframesperstim'], header_blk['frameheight']//header['spatial_bin'], header_blk['framewidth']//header['spatial_bin']))
+            sig = np.zeros((len(blks), header_blk['nframesperstim']))
+            roi_mask = blk_file.mask_roi(header_blk['framewidth']//header['spatial_bin'], header_blk['frameheight']//header['spatial_bin'])
         else:
             BLK = blk_file.BlkFile(
                 path_rawdata+blk_name, 
@@ -307,7 +307,7 @@ def signal_extraction(header, blks):
                 header['temporal_bin'], 
                 header['zero_frames'],
                 header['detrend'], 
-                header = header, 
+                header = header_blk, 
                 motion_switch = header['mov_switch'], 
                 roi_mask = roi_mask,
                 dmn = header['demean_switch'])
