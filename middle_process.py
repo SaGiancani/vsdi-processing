@@ -142,7 +142,7 @@ class Session:
 
     def get_session(self):
         if self.counter_blank == 0:
-            roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, self.session_blks, self.df_f0_blank)
+            roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, self.session_blks, self.df_f0_blank, False)
             self.conditions = conditions
             self.df_fz = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
             self.roi_signals = roi_signals
@@ -150,7 +150,7 @@ class Session:
         else:
             blks = [f for f in self.all_blks \
                 if (int(f.split('vsd_C')[1][0:2]) != self.blank_id)]
-            roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, blks, self.df_f0_blank)
+            roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
             self.session_blks = self.session_blks + blks
             shapes = np.shape(delta_f)
             
@@ -252,7 +252,7 @@ class Session:
             blks = [f for f in self.all_blks \
             if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
             # Blank signal extraction
-            blank_sig, blank_df_f0, blank_conditions, _ = signal_extraction(self.header, blks, None)
+            blank_sig, blank_df_f0, blank_conditions, _ = signal_extraction(self.header, blks, None, False)
             size_df_f0 = np.shape(blank_df_f0)
             
             blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mse', up=85, bottom=15)
@@ -354,7 +354,7 @@ class Session:
         return folder_path
 
 
-def signal_extraction(header, blks, blank_s):
+def signal_extraction(header, blks, blank_s, blnk_switch):
     motion_indeces, conditions = [], []
     path_rawdata = header['path_session'] + 'rawdata/'
     for i, blk_name in enumerate(blks):
@@ -368,7 +368,7 @@ def signal_extraction(header, blks, blank_s):
                 header['zero_frames'],
                 header['detrend'], 
                 motion_switch = header['mov_switch'],
-                dblnk = header['deblank_switch'],
+                dblnk = blnk_switch,
                 blank_signal= blank_s)
 
             header_blk = BLK.header
@@ -385,7 +385,7 @@ def signal_extraction(header, blks, blank_s):
                 header = header_blk, 
                 motion_switch = header['mov_switch'], 
                 roi_mask = roi_mask,
-                dblnk = header['deblank_switch'],
+                dblnk = blnk_switch,
                 blank_signal= blank_s)
         if header['mov_switch']:
             motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
