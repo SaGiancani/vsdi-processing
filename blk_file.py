@@ -54,7 +54,7 @@ class BlkFile:
 	    Reads the data contained in the BLK file
 	"""
 
-	def __init__(self, filename, spatial_binning, temporal_binning, zero_frames, detrend, header = None, motion_switch = False, roi_mask = None, dmn = True):
+	def __init__(self, filename, spatial_binning, temporal_binning, zero_frames, detrend, header = None, motion_switch = False, roi_mask = None, dblnk = True, blank_signal = None):
 		"""Initializes attributes
 		Default values for:
 		* p : '1p'
@@ -92,7 +92,7 @@ class BlkFile:
 		self.zero_frames = zero_frames # Number of starting frames considered zero
 		if motion_switch:
 			self.motion_ind, self.motion_ind_max = self.motion_index() # Motion index: float
-		self.df_fz = process.deltaf_up_fzero(self.binned_image, self.zero_frames, demean = dmn)
+		self.df_fz = process.deltaf_up_fzero(self.binned_image, self.zero_frames, deblank = dblnk, blank_sign = blank_signal)
 		self.roi_sign = self.get_roi_signal(detrend, roi_mask = roi_mask) # Instantiation of dtrnd_roi_sign. numpy.array 1D
 		#self.roi_sign = self.get_roi_signal(roi_mask = roi_mask) # Instantiation of dtrnd_roi_sign. numpy.array 1D
 		#self.select_flag = False # Boolean flag for autoselection of trial/blk

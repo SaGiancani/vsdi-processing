@@ -33,19 +33,33 @@ class Session:
         self.header = self.get_session_header(**kwargs)
         self.all_blks = self.get_all_blks()
         self.cond_names = self.get_condition_name()
+        self.blank_id = self.get_blank_id()
+        
         # If considered conditions are not explicitly indicated, then all the conditions are considered      
         if self.header['conditions_id'] is None:
             self.header['conditions_id'] = self.get_condition_ids()
         else:
-            self.header['conditions_id'] = list(set(self.header['conditions_id']+[self.get_blank_id()]))
+            self.header['conditions_id'] = list(set(self.header['conditions_id']+[self.blank_id]))
+        
         self.session_blks = self.get_blks()
+
         if self.header['mov_switch']:
             self.motion_indeces = None
+        
         self.roi_signals = None
         self.trials_name = None 
         self.df_fz = None
         self.auto_selected = None
         self.conditions = None
+        self.counter_blank = 0        
+        
+        if self.header['deblank_switch']:
+            # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
+            self.time_course_blank, self.df_f0_blank = self.get_blank_signal()
+        else:
+            self.time_course_blank, self.df_f0_blank = None, None
+
+
 
     def get_all_blks(self):
         '''
@@ -57,14 +71,21 @@ class Session:
         '''
         The .BLKs filenames corresponding to the choosen id conditions, from the considered path_session, are picked.        
         '''
-        #This condition check is an overkill
-        if ((self.header['conditions_id'] is None) or (len(self.header['conditions_id']) == len(self.cond_names))): 
-            return self.all_blks
+        if self.session_blks is None:
+            #This condition check is an overkill
+            if ((self.header['conditions_id'] is None) or (len(self.header['conditions_id']) == len(self.cond_names))): 
+                return self.all_blks
+            else:
+                return [f for f in self.all_blks \
+                    if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
         else:
-            return [f for f in self.all_blks \
-                if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+            print('Warning: session_blks was not None')
+            id_check = list(set([f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]))]))
+            if len(id_check) == 1 and self.blank_id in id_check:
+                b = np.array(self.header['conditions_id']).tolist()
+                return self.session_blks + [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])) in b.remove(self.blank_id)]
 
-    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, detrend, tolerance, mov_switch, demean_switch, conditions_id, chunks, strategy):
+    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, detrend, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy):
         header = {}
         header['path_session'] = path_session
         header['spatial_bin'] = spatial_bin
@@ -73,7 +94,7 @@ class Session:
         header['detrend'] = detrend
         header['tolerance'] = tolerance
         header['mov_switch'] = mov_switch
-        header['demean_switch'] = demean_switch
+        header['deblank_switch'] = deblank_switch
         header['conditions_id'] = conditions_id
         header['chunks'] = chunks
         header['strategy'] = strategy
@@ -106,7 +127,7 @@ class Session:
     def get_blank_id(self):
         '''
         The method returns the index of blank condition. It checks between the condition names: if labelConds.txt
-        file exits, than the position of "blank" label is picked. Otherwise the position of last condition 
+        file exists, than the position of "blank" label is picked. Otherwise the position of last condition 
         is picked.
         '''
         try:
@@ -120,43 +141,60 @@ class Session:
             return tmp
 
     def get_session(self):
-        roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, self.session_blks)
-        self.conditions = conditions
-        self.df_fz = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
-        self.roi_signals = roi_signals
-        self.motion_indeces = np.array(motion_indeces)
+        if self.counter_blank == 0:
+            roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, self.session_blks, self.df_f0_blank)
+            self.conditions = conditions
+            self.df_fz = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
+            self.roi_signals = roi_signals
+            self.motion_indeces = motion_indeces
+        else:
+            blks = [f for f in self.all_blks \
+                if (int(f.split('vsd_C')[1][0:2]) != self.blank_id)]
+            roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, blks, self.df_f0_blank)
+            self.session_blks = self.session_blks + blks
+            shapes = np.shape(delta_f)
+            
+            df_f0 = np.zeros(len(self.session_blks), shapes[1], shapes[2], shapes[3])
+            time_course = np.zeros(len(self.session_blks), shapes[1])
+            
+            df_f0[0:self.counter_blank, :, :, :] = self.df_fz
+            df_f0[self.counter_blank:, :, :, :] = delta_f
+            time_course[0:self.counter_blank, :] = self.roi_signals
+            time_course[self.counter_blank:, :] = roi_signals
+
+            self.conditions = self.conditions + conditions
+            self.df_fz = df_f0
+            self.roi_signals = time_course
+            self.motion_indeces = self.motion_indeces + motion_indeces
         return
 
     def autoselection(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
         strategy = self.header['strategy']
-        path_rawdata = self.header['path_session'] + 'rawdata/'
-        # Loading a blk just for meta information useful -framesperstim-
-        BLK = blk_file.BlkFile(
-            path_rawdata+self.session_blks[random.randint(0, len(self.session_blks))],
-            self.header['spatial_bin'],
-            self.header['temporal_bin'],
-            self.header['zero_frames'],
-            self.header['detrend'], 
-            motion_switch = self.header['mov_switch'],
-            dmn = self.header['demean_switch'])
+        shapes = np.shape(self.df_fz)
+        n_frames = shapes[1]
 
-        if strategy in ['mse', 'mae'] and (BLK.header['nframesperstim']%self.header['chunks']==0):
+        if strategy in ['mse', 'mae'] and (n_frames%self.header['chunks']==0):
             self.get_session()
-            self.auto_selected = overlap_strategy(self.roi_signals, n_chunks=self.header['chunks'], loss = strategy)
+            tmp = overlap_strategy(self.roi_signals, n_chunks=self.header['chunks'], loss = strategy)
         
-        elif strategy in ['mse', 'mae'] and not (BLK.header['nframesperstim']%self.header['chunks']==0):
+        elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
             print('Number of chunks incompatible with number of frames, roi strategy automatically picked')
             strategy = 'roi'
 
         if strategy in ['roi', 'roi_signals', 'ROI']:
             self.get_session()
-            self.auto_selected = roi_strategy(self.roi_signals, self.header['tolerance'], self.header['zero_frames'])
+            tmp = roi_strategy(self.roi_signals, self.header['tolerance'], self.header['zero_frames'])
 
         elif strategy in ['statistic', 'statistical', 'quartiles']:
             self.get_session()
-            self.auto_selected = statistical_strategy(self.roi_signals)
-        
+            tmp = statistical_strategy(self.roi_signals)
+
+        if self.auto_selected is None:
+            self.auto_selected = tmp
+        else:
+            self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist())
+
         print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
         self.trials_name = session_blks[self.auto_selected]
@@ -195,25 +233,43 @@ class Session:
         print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
     
-    def blank_roi_signal(self):
+    def get_blank_signal(self):
         
         if (self.auto_selected is not None) and (self.conditions is not None):
             print('Already loaded blank blks are used.')
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()        
-            t = self.get_blank_id()
-            blank_cdi = np.where(np.array(self.conditions) == t)
+            blank_cdi = np.where(np.array(self.conditions) == self.blank_id)
             blank_cdi = blank_cdi[0].tolist()
             blank_cdi = list(set(indeces_select).intersection(set(blank_cdi)))
             blank_sig = np.mean(self.roi_signals[blank_cdi, :], axis=0)
-            return blank_sig
-        else:
+            blank_df = np.mean(self.df_fz[blank_cdi, :], axis=0)
+            return blank_sig, blank_df
+
+        elif (self.auto_selected is None) and (self.conditions is None):
             print('Loaded blks were not found: blank blks will be loaded.')
-            blank_id = self.get_blank_id()
+            # All the blank blks
             blks = [f for f in self.all_blks \
-            if (int(f.split('vsd_C')[1][0:2])==blank_id)]
-            blank_sig, _, _ = signal_extraction(self.header, blks)
-            return blank_sig
+            if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
+            # Blank signal extraction
+            blank_sig, blank_df_f0, blank_conditions, _ = signal_extraction(self.header, blks, None)
+            size_df_f0 = np.shape(blank_df_f0)
+            
+            blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mse', up=85, bottom=15)
+
+            self.df_fz = blank_df_f0
+            self.roi_signals = blank_sig
+            self.conditions = blank_conditions
+            self.counter_blank = size_df_f0[0] # Countercheck this value
+            self.auto_selected = blank_autoselect
+
+            self.session_blks = blks
+
+            blank_sig = np.mean(blank_sig, axis=0)
+            blank_df = np.mean(blank_df_f0, axis=0)
+            return blank_sig, blank_df
+        else:
+            print('Something weird: one between auto_selected and conditions is an empty set')
 
     def roi_plots(self):
         sig = self.roi_signals
@@ -222,7 +278,7 @@ class Session:
         
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         conditions = np.unique(self.conditions)
-        blank_sign = self.blank_roi_signal()
+        blank_sign, _ = self.blank_signal()
 
         for cd_i in conditions:
             indeces_cdi = np.where(np.array(self.conditions) == cd_i)
@@ -288,7 +344,7 @@ class Session:
             + '_dtrnd' + str(self.header['detrend'])\
             + '_tol' + str(self.header['tolerance'])\
             + '_mov' + str(self.header['mov_switch'])\
-            + '_demean' + str(self.header['demean_switch'])\
+            + '_deblank' + str(self.header['deblank_switch'])\
             + '_strategy' + str(self.header['strategy'])
         folder_path = session_path + 'derivatives/'+folder_name              
         if not os.path.exists(folder_path):
@@ -298,7 +354,7 @@ class Session:
         return folder_path
 
 
-def signal_extraction(header, blks):
+def signal_extraction(header, blks, blank_s):
     motion_indeces, conditions = [], []
     path_rawdata = header['path_session'] + 'rawdata/'
     for i, blk_name in enumerate(blks):
@@ -312,7 +368,9 @@ def signal_extraction(header, blks):
                 header['zero_frames'],
                 header['detrend'], 
                 motion_switch = header['mov_switch'],
-                dmn = header['demean_switch'])
+                dblnk = header['deblank_switch'],
+                blank_signal= blank_s)
+                
             header_blk = BLK.header
             delta_f = np.zeros((len(blks), header_blk['nframesperstim'], header_blk['frameheight']//header['spatial_bin'], header_blk['framewidth']//header['spatial_bin']))
             sig = np.zeros((len(blks), header_blk['nframesperstim']))
@@ -327,7 +385,8 @@ def signal_extraction(header, blks):
                 header = header_blk, 
                 motion_switch = header['mov_switch'], 
                 roi_mask = roi_mask,
-                dmn = header['demean_switch'])
+                dblnk = header['deblank_switch'],
+                blank_signal= blank_s)
         if header['mov_switch']:
             motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
         conditions.append(BLK.condition)
@@ -459,13 +518,13 @@ if __name__=="__main__":
                         action='store_false')
     parser.set_defaults(mov_switch=False)
 
-    parser.add_argument('--dmn', 
-                        dest='demean_switch',
+    parser.add_argument('--dblnk', 
+                        dest='deblank_switch',
                         action='store_true')
     parser.add_argument('--no-dmn', 
-                        dest='demean_switch', 
+                        dest='deblank_switch', 
                         action='store_false')
-    parser.set_defaults(demean_switch=False)
+    parser.set_defaults(deblank_switch=False)
 
     parser.add_argument('--cid', 
                     action='append', 
@@ -504,6 +563,8 @@ if __name__=="__main__":
     print(np.shape(session.df_fz))
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
+    print(session.session_blks)
+    print(session.conditions)
     #print(session.trials_name)
 
 # 38, 18, 38

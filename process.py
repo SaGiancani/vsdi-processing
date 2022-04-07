@@ -2,7 +2,7 @@ import numpy as np
 from scipy.ndimage.filters import uniform_filter1d
 from scipy import optimize
 
-def deltaf_up_fzero(vsdi_sign, n_frames_zero, demean = False, outlier_tresh = 1000):
+def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
     '''F/F0 computation with -or without- demean of n_frames_zero and killing of outlier 
 		----------
 		vsdi_sign : np.array, with shape nframes, width, height
@@ -15,8 +15,8 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, demean = False, outlier_tresh = 10
 		df_fz : np.array, with shape nframes, width, height
     '''
     mean_frames_zero = np.mean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
-    if demean:
-        df_fz= (vsdi_sign - mean_frames_zero)/mean_frames_zero
+    if deblank:
+        df_fz= (vsdi_sign - blank_sign)/mean_frames_zero
     else:
         df_fz= (vsdi_sign/mean_frames_zero)-1
     # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
