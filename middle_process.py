@@ -565,9 +565,9 @@ if __name__=="__main__":
     print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     utils.inputs_save(session, 'session_prova')
     print(np.shape(session.df_fz))
-    session.roi_plots()
     print(session.session_blks)
     print(session.conditions)
+    session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
     #print(session.trials_name)
 
