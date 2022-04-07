@@ -143,11 +143,11 @@ class Session:
     def get_session(self):
         if self.counter_blank == 0:
             print('Trials loading starts:')
-            roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, self.session_blks, self.df_f0_blank, False)
+            roi_signals, delta_f, conditions= signal_extraction(self.header, self.session_blks, self.df_f0_blank, False)
             self.conditions = conditions
             self.df_fz = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
             self.roi_signals = roi_signals
-            self.motion_indeces = motion_indeces
+            #self.motion_indeces = motion_indeces
         else:
             blks = [f for f in self.all_blks \
                 if (int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
@@ -167,7 +167,7 @@ class Session:
             self.conditions = self.conditions + conditions
             self.df_fz = df_f0
             self.roi_signals = time_course
-            self.motion_indeces = self.motion_indeces + motion_indeces
+            #self.motion_indeces = self.motion_indeces + motion_indeces
         return
 
     def autoselection(self):
@@ -358,7 +358,8 @@ class Session:
 
 
 def signal_extraction(header, blks, blank_s, blnk_switch):
-    motion_indeces, conditions = [], []
+    #motion_indeces, conditions = [], []
+    conditions = []
     path_rawdata = header['path_session'] + 'rawdata/'
     for i, blk_name in enumerate(blks):
         start_time = datetime.datetime.now().replace(microsecond=0)
@@ -390,15 +391,15 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 roi_mask = roi_mask,
                 dblnk = blnk_switch,
                 blank_signal= blank_s)
-        if header['mov_switch']:
-            motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
+        # if header['mov_switch']:
+        #     motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
         conditions.append(BLK.condition)
         sig[i, :] = BLK.roi_sign
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
         delta_f[i, :, :, :] = BLK.df_fz
         print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-    return sig, delta_f, conditions, motion_indeces
+    return sig, delta_f, conditions#, motion_indeces
 
 
 def roi_strategy(matrix, tolerance, zero_frames):
@@ -519,7 +520,7 @@ if __name__=="__main__":
     parser.add_argument('--no-mov', 
                         dest='mov_switch', 
                         action='store_false')
-    parser.set_defaults(mov_switch=True)
+    parser.set_defaults(mov_switch=False)
 
     parser.add_argument('--dblnk', 
                         dest='deblank_switch',
