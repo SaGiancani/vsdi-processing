@@ -150,7 +150,7 @@ class Session:
             self.motion_indeces = motion_indeces
         else:
             blks = [f for f in self.all_blks \
-                if (int(f.split('vsd_C')[1][0:2]) != self.blank_id)]
+                if (int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
             print('Trials loading starts:')
             roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
             self.session_blks = self.session_blks + blks
@@ -519,7 +519,7 @@ if __name__=="__main__":
     parser.add_argument('--no-mov', 
                         dest='mov_switch', 
                         action='store_false')
-    parser.set_defaults(mov_switch=False)
+    parser.set_defaults(mov_switch=True)
 
     parser.add_argument('--dblnk', 
                         dest='deblank_switch',
