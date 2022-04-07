@@ -142,6 +142,7 @@ class Session:
 
     def get_session(self):
         if self.counter_blank == 0:
+            print('Trials loading starts:')
             roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, self.session_blks, self.df_f0_blank, False)
             self.conditions = conditions
             self.df_fz = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
@@ -150,12 +151,13 @@ class Session:
         else:
             blks = [f for f in self.all_blks \
                 if (int(f.split('vsd_C')[1][0:2]) != self.blank_id)]
+            print('Trials loading starts:')
             roi_signals, delta_f, conditions, motion_indeces= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
             self.session_blks = self.session_blks + blks
             shapes = np.shape(delta_f)
             
-            df_f0 = np.zeros(len(self.session_blks), shapes[1], shapes[2], shapes[3])
-            time_course = np.zeros(len(self.session_blks), shapes[1])
+            df_f0 = np.zeros((len(self.session_blks), shapes[1], shapes[2], shapes[3]))
+            time_course = np.zeros((len(self.session_blks), shapes[1]))
             
             df_f0[0:self.counter_blank, :, :, :] = self.df_fz
             df_f0[self.counter_blank:, :, :, :] = delta_f
@@ -252,6 +254,7 @@ class Session:
             blks = [f for f in self.all_blks \
             if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
             # Blank signal extraction
+            print('Blank trials loading starts:')
             blank_sig, blank_df_f0, blank_conditions, _ = signal_extraction(self.header, blks, None, False)
             size_df_f0 = np.shape(blank_df_f0)
             
