@@ -156,19 +156,9 @@ class Session:
             print('Trials loading starts:')
             roi_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
             self.session_blks = self.session_blks + blks
-            shapes = np.shape(delta_f)
-            
-            df_f0 = np.zeros((len(self.session_blks), shapes[1], shapes[2], shapes[3]))
-            time_course = np.zeros((len(self.session_blks), shapes[1]))
-            
-            df_f0[0:self.counter_blank, :, :, :] = self.df_fz
-            df_f0[self.counter_blank:, :, :, :] = delta_f
-            time_course[0:self.counter_blank, :] = self.roi_signals
-            time_course[self.counter_blank:, :] = roi_signals
-
-            self.conditions = self.conditions + conditions
-            self.df_fz = df_f0
-            self.roi_signals = time_course
+            self.conditions = self.conditions + conditions                        
+            self.df_fz = np.append(self.df_fz, delta_f, axis=0)
+            self.roi_signals = np.append(self.roi_signals, roi_signals, axis=0)
             #self.motion_indeces = self.motion_indeces + motion_indeces
         return
 
@@ -183,8 +173,8 @@ class Session:
             tmp = overlap_strategy(self.roi_signals, n_chunks=self.header['chunks'], loss = strategy)
         
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
-            print('Number of chunks incompatible with number of frames, roi strategy automatically picked')
-            strategy = 'roi'
+            print('Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
+            tmp = overlap_strategy(self.roi_signals, n_chunks=1, loss = strategy)
 
         if strategy in ['roi', 'roi_signals', 'ROI']:
             self.get_session()
@@ -257,17 +247,16 @@ class Session:
             if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
             # Blank signal extraction
             print('Blank trials loading starts:')
-            blank_sig, blank_df_f0, blank_conditions= signal_extraction(self.header, blks, None, False)
+            blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, False)
             size_df_f0 = np.shape(blank_df_f0)
             
-            blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mse', up=85, bottom=15)
+            blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
 
             self.df_fz = blank_df_f0
             self.roi_signals = blank_sig
             self.conditions = blank_conditions
             self.counter_blank = size_df_f0[0] # Countercheck this value
             self.auto_selected = blank_autoselect
-
             self.session_blks = blks
 
             blank_sig = np.mean(blank_sig, axis=0)
