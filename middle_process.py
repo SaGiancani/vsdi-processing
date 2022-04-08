@@ -31,7 +31,7 @@ class Session:
         """
         self.cond_names = None
         self.header = self.get_session_header(**kwargs)
-        self.all_blks = self.get_all_blks()
+        self.all_blks = self.get_all_blks() # all the blks. 
         self.cond_names = self.get_condition_name()
         self.blank_id = self.get_blank_id()
         
@@ -41,7 +41,7 @@ class Session:
         else:
             self.header['conditions_id'] = list(set(self.header['conditions_id']+[self.blank_id]))
 
-        self.session_blks = self.get_blks()
+        self.session_blks = self.get_blks() # only the used blks for the selection
 
         if self.header['mov_switch']:
             self.motion_indeces = None
