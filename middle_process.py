@@ -56,6 +56,8 @@ class Session:
         if self.header['deblank_switch']:
             # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
             self.time_course_blank, self.df_f0_blank = self.get_blank_signal()
+            print(f'Time Course blank shape: {np.shape(self.time_course_blank)}')
+            print(f'Time Course blank shape: {np.shape(self.df_f0_blank)}')
         else:
             self.time_course_blank, self.df_f0_blank = None, None
 
@@ -333,9 +335,9 @@ class Session:
                         ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     
             tmp = self.set_md_folder()
-            if not os.path.exists(tmp+'/rois/'):
-                os.makedirs(tmp+'/rois/')
-            plt.savefig(tmp +'/rois/'+ session_name+'_roi_0'+str(cd_i)+'.png')
+            if not os.path.exists(tmp+'/time_course/'):
+                os.makedirs(tmp+'/time_course/')
+            plt.savefig(tmp +'/time_course/'+ session_name+'_tc_0'+str(cd_i)+'.png')
             #plt.savefig((path_session+'/'session_name +'/'+ session_name+'_roi_0'+str(cd_i)+'.png')
         return
 
