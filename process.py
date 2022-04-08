@@ -16,7 +16,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     '''
     mean_frames_zero = np.mean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
     if deblank:
-        df_fz= (vsdi_sign - blank_sign)/mean_frames_zero
+        df_fz= (vsdi_sign/mean_frames_zero) - blank_sign
     else:
         df_fz= (vsdi_sign/mean_frames_zero)-1
     # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
