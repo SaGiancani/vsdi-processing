@@ -621,7 +621,7 @@ def mask_roi(new_width, new_height):
 	tmp = bnw
 	tmp[np.where(bnw>0)] = 1 
 	#tmp[np.where(bnw<=0)] = 0
-	tmp[np.where(bnw<=0)] = 0
+	tmp[np.where(bnw<=0)] = np.NaN
 	#print('mask roi building time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
 	return tmp # binned_x, binned_y
 
