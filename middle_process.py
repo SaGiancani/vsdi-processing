@@ -232,7 +232,7 @@ class Session:
                 for df_id, ax in zip(considered_frames, axs):
                     Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
                     ax.axis('off')
-                    pc = ax.pcolormesh(Y, vmin=-0.007, vmax=0.001)
+                    pc = ax.pcolormesh(Y, vmin=-0.005, vmax=0.003)
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             
             tmp = self.set_md_folder()
