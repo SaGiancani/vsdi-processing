@@ -44,6 +44,7 @@ class Session:
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
+        print( 'Original width '+ str(self.header['original_width']) +'& original height '+ str(self.header['original_height']))
         
         # If considered conditions are not explicitly indicated, then all the conditions are considered
         # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
@@ -373,6 +374,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
         start_time = datetime.datetime.now().replace(microsecond=0)
         # If first BLK file, than the header is stored
         if i == 0:
+            print(header['original_height'])
+            print(header['original_width'])
+            
             BLK = blk_file.BlkFile(
                 os.path.join(path_rawdata, blk_name),
                 header['spatial_bin'],
