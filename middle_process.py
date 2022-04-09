@@ -36,7 +36,7 @@ class Session:
         self.blank_id = self.get_blank_id()
 
         # A blk loaded for useful hyperparameters
-        blk = blk_file.BLK(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks))]), 
+        blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks))]), 
                             self.header['spatial_bin'], 
                             self.header['temporal_bin'],
                             self.header['zero_frames'])
