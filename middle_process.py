@@ -151,15 +151,17 @@ class Session:
             self.time_course_signals = time_course_signals
             #self.motion_indeces = motion_indeces
         else:
-            blks = [f for f in self.all_blks \
-                if (int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
-            print('Trials loading starts:')
-            time_course_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
-            self.session_blks = self.session_blks + blks
-            self.conditions = self.conditions + conditions                        
-            self.df_fz = np.append(self.df_fz, delta_f, axis=0)
-            self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
-            #self.motion_indeces = self.motion_indeces + motion_indeces
+            # If the condition is not only the blank one, than I compute the same iteration as up
+            if len(self.header['conditions_id']) > 1:
+                blks = [f for f in self.all_blks \
+                    if (int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+                print('Trials loading starts:')
+                time_course_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
+                self.session_blks = self.session_blks + blks
+                self.conditions = self.conditions + conditions                        
+                self.df_fz = np.append(self.df_fz, delta_f, axis=0)
+                self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
+                #self.motion_indeces = self.motion_indeces + motion_indeces
         return
 
     def autoselection(self):
