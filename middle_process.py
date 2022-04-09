@@ -60,7 +60,7 @@ class Session:
         
         self.time_course_signals = None
         self.trials_name = None 
-        self.df_fz = None
+        self.df_fzs = None
         self.auto_selected = None
         self.conditions = None
         self.counter_blank = 0        
@@ -69,7 +69,7 @@ class Session:
             # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
             self.time_course_blank, self.df_f0_blank = self.get_blank_signal()
             print(f'Time Course blank shape: {np.shape(self.time_course_blank)}')
-            print(f'Time Course blank shape: {np.shape(self.df_f0_blank)}')
+            print(f'Delta F/F0 blank shape: {np.shape(self.df_f0_blank)}')
         else:
             self.time_course_blank, self.df_f0_blank = None, None
 
@@ -159,7 +159,7 @@ class Session:
             print('Trials loading starts:')
             time_course_signals, delta_f, conditions= signal_extraction(self.header, self.session_blks, self.df_f0_blank, False)
             self.conditions = conditions
-            self.df_fz = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
+            self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
             self.time_course_signals = time_course_signals
             #self.motion_indeces = motion_indeces
         else:
@@ -171,7 +171,7 @@ class Session:
                 time_course_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
                 self.session_blks = self.session_blks + blks
                 self.conditions = self.conditions + conditions                        
-                self.df_fz = np.append(self.df_fz, delta_f, axis=0)
+                self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
                 self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
                 #self.motion_indeces = self.motion_indeces + motion_indeces
         return
@@ -231,7 +231,7 @@ class Session:
                 subfig.suptitle(f'Trial # {cdi_select[row]}')
                 axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
                 for df_id, ax in zip(considered_frames, axs):
-                    Y = self.df_fz[cdi_select[row], int(df_id), :, :]
+                    Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
                     ax.axis('off')
                     pc = ax.pcolormesh(Y, vmin=-0.007, vmax=0.001)
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
@@ -268,7 +268,7 @@ class Session:
             
             blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
 
-            self.df_fz = blank_df_f0
+            self.df_fzs = blank_df_f0
             self.time_course_signals = blank_sig
             self.conditions = blank_conditions
             self.counter_blank = size_df_f0[0] # Countercheck this value
@@ -276,6 +276,8 @@ class Session:
             self.session_blks = blks
             
             print(f'Print of blank autoselection: {blank_autoselect}')
+            print(f'Shape of blank_df {np.shape(blank_df)}')
+            print(f'Shape of blank_df_f0 {np.shape(blank_df_f0)}')
             blank_sig = np.mean(blank_sig[np.where(blank_autoselect==1), :], axis=0)
             blank_df = np.mean(blank_df_f0[np.where(blank_autoselect==1), :, :, :], axis=0)
             return blank_sig, blank_df
@@ -574,7 +576,7 @@ if __name__=="__main__":
     session.autoselection()
     print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     utils.inputs_save(session, 'session_prova')
-    print(np.shape(session.df_fz))
+    print(np.shape(session.df_fzs))
     print(np.shape(session.session_blks))
     print(f'This is the selected blks mask: {session.auto_selected}')
     session.roi_plots()
