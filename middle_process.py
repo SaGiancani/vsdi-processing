@@ -1,4 +1,4 @@
-import argparse, blk_file, datetime, random
+import argparse, blk_file, datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -34,6 +34,15 @@ class Session:
         self.all_blks = self.get_all_blks() # all the blks. 
         self.cond_names = self.get_condition_name()
         self.blank_id = self.get_blank_id()
+
+        # A blk loaded for useful hyperparameters
+        blk = blk_file.BLK(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks))]), 
+                            self.header['spatial_bin'], 
+                            self.header['temporal_bin'],
+                            self.header['zero_frames'])
+        self.header['n_frames'] = blk.header['nframesperstim']
+        self.header['original_height'] = blk.header['frameheight']
+        self.header['original_width'] = blk.header['framewidth']
         
         # If considered conditions are not explicitly indicated, then all the conditions are considered
         # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
@@ -68,7 +77,7 @@ class Session:
         '''
         All the .BLKs filenames, from the considered path_session, are picked.
         '''
-        return [f.name for f in os.scandir(self.header['path_session'] + 'rawdata/') if (f.is_file()) and (f.name.endswith(".BLK"))]
+        return [f.name for f in os.scandir(os.path.join(self.header['path_session'],'rawdata/')) if (f.is_file()) and (f.name.endswith(".BLK"))]
 
     def get_blks(self):
         '''
@@ -115,7 +124,7 @@ class Session:
         than names are simply loaded. Otherwise a list of names with "Condition #" style is built.
         '''
         try:
-            with open(self.header['path_session'] + LABEL_CONDS_PATH) as f:
+            with open(os.path.join(self.header['path_session'], LABEL_CONDS_PATH)) as f:
                 contents = f.readlines()
             return [i.split('\n')[0] for i in contents]
         except FileNotFoundError:
@@ -123,7 +132,7 @@ class Session:
             cds = self.get_condition_ids()
             return ['Condition ' + str(c) for c in cds]
         except NotADirectoryError:
-            print(self.header['path_session'] + LABEL_CONDS_PATH +' path does not exist')
+            print(os.path.join(self.header['path_session'], LABEL_CONDS_PATH) +' path does not exist')
             cds = self.get_condition_ids()
             return ['Condition ' + str(c) for c in cds]
 
@@ -169,7 +178,7 @@ class Session:
         start_time = datetime.datetime.now().replace(microsecond=0)
         strategy = self.header['strategy']
         shapes = np.shape(self.df_fz)
-        n_frames = shapes[1]
+        n_frames = self.header['n_frames']
 
         if strategy in ['mse', 'mae'] and (n_frames%self.header['chunks']==0):
             self.get_session()
@@ -224,9 +233,9 @@ class Session:
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             
             tmp = self.set_md_folder()
-            if not os.path.exists(tmp+'/activity_maps/'):
-                os.makedirs(tmp+'/activity_maps/')
-            plt.savefig(tmp+'/activity_maps/'+ session_name+'_0'+str(cd_i)+'.png')
+            if not os.path.exists(os.path.join(tmp,'/activity_maps/')):
+                os.makedirs(os.path.join(tmp,'/activity_maps/'))
+            plt.savefig(os.path.join(tmp,'/activity_maps/', session_name+'_0'+str(cd_i)+'.png'))
         print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
     
@@ -328,9 +337,9 @@ class Session:
                         ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     
             tmp = self.set_md_folder()
-            if not os.path.exists(tmp+'/time_course/'):
-                os.makedirs(tmp+'/time_course/')
-            plt.savefig(tmp +'/time_course/'+ session_name+'_tc_0'+str(cd_i)+'.png')
+            if not os.path.exists(os.path.join(tmp,'/time_course/')):
+                os.makedirs(os.path.join(tmp,'/time_course/'))
+            plt.savefig(os.path.join(tmp,'/time_course/', session_name+'_tc_0'+str(cd_i)+'.png'))
             #plt.savefig((path_session+'/'session_name +'/'+ session_name+'_roi_0'+str(cd_i)+'.png')
         return
 
@@ -344,7 +353,7 @@ class Session:
             + '_mov' + str(self.header['mov_switch'])\
             + '_deblank' + str(self.header['deblank_switch'])\
             + '_strategy' + str(self.header['strategy'])
-        folder_path = session_path + 'derivatives/'+folder_name              
+        folder_path = os.path.join(session_path, 'derivatives/',folder_name)               
         if not os.path.exists(folder_path):
         #if not os.path.exists( path_session+'/'+session_name):
             os.makedirs(folder_path)
@@ -355,13 +364,13 @@ class Session:
 def signal_extraction(header, blks, blank_s, blnk_switch):
     #motion_indeces, conditions = [], []
     conditions = []
-    path_rawdata = header['path_session'] + 'rawdata/'
+    path_rawdata = os.path.join(header['path_session'],'rawdata/')
     for i, blk_name in enumerate(blks):
         start_time = datetime.datetime.now().replace(microsecond=0)
         # If first BLK file, than the header is stored
         if i == 0:
             BLK = blk_file.BlkFile(
-                path_rawdata+blk_name,
+                os.path.join(path_rawdata, blk_name),
                 header['spatial_bin'],
                 header['temporal_bin'],
                 header['zero_frames'],
@@ -369,12 +378,12 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 blank_signal= blank_s)
 
             header_blk = BLK.header
-            delta_f = np.zeros((len(blks), header_blk['nframesperstim'], header_blk['frameheight']//header['spatial_bin'], header_blk['framewidth']//header['spatial_bin']))
-            sig = np.zeros((len(blks), header_blk['nframesperstim']))
-            roi_mask = blk_file.mask_roi(header_blk['framewidth']//header['spatial_bin'], header_blk['frameheight']//header['spatial_bin'])
+            delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+            sig = np.zeros((len(blks), header['n_frames']))
+            roi_mask = blk_file.mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
         else:
             BLK = blk_file.BlkFile(
-                path_rawdata+blk_name, 
+                os.path.join(path_rawdata, blk_name), 
                 header['spatial_bin'], 
                 header['temporal_bin'], 
                 header['zero_frames'],
