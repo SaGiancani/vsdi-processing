@@ -276,8 +276,10 @@ class Session:
             self.session_blks = blks
             
             print(f'Print of blank autoselection: {blank_autoselect}')
-            blank_sig = np.mean(blank_sig[np.where(blank_autoselect==1), :], axis=0)
-            blank_df = np.mean(blank_df_f0[np.where(blank_autoselect==1), :, :, :], axis=0)
+            tmp = blank_sig[np.where(blank_autoselect==1), :]            
+            blank_sig = np.mean(tmp, axis=0)
+            tmp = blank_df_f0[np.where(blank_autoselect==1), :, :, :]
+            blank_df = np.mean(tmp, axis=0)
             print(f'Shape of blank_df {np.shape(blank_df)}')
             print(f'Shape of blank_df_f0 {np.shape(blank_df_f0)}')
             return blank_sig, blank_df
