@@ -275,8 +275,8 @@ class Session:
             self.session_blks = blks
             
             print(f'Print of blank autoselection: {blank_autoselect}')
-            blank_sig = np.mean(blank_sig[np.where(blank_conditions==1), :], axis=0)
-            blank_df = np.mean(blank_df_f0[np.where(blank_conditions==1), :, :, :], axis=0)
+            blank_sig = np.mean(blank_sig[np.where(blank_autoselect==1), :], axis=0)
+            blank_df = np.mean(blank_df_f0[np.where(blank_autoselect==1), :, :, :], axis=0)
             return blank_sig, blank_df
         else:
             print('Something weird: one between auto_selected and conditions is an empty set')
