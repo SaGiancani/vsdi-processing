@@ -99,13 +99,12 @@ class Session:
         #         b = np.array(self.header['conditions_id']).tolist()
         #         return self.session_blks + [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])) in b.remove(self.blank_id)]
 
-    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, detrend, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy):
+    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy):
         header = {}
         header['path_session'] = path_session
         header['spatial_bin'] = spatial_bin
         header['temporal_bin'] = temporal_bin
         header['zero_frames'] = zero_frames
-        header['detrend'] = detrend
         header['tolerance'] = tolerance
         header['mov_switch'] = mov_switch
         header['deblank_switch'] = deblank_switch
@@ -276,16 +275,15 @@ class Session:
             self.session_blks = blks
             
             print(f'Print of blank autoselection: {blank_autoselect}')
-            inds = np.where(blank_autoselect==1)
+            indeces_select = np.where(self.auto_selected==1)
+            indeces_select = indeces_select[0].tolist()        
             #print(f'Indeces {inds}')
-            tmp = blank_sig[inds, :]
-            blank_sig = tmp.mean(axis=0)
-            tmp = blank_df_f0[inds, :, :, :]
-            blank_df = tmp.mean(axis=1)
+            blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
+            blank_df = np.mean(self.df_fzs[indeces_select, :, :, :], axis=0)
             print(np.shape(blank_df))
             #print(f'blank_df_f0 {(blank_df_f0)}')
             #print(f'blank_df {(blank_df)}')
-            return blank_sig, blank_df
+            return blank_sig_, blank_df
         else:
             print('Something weird: one between auto_selected and conditions is an empty set')
             return
@@ -360,7 +358,6 @@ class Session:
         folder_name = 'spcbin' + str(self.header['spatial_bin']) \
             + '_timebin' + str(self.header['temporal_bin']) \
             + '_zerofrms' + str(self.header['zero_frames']) \
-            + '_dtrnd' + str(self.header['detrend'])\
             + '_tol' + str(self.header['tolerance'])\
             + '_mov' + str(self.header['mov_switch'])\
             + '_deblank' + str(self.header['deblank_switch'])\
@@ -515,14 +512,6 @@ if __name__=="__main__":
                         default = 20,
                         required=False,
                         help='The first frames considered zero')    
-
-    parser.add_argument('--dtrn', 
-                        dest='detrend',
-                        action='store_true')
-    parser.add_argument('--no-dtrn', 
-                        dest='detrend', 
-                        action='store_false')
-    parser.set_defaults(detrend=False)
 
     parser.add_argument('--tol', 
                         dest='tolerance',
