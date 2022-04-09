@@ -18,7 +18,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     if deblank:
         df_fz= (vsdi_sign/mean_frames_zero) - blank_sign
     else:
-        df_fz= (vsdi_sign/mean_frames_zero)
+        df_fz = (vsdi_sign/mean_frames_zero) - 1 
     # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
     #df_fz = df_fz - df_fz[0, :, :] 
     df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
