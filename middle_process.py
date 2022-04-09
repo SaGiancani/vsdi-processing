@@ -273,9 +273,10 @@ class Session:
             self.counter_blank = size_df_f0[0] # Countercheck this value
             self.auto_selected = blank_autoselect
             self.session_blks = blks
-            print(f'Print of sessions_blks shape after blank: {np.shape(self.session_blks)}')
-            blank_sig = np.mean(blank_sig, axis=0)
-            blank_df = np.mean(blank_df_f0, axis=0)
+            
+            print(f'Print of blank autoselection: {blank_autoselect}')
+            blank_sig = np.mean(blank_sig[np.where(blank_conditions==1), :], axis=0)
+            blank_df = np.mean(blank_df_f0[np.where(blank_conditions==1), :, :, :], axis=0)
             return blank_sig, blank_df
         else:
             print('Something weird: one between auto_selected and conditions is an empty set')
@@ -569,7 +570,7 @@ if __name__=="__main__":
     utils.inputs_save(session, 'session_prova')
     print(np.shape(session.df_fz))
     print(np.shape(session.session_blks))
-    print(session.conditions)
+    print(f'This is the selected blks mask: {session.auto_selected}')
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
     #print(session.trials_name)
