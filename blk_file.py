@@ -54,7 +54,7 @@ class BlkFile:
 	    Reads the data contained in the BLK file
 	"""
 
-	def __init__(self, filename, spatial_binning, temporal_binning, zero_frames, detrend, header = None, motion_switch = False, roi_mask = None, dblnk = True, blank_signal = None):
+	def __init__(self, filename, spatial_binning, temporal_binning, zero_frames, header = None, roi_mask = None, dblnk = True, blank_signal = None, motion_switch = False):
 		"""Initializes attributes
 		Default values for:
 		* p : '1p'
@@ -93,7 +93,7 @@ class BlkFile:
 		if motion_switch:
 			self.motion_ind, self.motion_ind_max = self.motion_index() # Motion index: float
 		self.df_fz = process.deltaf_up_fzero(self.binned_image, self.zero_frames, deblank = dblnk, blank_sign = blank_signal)
-		self.roi_sign = self.get_roi_signal(detrend, roi_mask = roi_mask) # Instantiation of dtrnd_roi_sign. numpy.array 1D
+		self.time_course_sign = self.get_tc_signal(roi_mask = roi_mask) # Instantiation of dtrnd_roi_sign. numpy.array 1D
 		#self.roi_sign = self.get_roi_signal(roi_mask = roi_mask) # Instantiation of dtrnd_roi_sign. numpy.array 1D
 		#self.select_flag = False # Boolean flag for autoselection of trial/blk
 
@@ -493,7 +493,7 @@ class BlkFile:
 		#print('vsdi-signal extraction time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
 		return a
         
-	def get_roi_signal(self, detrend, roi_mask = None):#, hand_made=False):
+	def get_tc_signal(self, roi_mask = None):#, hand_made=False):
 		"""
 		Computes the signal in ROI. 
 		It recalls initially the mask_roi method, than it computes demeaning of the signal.
@@ -501,21 +501,19 @@ class BlkFile:
 		-----------
 		 self Object
 		 bnnd_img: numpy.array (70, width of binning, height of binning), the binned signal
-		 detrend: boolean, switch for choosing the detrend. 
-		 hand_made: boolean, switch for choosing the detrending strategy. False by default -scipy.signal.detrend method-
 		Returns
 		-----------
-		 self.roi_sign: numpy.array (70,1) the demeaned signal inside the ROI, represented as a 1D array
-		 self.dtrnd_roi_sign: numpy.array (70,1) the signal is demeaned and detrended.
+		 self.roi_sign: numpy.array (70,1) the signal inside the ROI, represented as a 1D array
 		"""
 		if roi_mask is None:
 			# This could lead to some issue: it works because df_fz is ALWAYS binned, otherwise it wouldnt work.
 			# Modify with shape of df_fz in place of (width and height)//spatial_bin
 			roi_mask = mask_roi(self.header['framewidth']//self.spatial_binning, self.header['frameheight']//self.spatial_binning)
-		roi_sign = np.mean(np.mean(roi_mask*self.df_fz, axis=1), axis=1) # Masking of the whole signal and mean computing of each frame of the signal
-		if detrend:
-			roi_sign =  signal.detrend(np.nan_to_num(roi_sign))# + np.mean(roi_sign, axis=0)
-		return roi_sign
+		#roi_sign = np.mean(np.mean(roi_mask*self.df_fz, axis=1), axis=1) # Masking of the whole signal and mean computing of each frame of the signal
+		roi_sign = list()
+		for i in self.df_fz:
+			roi_sign.append(np.ma.masked_array(i, mask = roi_mask).mean())
+		return np.array(roi_sign)
 
 	def bin_image(self):
 		"""
@@ -599,7 +597,7 @@ class BlkFile:
 
 def mask_roi(new_width, new_height):
 	"""
-	Creation of a rectangular of interest (ROI) mask. It uses the x bin and y bin of the BLK object.
+	Creation of a circle of interest (ROI) mask. It uses the x bin and y bin of the BLK object.
 	Parameter
 	-----------
 	self.header['framewidth']: int
@@ -618,10 +616,7 @@ def mask_roi(new_width, new_height):
 	y = np.linspace(-1, 1, new_height)
 	xv, yv = np.meshgrid(x, y)
 	bnw = np.sqrt((np.square(xv)+np.square(yv))<0.5)
-	tmp = bnw
-	tmp[np.where(bnw>0)] = 1 
-	#tmp[np.where(bnw<=0)] = 0
-	tmp[np.where(bnw<=0)] = np.NaN
+	mask=[~(bnw>0)]
 	#print('mask roi building time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
-	return tmp # binned_x, binned_y
+	return mask # binned_x, binned_y
 
