@@ -155,7 +155,7 @@ class Session:
             # If the condition is not only the blank one, than I compute the same iteration as up
             if len(self.header['conditions_id']) > 1:
                 blks = [f for f in self.all_blks \
-                    if (int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+                    if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
                 print('Trials loading starts:')
                 time_course_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
                 self.session_blks = self.session_blks + blks
@@ -173,19 +173,19 @@ class Session:
 
         if strategy in ['mse', 'mae'] and (n_frames%self.header['chunks']==0):
             self.get_session()
-            tmp = overlap_strategy(self.time_course_signals, n_chunks=self.header['chunks'], loss = strategy)
+            tmp = overlap_strategy(self.time_course_signals[self.counter_blank:, :], n_chunks=self.header['chunks'], loss = strategy)
         
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
             print('Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
-            tmp = overlap_strategy(self.time_course_signals, n_chunks=1, loss = strategy)
+            tmp = overlap_strategy(self.time_course_signals[self.counter_blank:, :], n_chunks=1, loss = strategy)
 
         if strategy in ['roi', 'roi_signals', 'ROI']:
             self.get_session()
-            tmp = roi_strategy(self.time_course_signals, self.header['tolerance'], self.header['zero_frames'])
+            tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
         elif strategy in ['statistic', 'statistical', 'quartiles']:
             self.get_session()
-            tmp = statistical_strategy(self.time_course_signals)
+            tmp = statistical_strategy(self.time_course_signals[self.counter_blank:, :])
 
         if (self.auto_selected is None) or (len(self.header['conditions_id'])==1):
             self.auto_selected = tmp
@@ -261,7 +261,7 @@ class Session:
             self.counter_blank = size_df_f0[0] # Countercheck this value
             self.auto_selected = blank_autoselect
             self.session_blks = blks
-
+            print(f'Print of sessions_blks shape after blank: {np.shape(self.session_blks)}')
             blank_sig = np.mean(blank_sig, axis=0)
             blank_df = np.mean(blank_df_f0, axis=0)
             return blank_sig, blank_df
@@ -556,7 +556,7 @@ if __name__=="__main__":
     print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     utils.inputs_save(session, 'session_prova')
     print(np.shape(session.df_fz))
-    print(session.session_blks)
+    print(np.shape(session.session_blks))
     print(session.conditions)
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
