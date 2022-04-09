@@ -133,13 +133,9 @@ class BlkFile:
 
 		filesize = fid.read(8)
 		header = {}
-		# print filesize
-		#print(unpack('1l',filesize))
 		header['filesize'] = unpack(self.l,filesize)[0]
 
 		checksum_header = fid.read(2)
-		# print checksum_header
-		# print unpack('1H',checksum_header)
 		header['checksum_header'] = unpack(self.h,checksum_header)[0]
 
 		checksum_data= fid.read(2)
@@ -472,8 +468,6 @@ class BlkFile:
 
 		# Check on time dimension aka number of frames
 		t_size_header = int(round(float(filesize-headersize)/float(framesize),0))
-		#print(t_size_header)
-		#print(filesize, headersize, framesize)
 		if  t_size_header!=t_size:
 			f = t_size_header/t_size
 			print('Number of time frames does not correspond to file size by a factor ',f)
@@ -506,9 +500,9 @@ class BlkFile:
 			roi_mask = mask_roi(self.header['framewidth']//self.spatial_binning, self.header['frameheight']//self.spatial_binning)
 		#roi_sign = np.mean(np.mean(roi_mask*self.df_fz, axis=1), axis=1) # Masking of the whole signal and mean computing of each frame of the signal
 		roi_sign = list()
-		print(np.shape(self.df_fz))
+		print(f'Shape of blk.df_fz : {np.shape(self.df_fz)}')
 		for i in self.df_fz:
-			print(np.shape(i))
+		#	print(np.shape(i))
 			roi_sign.append(np.ma.masked_array(i, mask = roi_mask).mean())
 		return np.array(roi_sign)
 
