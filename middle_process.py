@@ -340,9 +340,9 @@ class Session:
                         ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     
             tmp = self.set_md_folder()
-            if not os.path.exists(os.path.join(tmp,'/time_course/')):
-                os.makedirs(os.path.join(tmp,'/time_course/'))
-            plt.savefig(os.path.join(tmp,'/time_course/', session_name+'_tc_0'+str(cd_i)+'.png'))
+            if not os.path.exists(os.path.join(tmp,'time_course')):
+                os.makedirs(os.path.join(tmp,'time_course'))
+            plt.savefig(os.path.join(tmp,'time_course', session_name+'_tc_0'+str(cd_i)+'.png'))
             #plt.savefig((path_session+'/'session_name +'/'+ session_name+'_roi_0'+str(cd_i)+'.png')
         return
 
