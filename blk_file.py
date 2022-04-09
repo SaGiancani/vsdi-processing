@@ -10,10 +10,7 @@ import itertools as it
 import io
 import numpy as np
 import process
-from scipy import signal
-import sys
 import struct
-import utils
 
 # Commit Try
 class BlkFile:
