@@ -376,12 +376,14 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
         if i == 0:
             print(header['original_height'])
             print(header['original_width'])
-            
+
             BLK = blk_file.BlkFile(
                 os.path.join(path_rawdata, blk_name),
                 header['spatial_bin'],
                 header['temporal_bin'],
                 header['zero_frames'],
+                header = None,
+                roi_mask = None,
                 dblnk = blnk_switch,
                 blank_signal= blank_s)
 
