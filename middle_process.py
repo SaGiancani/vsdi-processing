@@ -277,10 +277,13 @@ class Session:
             
             print(f'Print of blank autoselection: {blank_autoselect}')
             inds = np.where(blank_autoselect==1)
-            blank_sig = np.mean(blank_sig[inds, :], axis=0)
-            blank_df = np.mean(blank_df_f0[inds, :, :, :], axis=0)
-            print(f'Shape of blank_df_f0 {np.shape(blank_df_f0)}')
-            print(f'Shape of blank_df {np.shape(blank_df)}')
+            print(f'Indeces {inds}')
+            tmp = blank_sig[inds, :]
+            blank_sig = np.mean(tmp, axis=0)
+            tmp = blank_df_f0[inds, :, :, :]
+            blank_df = np.mean(tmp, axis=0)
+            print(f'blank_df_f0 {(blank_df_f0)}')
+            print(f'blank_df {(blank_df)}')
             return blank_sig, blank_df
         else:
             print('Something weird: one between auto_selected and conditions is an empty set')
