@@ -178,7 +178,6 @@ class Session:
     def autoselection(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
         strategy = self.header['strategy']
-        shapes = np.shape(self.df_fz)
         n_frames = self.header['n_frames']
 
         if strategy in ['mse', 'mae'] and (n_frames%self.header['chunks']==0):
@@ -201,6 +200,9 @@ class Session:
             self.auto_selected = tmp
         else :
             self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist())
+
+        if self.time_course_blank is None:
+            self.time_course_blank, self.df_f0_blank = self.get_blank_signal()
 
         print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
