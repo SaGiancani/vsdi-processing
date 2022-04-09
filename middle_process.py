@@ -236,9 +236,9 @@ class Session:
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             
             tmp = self.set_md_folder()
-            if not os.path.exists(os.path.join(tmp,'/activity_maps/')):
-                os.makedirs(os.path.join(tmp,'/activity_maps/'))
-            plt.savefig(os.path.join(tmp,'/activity_maps/', session_name+'_0'+str(cd_i)+'.png'))
+            if not os.path.exists(os.path.join(tmp,'activity_maps')):
+                os.makedirs(os.path.join(tmp,'activity_maps'))
+            plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_0'+str(cd_i)+'.png'))
         print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
     
