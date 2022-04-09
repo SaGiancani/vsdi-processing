@@ -128,7 +128,6 @@ class BlkFile:
 		    The head of the BLK file, containings meta-datas
 		"""
 		from struct import unpack
-		global_timer = datetime.datetime.now().replace(microsecond=0)
 
 		fid = io.open(self.filename,'rb')
 
@@ -393,7 +392,6 @@ class BlkFile:
 		header['actuallength'] = fid.tell() # report where EOF is in bytes
 
 		fid.close()
-		print('header building time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
 		return header
 
 	def get_data(self):
