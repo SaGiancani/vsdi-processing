@@ -362,7 +362,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 header['spatial_bin'],
                 header['temporal_bin'],
                 header['zero_frames'],
-                header['detrend'], 
                 dblnk = blnk_switch,
                 blank_signal= blank_s)
 
@@ -376,7 +375,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 header['spatial_bin'], 
                 header['temporal_bin'], 
                 header['zero_frames'],
-                header['detrend'], 
                 header = header_blk, 
                 roi_mask = roi_mask,
                 dblnk = blnk_switch,
