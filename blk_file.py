@@ -507,6 +507,7 @@ class BlkFile:
 		#roi_sign = np.mean(np.mean(roi_mask*self.df_fz, axis=1), axis=1) # Masking of the whole signal and mean computing of each frame of the signal
 		roi_sign = list()
 		for i in self.df_fz:
+			print(np.shape(self.df_fz))
 			roi_sign.append(np.ma.masked_array(i, mask = roi_mask).mean())
 		return np.array(roi_sign)
 
