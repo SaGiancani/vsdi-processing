@@ -264,25 +264,18 @@ class Session:
             print('Blank trials loading starts:')
             blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, False)
             size_df_f0 = np.shape(blank_df_f0)
-            
             blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
-
             self.df_fzs = blank_df_f0
             self.time_course_signals = blank_sig
             self.conditions = blank_conditions
             self.counter_blank = size_df_f0[0] # Countercheck this value
             self.auto_selected = blank_autoselect
             self.session_blks = blks
-            
-            print(f'Print of blank autoselection: {blank_autoselect}')
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()        
-            #print(f'Indeces {inds}')
             blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
             blank_df = np.mean(self.df_fzs[indeces_select, :, :, :], axis=0)
             print(np.shape(blank_df))
-            #print(f'blank_df_f0 {(blank_df_f0)}')
-            #print(f'blank_df {(blank_df)}')
             return blank_sig_, blank_df
         else:
             print('Something weird: one between auto_selected and conditions is an empty set')
@@ -570,9 +563,6 @@ if __name__=="__main__":
     session.autoselection()
     print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     utils.inputs_save(session, 'session_prova')
-    print(np.shape(session.df_fzs))
-    print(np.shape(session.session_blks))
-    print(f'This is the selected blks mask: {session.auto_selected}')
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
     #print(session.trials_name)
