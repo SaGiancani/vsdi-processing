@@ -35,13 +35,14 @@ class Session:
         self.cond_names = self.get_condition_name()
         self.blank_id = self.get_blank_id()
         
-        # If considered conditions are not explicitly indicated, then all the conditions are considered      
+        # If considered conditions are not explicitly indicated, then all the conditions are considered
+        # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
         if self.header['conditions_id'] is None:
             self.header['conditions_id'] = self.get_condition_ids()
         else:
             self.header['conditions_id'] = list(set(self.header['conditions_id']+[self.blank_id]))
-
-        self.session_blks = self.get_blks() # only the used blks for the selection
+        # only the used blks for the selection
+        self.session_blks = self.get_blks() 
 
         if self.header['mov_switch']:
             self.motion_indeces = None
@@ -186,9 +187,9 @@ class Session:
             self.get_session()
             tmp = statistical_strategy(self.time_course_signals)
 
-        if self.auto_selected is None:
+        if (self.auto_selected is None) or (len(self.header['conditions_id'])==1):
             self.auto_selected = tmp
-        else:
+        else :
             self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist())
 
         print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
@@ -230,7 +231,7 @@ class Session:
         return 
     
     def get_blank_signal(self):
-        
+        # If autoselection has been performed, then it enters here
         if (self.auto_selected is not None) and (self.conditions is not None):
             print('Already loaded blank blks are used.')
             indeces_select = np.where(self.auto_selected==1)
@@ -241,7 +242,7 @@ class Session:
             blank_sig = np.mean(self.time_course_signals[blank_cdi, :], axis=0)
             blank_df = np.mean(self.df_fz[blank_cdi, :], axis=0)
             return blank_sig, blank_df
-
+        # Otherwise 
         elif (self.auto_selected is None) and (self.conditions is None):
             print('Loaded blks were not found: blank blks will be loaded.')
             # All the blank blks
