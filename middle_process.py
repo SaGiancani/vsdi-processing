@@ -46,7 +46,7 @@ class Session:
         if self.header['mov_switch']:
             self.motion_indeces = None
         
-        self.roi_signals = None
+        self.time_course_signals = None
         self.trials_name = None 
         self.df_fz = None
         self.auto_selected = None
@@ -145,20 +145,20 @@ class Session:
     def get_session(self):
         if self.counter_blank == 0:
             print('Trials loading starts:')
-            roi_signals, delta_f, conditions= signal_extraction(self.header, self.session_blks, self.df_f0_blank, False)
+            time_course_signals, delta_f, conditions= signal_extraction(self.header, self.session_blks, self.df_f0_blank, False)
             self.conditions = conditions
             self.df_fz = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
-            self.roi_signals = roi_signals
+            self.time_course_signals = time_course_signals
             #self.motion_indeces = motion_indeces
         else:
             blks = [f for f in self.all_blks \
                 if (int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
             print('Trials loading starts:')
-            roi_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
+            time_course_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
             self.session_blks = self.session_blks + blks
             self.conditions = self.conditions + conditions                        
             self.df_fz = np.append(self.df_fz, delta_f, axis=0)
-            self.roi_signals = np.append(self.roi_signals, roi_signals, axis=0)
+            self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
             #self.motion_indeces = self.motion_indeces + motion_indeces
         return
 
@@ -170,19 +170,19 @@ class Session:
 
         if strategy in ['mse', 'mae'] and (n_frames%self.header['chunks']==0):
             self.get_session()
-            tmp = overlap_strategy(self.roi_signals, n_chunks=self.header['chunks'], loss = strategy)
+            tmp = overlap_strategy(self.time_course_signals, n_chunks=self.header['chunks'], loss = strategy)
         
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
             print('Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
-            tmp = overlap_strategy(self.roi_signals, n_chunks=1, loss = strategy)
+            tmp = overlap_strategy(self.time_course_signals, n_chunks=1, loss = strategy)
 
         if strategy in ['roi', 'roi_signals', 'ROI']:
             self.get_session()
-            tmp = roi_strategy(self.roi_signals, self.header['tolerance'], self.header['zero_frames'])
+            tmp = roi_strategy(self.time_course_signals, self.header['tolerance'], self.header['zero_frames'])
 
         elif strategy in ['statistic', 'statistical', 'quartiles']:
             self.get_session()
-            tmp = statistical_strategy(self.roi_signals)
+            tmp = statistical_strategy(self.time_course_signals)
 
         if self.auto_selected is None:
             self.auto_selected = tmp
@@ -236,7 +236,7 @@ class Session:
             blank_cdi = np.where(np.array(self.conditions) == self.blank_id)
             blank_cdi = blank_cdi[0].tolist()
             blank_cdi = list(set(indeces_select).intersection(set(blank_cdi)))
-            blank_sig = np.mean(self.roi_signals[blank_cdi, :], axis=0)
+            blank_sig = np.mean(self.time_course_signals[blank_cdi, :], axis=0)
             blank_df = np.mean(self.df_fz[blank_cdi, :], axis=0)
             return blank_sig, blank_df
 
@@ -253,7 +253,7 @@ class Session:
             blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
 
             self.df_fz = blank_df_f0
-            self.roi_signals = blank_sig
+            self.time_course_signals = blank_sig
             self.conditions = blank_conditions
             self.counter_blank = size_df_f0[0] # Countercheck this value
             self.auto_selected = blank_autoselect
@@ -264,9 +264,10 @@ class Session:
             return blank_sig, blank_df
         else:
             print('Something weird: one between auto_selected and conditions is an empty set')
+            return
 
     def roi_plots(self):
-        sig = self.roi_signals
+        sig = self.time_course_signals
         indeces_select = np.where(self.auto_selected==1)
         indeces_select = indeces_select[0].tolist()
         
@@ -362,7 +363,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 header['temporal_bin'],
                 header['zero_frames'],
                 header['detrend'], 
-                motion_switch = header['mov_switch'],
                 dblnk = blnk_switch,
                 blank_signal= blank_s)
 
@@ -378,14 +378,13 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 header['zero_frames'],
                 header['detrend'], 
                 header = header_blk, 
-                motion_switch = header['mov_switch'], 
                 roi_mask = roi_mask,
                 dblnk = blnk_switch,
                 blank_signal= blank_s)
         # if header['mov_switch']:
         #     motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
         conditions.append(BLK.condition)
-        sig[i, :] = BLK.roi_sign
+        sig[i, :] = BLK.time_course_sign
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
         delta_f[i, :, :, :] = BLK.df_fz
