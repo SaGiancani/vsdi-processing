@@ -371,9 +371,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
         start_time = datetime.datetime.now().replace(microsecond=0)
         # If first BLK file, than the header is stored
         if i == 0:
-            print(header['original_height'])
-            print(header['original_width'])
-
             BLK = blk_file.BlkFile(
                 os.path.join(path_rawdata, blk_name),
                 header['spatial_bin'],
@@ -562,9 +559,9 @@ if __name__=="__main__":
     session = Session(**vars(args))
     session.autoselection()
     print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-    utils.inputs_save(session, 'session_prova')
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
+    utils.inputs_save(session, 'session_prova')
     #print(session.trials_name)
 
 # 38, 18, 38
