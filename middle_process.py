@@ -1,4 +1,4 @@
-import argparse, blk_file, datetime
+import argparse, blk_file, datetime, process
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -376,32 +376,27 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 header['spatial_bin'],
                 header['temporal_bin'],
                 header['zero_frames'],
-                header = None,
-                roi_mask = None,
-                dblnk = blnk_switch,
-                blank_signal= blank_s)
+                header = None)
 
             header_blk = BLK.header
             delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
             sig = np.zeros((len(blks), header['n_frames']))
-            roi_mask = blk_file.mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
+            roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
         else:
             BLK = blk_file.BlkFile(
                 os.path.join(path_rawdata, blk_name), 
                 header['spatial_bin'], 
                 header['temporal_bin'], 
                 header['zero_frames'],
-                header = header_blk, 
-                roi_mask = roi_mask,
-                dblnk = blnk_switch,
-                blank_signal= blank_s)
+                header = header_blk)
         # if header['mov_switch']:
         #     motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
         conditions.append(BLK.condition)
-        sig[i, :] = BLK.time_course_sign
+        #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
+        delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
+        sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
-        delta_f[i, :, :, :] = BLK.df_fz
         print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     return sig, delta_f, conditions#, motion_indeces
 

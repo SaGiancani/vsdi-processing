@@ -51,7 +51,7 @@ class BlkFile:
 	    Reads the data contained in the BLK file
 	"""
 
-	def __init__(self, filename, spatial_binning, temporal_binning, zero_frames, header = None, roi_mask = None, dblnk = True, blank_signal = None, motion_switch = False):
+	def __init__(self, filename, spatial_binning, temporal_binning, zero_frames, header = None, motion_switch = False):
 		"""Initializes attributes
 		Default values for:
 		* p : '1p'
@@ -80,17 +80,17 @@ class BlkFile:
 		else:
 			self.header = header
 		self.data=self.get_data() # Raw vsdi data
-		self.image=self.get_image() # Images for vsdi
+		self.signal=self.get_signal() # Images for vsdi
 		#self.image=self.get_image(detrend) # Images for vsdi
 		self.spatial_binning = spatial_binning # Binning value for space (both x and y)
 		self.temporal_binning = temporal_binning # Binning value for time
-		self.binned_image = self.bin_image()#bin_image(interpolation_mode = cv.INTER_CUBIC) #default is INTER_LINEAR	
+		self.binned_signal = self.bin_signal()#bin_image(interpolation_mode = cv.INTER_CUBIC) #default is INTER_LINEAR	
 		self.condition = int(self.filename.split('vsd_C')[1][0:2]) #Adding an extracting string directly from filename
 		self.zero_frames = zero_frames # Number of starting frames considered zero
 		if motion_switch:
 			self.motion_ind, self.motion_ind_max = self.motion_index() # Motion index: float
-		self.df_fz = process.deltaf_up_fzero(self.binned_image, self.zero_frames, deblank = dblnk, blank_sign = blank_signal)
-		self.time_course_sign = self.get_tc_signal(roi_mask = roi_mask) # Instantiation of dtrnd_roi_sign. numpy.array 1D
+		#self.df_fz = process.deltaf_up_fzero(self.binned_image, self.zero_frames, deblank = dblnk, blank_sign = blank_signal)
+		#self.time_course_sign = self.get_tc_signal(roi_mask = roi_mask) # Instantiation of dtrnd_roi_sign. numpy.array 1D
 		#self.roi_sign = self.get_roi_signal(roi_mask = roi_mask) # Instantiation of dtrnd_roi_sign. numpy.array 1D
 		#self.select_flag = False # Boolean flag for autoselection of trial/blk
 
@@ -444,7 +444,7 @@ class BlkFile:
 		f = t_size_header/t_size
 		return f
 
-	def get_image(self):
+	def get_signal(self):
 		"""Transformation of data linear bitstream to a regular image 2D + time data.
 		It substitues old methods get_3d_image and get_4d_image.
 		Parameters
@@ -482,30 +482,8 @@ class BlkFile:
 		#print('vsdi-signal extraction time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
 		return a
         
-	def get_tc_signal(self, roi_mask = None):#, hand_made=False):
-		"""
-		Computes the signal in ROI. 
-		It recalls initially the mask_roi method, than it computes demeaning of the signal.
-		Parameter
-		-----------
-		 self Object
-		 bnnd_img: numpy.array (70, width of binning, height of binning), the binned signal
-		Returns
-		-----------
-		 self.roi_sign: numpy.array (70,1) the signal inside the ROI, represented as a 1D array
-		"""
-		if roi_mask is None:
-			# This could lead to some issue: it works because df_fz is ALWAYS binned, otherwise it wouldnt work.
-			# Modify with shape of df_fz in place of (width and height)//spatial_bin
-			roi_mask = mask_roi(self.header['framewidth']//self.spatial_binning, self.header['frameheight']//self.spatial_binning)
-		#roi_sign = np.mean(np.mean(roi_mask*self.df_fz, axis=1), axis=1) # Masking of the whole signal and mean computing of each frame of the signal
-		roi_sign = list()
-		for i in self.df_fz:
-		#	print(np.shape(i))
-			roi_sign.append(np.ma.masked_array(i, mask = roi_mask).mean())
-		return np.array(roi_sign)
-
-	def bin_image(self):
+		
+	def bin_signal(self):
 		"""
 		Binning image method. It partially reproduces the old get_3d_image and get_4d_image methods
 		-for the temporal binning side- but introduce a resizing with interpolation for spatial binning.
@@ -574,7 +552,7 @@ class BlkFile:
 		#global_timer = datetime.datetime.now().replace(microsecond=0)
 		#bnnd_img = self.bin_image()
 		#bnnd_img = self.image #used for debugging 
-		rshpd_img = np.transpose(np.reshape(self.binned_image, (self.binned_image.shape[0], self.binned_image.shape[1]*self.binned_image.shape[2])))# shape(15k,70)
+		rshpd_img = np.transpose(np.reshape(self.binned_signal, (self.binned_signal.shape[0], self.binned_signal.shape[1]*self.binned_signal.shape[2])))# shape(15k,70)
 		tmp = (rshpd_img-np.mean(rshpd_img, axis = 0))/(np.mean(rshpd_img, axis = 0))
 		tmp_ = np.nan_to_num((tmp - tmp[:, 0].reshape(-1, 1 ))/tmp[:, 0].reshape(-1, 1))
 		tmp_[:, 0] = tmp_[:, 1]
@@ -585,7 +563,7 @@ class BlkFile:
 		#print('motion index computing time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
 		return motion_ind, motion_ind_max
 
-def mask_roi(new_width, new_height):
+def circular_mask_roi(new_width, new_height):
 	"""
 	Creation of a circle of interest (ROI) mask. It uses the x bin and y bin of the BLK object.
 	Parameter
