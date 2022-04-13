@@ -15,14 +15,39 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
 		df_fz : np.array, with shape nframes, width, height
     '''
     mean_frames_zero = np.mean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
-    if deblank:
-        df_fz= ((vsdi_sign/mean_frames_zero) -1 ) - blank_sign
-    else:
+    # The case for precalculating the blank signal
+    if deblank and (blank_sign is None):
+        df_fz= (vsdi_sign/mean_frames_zero)
+    # The case for calculating the signal deblanked
+    elif deblank and (blank_sign is not None):
+        df_fz = ((vsdi_sign/mean_frames_zero)/blank_sign) -1
+    # The case without deblank
+    elif not deblank:
         df_fz = (vsdi_sign/mean_frames_zero) - 1 
     # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
     #df_fz = df_fz - df_fz[0, :, :] 
     df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
     return df_fz
+
+
+def time_course_signal(df_fz, roi_mask):#, hand_made=False):
+    """
+    Computes the signal in ROI. 
+    It recalls initially the mask_roi method, than it computes demeaning of the signal.
+    Parameter
+    -----------
+        self Object
+        bnnd_img: numpy.array (70, width of binning, height of binning), the binned signal
+    Returns
+    -----------
+        self.roi_sign: numpy.array (70,1) the signal inside the ROI, represented as a 1D array
+    """
+    roi_sign = list()
+    for i in df_fz:
+    #	print(np.shape(i))
+        roi_sign.append(np.ma.masked_array(i, mask = roi_mask).mean())
+    return np.array(roi_sign)
+
 
 def traject_designing():
     return
