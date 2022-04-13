@@ -261,7 +261,7 @@ class Session:
             if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
             # Blank signal extraction
             print('Blank trials loading starts:')
-            blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, False)
+            blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, True)
             size_df_f0 = np.shape(blank_df_f0)
             blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
             self.df_fzs = blank_df_f0
