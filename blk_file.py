@@ -482,7 +482,7 @@ class BlkFile:
 		#print('vsdi-signal extraction time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
 		return a
         
-		
+
 	def bin_signal(self):
 		"""
 		Binning image method. It partially reproduces the old get_3d_image and get_4d_image methods
@@ -508,7 +508,7 @@ class BlkFile:
 		x_size = self.header['framewidth']
 		y_size = self.header['frameheight']
 		t_size = self.header['nframesperstim']
-		b = self.image
+		b = self.signal
 		if self.temporal_binning > 1:
 			t_size_binned = int( np.ceil( float(t_size) / self.temporal_binning ) )
 			# print 't_size_binned if: ', t_size_binned
