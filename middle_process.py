@@ -39,8 +39,7 @@ class Session:
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks))]), 
                             self.header['spatial_bin'], 
                             self.header['temporal_bin'],
-                            self.header['zero_frames'],
-                            dblnk = False)
+                            self.header['zero_frames'])
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
