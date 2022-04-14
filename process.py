@@ -8,7 +8,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
 		vsdi_sign : np.array, with shape nframes, width, height
         n_frames_zero: int, the number of frames taken as zero, aka prestimulus
         demean: bool, switch for demeaning the signal: F-mean(F[0:n_frames_zero])/mean(F[0:n_frames_zero]) if True
-                F/mean(F[0:n_frames_zero]) if False
+                F/mean(F[0:n_frames_zero]) if False 
         outlier_tresh: int, 1000 by default, over this -absolute- threshold the pixel-value is put to 0  
 		Returns
 		-------
