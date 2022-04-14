@@ -155,7 +155,7 @@ class Session:
     def get_session(self):
         if self.counter_blank == 0:
             print('Trials loading starts:')
-            time_course_signals, delta_f, conditions= signal_extraction(self.header, self.session_blks, self.df_f0_blank, False)
+            time_course_signals, delta_f, conditions= signal_extraction(self.header, self.session_blks, self.df_f0_blank, self.header['deblank_switch'])
             self.conditions = conditions
             self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
             self.time_course_signals = time_course_signals
@@ -261,7 +261,7 @@ class Session:
             if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
             # Blank signal extraction
             print('Blank trials loading starts:')
-            blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, True)
+            blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
             size_df_f0 = np.shape(blank_df_f0)
             blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
             self.df_fzs = blank_df_f0
