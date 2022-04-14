@@ -35,6 +35,8 @@ class Session:
         self.cond_names = self.get_condition_name()
         self.blank_id = self.get_blank_id()
 
+        # This can be automatized, with zero_frames, extracting parameters from BaseReport
+        # Avoiding to load a BLK file
         # A blk loaded for useful hyperparameters
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks))]), 
                             self.header['spatial_bin'], 
@@ -43,7 +45,6 @@ class Session:
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
-        print( 'Original width '+ str(self.header['original_width']) +'& original height '+ str(self.header['original_height']))
         
         # If considered conditions are not explicitly indicated, then all the conditions are considered
         # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
@@ -67,8 +68,8 @@ class Session:
         if self.header['deblank_switch']:
             # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
             self.time_course_blank, self.df_f0_blank = self.get_blank_signal()
-            print(f'Time Course blank shape: {np.shape(self.time_course_blank)}')
-            print(f'Delta F/F0 blank shape: {np.shape(self.df_f0_blank)}')
+            #print(f'Time Course blank shape: {np.shape(self.time_course_blank)}')
+            #print(f'Delta F/F0 blank shape: {np.shape(self.df_f0_blank)}')
         else:
             self.time_course_blank, self.df_f0_blank = None, None
 
@@ -153,55 +154,55 @@ class Session:
             return tmp
 
     def get_session(self):
+        # If blank signal already loaded -or not deblank- come in
         if self.counter_blank == 0:
             print('Trials loading starts:')
-            time_course_signals, delta_f, conditions= signal_extraction(self.header, self.session_blks, self.df_f0_blank, self.header['deblank_switch'])
+            time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.df_f0_blank, self.header['deblank_switch'])
             self.conditions = conditions
             self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
             self.time_course_signals = time_course_signals
             #self.motion_indeces = motion_indeces
+        # Otherwise, keep loading other condition a part the blank 
         else:
             # If the condition is not only the blank one, than I compute the same iteration as up
             if len(self.header['conditions_id']) > 1:
                 blks = [f for f in self.all_blks \
                     if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
                 print('Trials loading starts:')
-                time_course_signals, delta_f, conditions= signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
+                time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
                 self.session_blks = self.session_blks + blks
                 self.conditions = self.conditions + conditions                        
                 self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
                 self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
                 #self.motion_indeces = self.motion_indeces + motion_indeces
+            else:
+                print('Warning: Something weird in get_session')
         return
 
     def autoselection(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
         strategy = self.header['strategy']
         n_frames = self.header['n_frames']
+        
+        self.get_session()
 
         if strategy in ['mse', 'mae'] and (n_frames%self.header['chunks']==0):
-            self.get_session()
             tmp = overlap_strategy(self.time_course_signals[self.counter_blank:, :], n_chunks=self.header['chunks'], loss = strategy)
         
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
             print('Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
             tmp = overlap_strategy(self.time_course_signals[self.counter_blank:, :], n_chunks=1, loss = strategy)
 
-        if strategy in ['roi', 'roi_signals', 'ROI']:
-            self.get_session()
+        elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
         elif strategy in ['statistic', 'statistical', 'quartiles']:
-            self.get_session()
             tmp = statistical_strategy(self.time_course_signals[self.counter_blank:, :])
 
         if (self.auto_selected is None) or (len(self.header['conditions_id'])==1):
             self.auto_selected = tmp
         else :
             self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist())
-
-        if self.time_course_blank is None:
-            self.time_course_blank, self.df_f0_blank = self.get_blank_signal()
 
         print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
@@ -241,44 +242,36 @@ class Session:
         print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
     
+    def get_averaged_signal(self, id):
+        indeces_select = np.where(self.auto_selected==1)
+        indeces_select = indeces_select[0].tolist()        
+        cdi = np.where(np.array(self.conditions) == id)
+        cdi = cdi[0].tolist()
+        cdi = list(set(indeces_select).intersection(set(cdi)))
+        sig = np.mean(self.time_course_signals[cdi, :], axis=0)
+        df = np.mean(self.df_fz[cdi, :], axis=0)
+        return sig, df
+
     def get_blank_signal(self):
-        # If autoselection has been performed, then it enters here
-        if (self.auto_selected is not None) and (self.conditions is not None):
-            print('Already loaded blank blks are used.')
-            indeces_select = np.where(self.auto_selected==1)
-            indeces_select = indeces_select[0].tolist()        
-            blank_cdi = np.where(np.array(self.conditions) == self.blank_id)
-            blank_cdi = blank_cdi[0].tolist()
-            blank_cdi = list(set(indeces_select).intersection(set(blank_cdi)))
-            blank_sig = np.mean(self.time_course_signals[blank_cdi, :], axis=0)
-            blank_df = np.mean(self.df_fz[blank_cdi, :], axis=0)
-            return blank_sig, blank_df
-        # Otherwise 
-        elif (self.auto_selected is None) and (self.conditions is None):
-            print('Loaded blks were not found: blank blks will be loaded.')
-            # All the blank blks
-            blks = [f for f in self.all_blks \
-            if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
-            # Blank signal extraction
-            print('Blank trials loading starts:')
-            blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
-            size_df_f0 = np.shape(blank_df_f0)
-            blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
-            self.df_fzs = blank_df_f0
-            self.time_course_signals = blank_sig
-            self.conditions = blank_conditions
-            self.counter_blank = size_df_f0[0] # Countercheck this value
-            self.auto_selected = blank_autoselect
-            self.session_blks = blks
-            indeces_select = np.where(self.auto_selected==1)
-            indeces_select = indeces_select[0].tolist()        
-            blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
-            blank_df = np.mean(self.df_fzs[indeces_select, :, :, :], axis=0)
-            print(np.shape(blank_df))
-            return blank_sig_, blank_df
-        else:
-            print('Something weird: one between auto_selected and conditions is an empty set')
-            return
+        # All the blank blks
+        blks = [f for f in self.all_blks \
+        if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
+        # Blank signal extraction
+        print('Blank trials loading starts:')
+        blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
+        size_df_f0 = np.shape(blank_df_f0)
+        blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
+        self.df_fzs = blank_df_f0
+        self.time_course_signals = blank_sig
+        self.conditions = blank_conditions
+        self.counter_blank = size_df_f0[0] # Countercheck this value
+        self.auto_selected = blank_autoselect
+        self.session_blks = blks
+        indeces_select = np.where(self.auto_selected==1)
+        indeces_select = indeces_select[0].tolist()        
+        blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
+        blank_df = np.mean(self.df_fzs[indeces_select, :, :, :], axis=0)
+        return blank_sig_, blank_df
 
     def roi_plots(self):
         sig = self.time_course_signals
@@ -366,10 +359,10 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
+    print(f'The blank_signal exist: {blank_s is not None}')
+    print(f'The blank switch is: {blnk_switch}')
     for i, blk_name in enumerate(blks):
         start_time = datetime.datetime.now().replace(microsecond=0)
-        print(f'The blank_signal exist: {blank_s is not None}')
-        print(f'The blank switch is: {blnk_switch}')
         # If first BLK file, than the header is stored
         if i == 0:
             BLK = blk_file.BlkFile(
