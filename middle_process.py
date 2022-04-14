@@ -263,8 +263,8 @@ class Session:
         blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
         # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
         # But the one for normalization is kept without demean
-        self.df_fzs = blank_df_f0 - 1
-        self.time_course_signals = blank_sig - 1
+        self.df_fzs = blank_df_f0 
+        self.time_course_signals = blank_sig 
         self.conditions = blank_conditions
         self.counter_blank = size_df_f0[0] # Countercheck this value
         self.auto_selected = blank_autoselect
@@ -274,7 +274,7 @@ class Session:
         blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
         print(blank_sig_)
         blank_df = np.mean(blank_df_f0[indeces_select, :, :, :], axis=0)
-        return blank_sig_ - 1 , blank_df
+        return blank_sig_  , blank_df
 
     def roi_plots(self):
         sig = self.time_course_signals
