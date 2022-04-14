@@ -67,11 +67,11 @@ class Session:
         
         if self.header['deblank_switch']:
             # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
-            self.time_course_blank, self.df_f0_blank = self.get_blank_signal()
+            self.time_course_blank, self.f_f0_blank = self.get_blank_signal()
             #print(f'Time Course blank shape: {np.shape(self.time_course_blank)}')
             #print(f'Delta F/F0 blank shape: {np.shape(self.df_f0_blank)}')
         else:
-            self.time_course_blank, self.df_f0_blank = None, None
+            self.time_course_blank, self.f_f0_blank = None, None
 
 
 
@@ -157,7 +157,7 @@ class Session:
         # If blank signal already loaded -or not deblank- come in
         if self.counter_blank == 0:
             print('Trials loading starts:')
-            time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.df_f0_blank, self.header['deblank_switch'])
+            time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.f_f0_blank, self.header['deblank_switch'])
             self.conditions = conditions
             self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
             self.time_course_signals = time_course_signals
@@ -169,7 +169,7 @@ class Session:
                 blks = [f for f in self.all_blks \
                     if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
                 print('Trials loading starts:')
-                time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.df_f0_blank, self.header['deblank_switch'])
+                time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
                 self.session_blks = self.session_blks + blks
                 self.conditions = self.conditions + conditions                        
                 self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
@@ -272,7 +272,8 @@ class Session:
         indeces_select = np.where(self.auto_selected==1)
         indeces_select = indeces_select[0].tolist()        
         blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
-        print(blank_sig_)
+        # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
+        # employed for normalize the signal 
         blank_df = np.mean(blank_df_f0[indeces_select, :, :, :], axis=0)
         return blank_sig_  , blank_df
 
