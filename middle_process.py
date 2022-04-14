@@ -388,7 +388,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
         conditions.append(BLK.condition)
         #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
         delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
-        print(blank_s[ 40, 100:105, 100:105])
+        if blank_s is not None:
+            print(blank_s[ 40, 100:105, 100:105])
         sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
