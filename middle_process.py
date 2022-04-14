@@ -270,6 +270,7 @@ class Session:
         indeces_select = np.where(self.auto_selected==1)
         indeces_select = indeces_select[0].tolist()        
         blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
+        print(blank_sig_)
         blank_df = np.mean(self.df_fzs[indeces_select, :, :, :], axis=0)
         return blank_sig_, blank_df
 
@@ -388,8 +389,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
         conditions.append(BLK.condition)
         #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
         delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
-        if blank_s is not None:
-            print(blank_s[ 40, 100:105, 100:105])
         sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
@@ -549,6 +548,7 @@ if __name__=="__main__":
     start_time = datetime.datetime.now().replace(microsecond=0)
     session = Session(**vars(args))
     session.autoselection()
+    print(session.time_course_blank)
     print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
