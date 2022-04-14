@@ -38,7 +38,7 @@ class Session:
         # This can be automatized, with zero_frames, extracting parameters from BaseReport
         # Avoiding to load a BLK file
         # A blk loaded for useful hyperparameters
-        blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks))]), 
+        blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
                             self.header['spatial_bin'], 
                             self.header['temporal_bin'],
                             self.header['zero_frames'])
