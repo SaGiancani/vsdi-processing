@@ -263,8 +263,8 @@ class Session:
         blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
         # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
         # But the one for normalization is kept without demean
-        self.df_fzs = blank_df_f0 
-        self.time_course_signals = blank_sig 
+        self.df_fzs = blank_df_f0 - 1
+        self.time_course_signals = blank_sig - 1
         self.conditions = blank_conditions
         self.counter_blank = size_df_f0[0] # Countercheck this value
         self.auto_selected = blank_autoselect
