@@ -261,8 +261,10 @@ class Session:
         blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
         size_df_f0 = np.shape(blank_df_f0)
         blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
-        self.df_fzs = blank_df_f0
-        self.time_course_signals = blank_sig
+        # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
+        # But the one for normalization is kept without demean
+        self.df_fzs = blank_df_f0 - 1
+        self.time_course_signals = blank_sig - 1
         self.conditions = blank_conditions
         self.counter_blank = size_df_f0[0] # Countercheck this value
         self.auto_selected = blank_autoselect
@@ -271,8 +273,8 @@ class Session:
         indeces_select = indeces_select[0].tolist()        
         blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
         print(blank_sig_)
-        blank_df = np.mean(self.df_fzs[indeces_select, :, :, :], axis=0)
-        return blank_sig_, blank_df
+        blank_df = np.mean(blank_df_f0[indeces_select, :, :, :], axis=0)
+        return blank_sig_ - 1 , blank_df
 
     def roi_plots(self):
         sig = self.time_course_signals
@@ -281,7 +283,7 @@ class Session:
         
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         conditions = np.unique(self.conditions)
-        blank_sign = self.time_course_blank - 1
+        blank_sign = self.time_course_blank
 
         for cd_i in conditions:
             indeces_cdi = np.where(np.array(self.conditions) == cd_i)
