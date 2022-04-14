@@ -2,7 +2,7 @@ import numpy as np
 from scipy.ndimage.filters import uniform_filter1d
 from scipy import optimize
 
-def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
+def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000, eps = 0.0000000001):
     '''F/F0 computation with -or without- demean of n_frames_zero and killing of outlier 
 		----------
 		vsdi_sign : np.array, with shape nframes, width, height
@@ -20,7 +20,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
         df_fz= (vsdi_sign/mean_frames_zero) - 1 
     # The case for calculating the signal deblanked
     elif deblank and (blank_sign is not None):
-        df_fz = ((vsdi_sign/mean_frames_zero)-1)/blank_sign
+        df_fz = ((vsdi_sign/mean_frames_zero)-1)/(blank_sign + eps)
     # The case without deblank
     #elif (not deblank):
     #    df_fz = (vsdi_sign/mean_frames_zero) 
