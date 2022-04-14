@@ -368,6 +368,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
     for i, blk_name in enumerate(blks):
         start_time = datetime.datetime.now().replace(microsecond=0)
+        print(f'The blank_signal exist: {blank_s is not None}')
+        print(f'The blank switch is: {blnk_switch}')
         # If first BLK file, than the header is stored
         if i == 0:
             BLK = blk_file.BlkFile(
