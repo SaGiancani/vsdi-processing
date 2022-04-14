@@ -20,7 +20,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
         df_fz= (vsdi_sign/mean_frames_zero) 
     # The case for calculating the signal deblanked
     elif deblank and (blank_sign is not None):
-        df_fz = (vsdi_sign/mean_frames_zero)/blank_sign
+        df_fz = ((vsdi_sign/mean_frames_zero)/(blank_sign)) - 1
     # The case without deblank
     elif (not deblank):
         df_fz = (vsdi_sign/mean_frames_zero) -1
