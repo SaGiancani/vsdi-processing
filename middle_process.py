@@ -410,7 +410,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     size = np.shape(matrix)
     tmp = np.zeros(size)
     for i, roi in enumerate(matrix):
-        tmp[i, :] = signal.detrend(roi)
+        tmp[i, :] = signal.detrend(np.nan_to_num(roi))
     # Blank subtraction on tmp -no demean if blank subt-
     # Mean ROI signal over trials -70, shape output-
     # The 0 shape is the number of trials
