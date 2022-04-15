@@ -417,7 +417,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     autoselect = np.sum(selected_frames_mask, axis=1)<((size[1]-zero_frames)/2)
     return autoselect
 
-def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25):
+def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25, save_switch = True):
     size = np.shape(matrix)
     if  size[1] % n_chunks == 0:
         matrix_ = matrix.reshape(size[0], n_chunks, -1)
@@ -441,6 +441,8 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25):
         m = np.sum(tmp_m_, axis=1)
         print(f'Chunks aggregated values shape: {m.shape}')
         print(f'Chunks aggregated values: {m}')
+        if save_switch:
+            np.save('chunk_aggregation_values.npy', m)
         t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
         util = list(t_whol[0])
         set_a = list(set(util))
