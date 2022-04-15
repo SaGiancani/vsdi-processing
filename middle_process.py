@@ -439,6 +439,8 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25):
             tmp_m_[m, :, :] = tmp_m
             
         m = np.sum(tmp_m_, axis=1)
+        print(f'Chunks aggregated values shape: {m.shape}')
+        print(f'Chunks aggregated values: {m}')
         t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
         util = list(t_whol[0])
         set_a = list(set(util))
