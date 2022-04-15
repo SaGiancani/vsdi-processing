@@ -553,7 +553,6 @@ if __name__=="__main__":
     start_time = datetime.datetime.now().replace(microsecond=0)
     session = Session(**vars(args))
     session.autoselection()
-    print(session.time_course_blank)
     print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
