@@ -177,6 +177,8 @@ class Session:
                 self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
                 self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
                 #self.motion_indeces = self.motion_indeces + motion_indeces
+                print(self.time_course_signals.shape)
+                print(self.df_fzs.shape)
             else:
                 print('Warning: Something weird in get_session')
         return
