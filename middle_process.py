@@ -443,6 +443,7 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25, save_sw
         print(f'Chunks aggregated values: {m}')
         if save_switch:
             np.save('chunk_aggregation_values.npy', m)
+            np.save('time_courses.npy', matrix)
         t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
         util = list(t_whol[0])
         set_a = list(set(util))
