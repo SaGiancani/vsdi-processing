@@ -183,7 +183,7 @@ class Session:
                 print('Warning: Something weird in get_session')
         return
 
-    def autoselection(self):
+    def autoselection(self, save_switch = True):
         start_time = datetime.datetime.now().replace(microsecond=0)
         strategy = self.header['strategy']
         n_frames = self.header['n_frames']
@@ -207,7 +207,8 @@ class Session:
             self.auto_selected = tmp
         else :
             self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist())
-
+        if save_switch:
+            np.save('time_courses.npy', self.time_course_signals)
         print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
         self.trials_name = session_blks[self.auto_selected]
@@ -447,7 +448,6 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25, save_sw
         print(f'Chunks aggregated values: {m}')
         if save_switch:
             np.save('chunk_aggregation_values.npy', m)
-            np.save('time_courses.npy', matrix)
         t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
         util = list(t_whol[0])
         set_a = list(set(util))
