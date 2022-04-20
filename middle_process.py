@@ -560,6 +560,7 @@ if __name__=="__main__":
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
     utils.inputs_save(session, 'session_prova')
+    utils.inputs_save(session.session_blks, 'blk_names')
     #print(session.trials_name)
 
 # 38, 18, 38
