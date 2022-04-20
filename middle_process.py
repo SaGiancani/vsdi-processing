@@ -169,6 +169,8 @@ class Session:
                 blks = [f for f in self.all_blks \
                     if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
                 print('Trials loading starts:')
+                print(self.time_course_signals.shape)
+                print(self.df_fzs.shape)
                 time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
                 self.session_blks = self.session_blks + blks
                 self.conditions = self.conditions + conditions                        
