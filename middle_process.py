@@ -202,7 +202,7 @@ class Session:
                 tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
-            print('Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
+            print('Warning: Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
@@ -211,7 +211,7 @@ class Session:
             for i, c in enumerate(mod_conds):
                 indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 tc_cond = self.time_course_signals[indeces, :]
-                t = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
+                t = overlap_strategy(tc_cond, n_chunks=1, loss = strategy)
                 tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
         elif strategy in ['roi', 'roi_signals', 'ROI']:
@@ -283,7 +283,8 @@ class Session:
         print('Blank trials loading starts:')
         blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
         size_df_f0 = np.shape(blank_df_f0)
-        blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae', up=85, bottom=15)
+        # Minimum chunks == 2: otherwise an outlier could mess the results up
+        blank_autoselect = overlap_strategy(blank_sig, n_chunks=2, loss = 'mae')
         # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
         # But the one for normalization is kept without demean
         self.df_fzs = blank_df_f0 - 1
@@ -440,7 +441,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     autoselect = np.sum(selected_frames_mask, axis=1)<((size[1]-zero_frames)/2)
     return autoselect
 
-def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25, save_switch = True):
+def overlap_strategy(matrix, n_chunks=1, loss = 'mae', save_switch = True):
     size = np.shape(matrix)
     if  size[1] % n_chunks == 0:
         matrix_ = matrix.reshape(size[0], n_chunks, -1)
