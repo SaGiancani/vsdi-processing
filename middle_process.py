@@ -477,6 +477,7 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25, save_sw
         # For combatibility with other methods, conversion in mask
         mask_array = np.zeros(size[0], dtype=int)
         mask_array[autoselect] = 1
+        print(mask_array)
         return mask_array
     else:
         # This check has to be done before running the script
