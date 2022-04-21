@@ -284,7 +284,7 @@ class Session:
         blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
         size_df_f0 = np.shape(blank_df_f0)
         # Minimum chunks == 2: otherwise an outlier could mess the results up
-        blank_autoselect = overlap_strategy(blank_sig, n_chunks=2, loss = 'mae')
+        blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae')
         # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
         # But the one for normalization is kept without demean
         self.df_fzs = blank_df_f0 - 1
@@ -465,7 +465,7 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', save_switch = True):
         m = np.sum(tmp_m_, axis=1)
         if save_switch:
             np.save('chunk_aggregation_values.npy', m)
-        t_whol = [np.where((m[i, :])>np.mean(m[i, :]))[0].tolist() for i in range(n_chunks)]
+        t_whol = [np.where((m[i, :])<np.mean(m[i, :]))[0].tolist() for i in range(n_chunks)]
         autoselect = list(set.union(*map(set,t_whol)))
         #t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
         #util = list(t_whol[0])
