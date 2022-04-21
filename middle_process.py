@@ -194,12 +194,14 @@ class Session:
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
+            print(mod_conds)
+            tmp_ = list()
             for i, c in enumerate(mod_conds):
                 indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 tc_cond = self.time_course_signals[indeces, :]
-                tmp = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
-                if i>0:
-                    tmp = np.append(tmp, tmp)
+                t = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
+                tmp_.append(t.tolist())
+            tmp = np.array(tmp_) 
             print(tmp.shape)                    
             print(tmp)         
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
@@ -207,12 +209,14 @@ class Session:
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
+            print(mod_conds)
+            tmp_ = list()
             for i, c in enumerate(mod_conds):
                 indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 tc_cond = self.time_course_signals[indeces, :]
-                tmp = overlap_strategy(tc_cond, n_chunks=1, loss = strategy)
-                if i>0:
-                    tmp = np.append(tmp, tmp)
+                t = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
+                tmp_.append(t.tolist())
+            tmp = np.array(tmp_) 
             print(tmp.shape)                    
             print(tmp)                    
         elif strategy in ['roi', 'roi_signals', 'ROI']:
