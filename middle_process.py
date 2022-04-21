@@ -194,7 +194,6 @@ class Session:
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
-            print(mod_conds)
             tmp_ = list()
             for i, c in enumerate(mod_conds):
                 indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
@@ -202,8 +201,6 @@ class Session:
                 t = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
                 tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
-            print(tmp.shape)                    
-            print(tmp)         
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
             print('Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
             # Condition per condition
@@ -217,8 +214,6 @@ class Session:
                 t = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
                 tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
-            print(tmp.shape)                    
-            print(tmp)                    
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
@@ -234,6 +229,7 @@ class Session:
         print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
         self.trials_name = session_blks[self.auto_selected]
+        print(self.auto_selected)
         print('Autoselection loop time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return
 
