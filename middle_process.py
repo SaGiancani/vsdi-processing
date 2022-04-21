@@ -191,12 +191,28 @@ class Session:
         self.get_session()
 
         if strategy in ['mse', 'mae'] and (n_frames%self.header['chunks']==0):
-            tmp = overlap_strategy(self.time_course_signals[self.counter_blank:, :], n_chunks=self.header['chunks'], loss = strategy)
+            # Condition per condition
+            uniq_conds = np.unique(self.conditions)
+            mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
+            for i, c in enumerate(mod_conds):
+                indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
+                tc_cond = self.time_course_signals[indeces, :]
+                tmp = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
+                if i>0:
+                    tmp = np.append(tmp, tmp)
         
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
             print('Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
-            tmp = overlap_strategy(self.time_course_signals[self.counter_blank:, :], n_chunks=1, loss = strategy)
-
+            # Condition per condition
+            uniq_conds = np.unique(self.conditions)
+            mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
+            for i, c in enumerate(mod_conds):
+                indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
+                tc_cond = self.time_course_signals[indeces, :]
+                tmp = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
+                if i>0:
+                    tmp = np.append(tmp, tmp)
+                    
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
@@ -444,18 +460,18 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25, save_sw
             tmp_m_[m, :, :] = tmp_m
             
         m = np.sum(tmp_m_, axis=1)
-        print(f'Chunks aggregated values shape: {m.shape}')
-        print(f'Chunks aggregated values: {m}')
         if save_switch:
             np.save('chunk_aggregation_values.npy', m)
-        t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
-        util = list(t_whol[0])
-        set_a = list(set(util))
-        dict_a = [(k, util.count(k)) for k in set_a] # List of tuples: first element the index of trial, second element number of chunks with the mae/mse value inside the range
-        tmp = list(zip(*dict_a))
-        lk = np.array(tmp[0])
+        t_whol = [np.where((m[i, :])>np.mean(m[i, :]))[0].tolist() for i in range(n_chunks)]
+        autoselect = list(set.union(*map(set,t_whol)))
+        #t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
+        #util = list(t_whol[0])
+        #set_a = list(set(util))
+        #dict_a = [(k, util.count(k)) for k in set_a] # List of tuples: first element the index of trial, second element number of chunks with the mae/mse value inside the range
+        #tmp = list(zip(*dict_a))
+        #lk = np.array(tmp[0])
         #consider only the trials with value of mae/mse inside the quartiles for at least half of the chunks
-        autoselect = lk[np.where(np.array(tmp[1])>= np.ceil(n_chunks*0.5))[0]]
+        #autoselect = lk[np.where(np.array(tmp[1])>= np.ceil(n_chunks*0.5))[0]]
         # For combatibility with other methods, conversion in mask
         mask_array = np.zeros(size[0], dtype=int)
         mask_array[autoselect] = 1
