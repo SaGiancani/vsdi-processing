@@ -200,7 +200,8 @@ class Session:
                 tmp = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
                 if i>0:
                     tmp = np.append(tmp, tmp)
-        
+            print(tmp.shape)                    
+            print(tmp)         
         elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
             print('Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
             # Condition per condition
@@ -209,10 +210,11 @@ class Session:
             for i, c in enumerate(mod_conds):
                 indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 tc_cond = self.time_course_signals[indeces, :]
-                tmp = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
+                tmp = overlap_strategy(tc_cond, n_chunks=1, loss = strategy)
                 if i>0:
                     tmp = np.append(tmp, tmp)
-                    
+            print(tmp.shape)                    
+            print(tmp)                    
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
