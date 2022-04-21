@@ -308,7 +308,7 @@ class Session:
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         conditions = np.unique(self.conditions)
         blank_sign = self.time_course_blank
-
+        print(self.conditions)
         for cd_i in conditions:
             indeces_cdi = np.where(np.array(self.conditions) == cd_i)
             indeces_cdi = indeces_cdi[0].tolist()
