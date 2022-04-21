@@ -478,7 +478,7 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', up=75, bottom=25, save_sw
         mask_array = np.zeros(size[0], dtype=int)
         mask_array[autoselect] = 1
         print(mask_array)
-        return np.abs(mask_array -1 )
+        return mask_array
     else:
         # This check has to be done before running the script
         print('Use a proper number of chunks: exact division for the number of frames required')
