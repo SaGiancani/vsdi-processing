@@ -200,7 +200,7 @@ class Session:
                 indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 tc_cond = self.time_course_signals[indeces, :]
                 t = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
-                tmp_.append(t.tolist())
+                tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
             print(tmp.shape)                    
             print(tmp)         
@@ -215,7 +215,7 @@ class Session:
                 indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 tc_cond = self.time_course_signals[indeces, :]
                 t = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
-                tmp_.append(t.tolist())
+                tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
             print(tmp.shape)                    
             print(tmp)                    
