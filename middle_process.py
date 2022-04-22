@@ -565,7 +565,7 @@ if __name__=="__main__":
     parser.add_argument('--chunks', 
                         dest='chunks',
                         type=int,
-                        default = 5,
+                        default = 1,
                         required=False,
                         help='Number of elements value for autoselection') 
 
