@@ -1,7 +1,6 @@
 import numpy as np
-import struct
-import datetime
-import pickle
+import scipy.io as scio
+import datetime, os, pickle, struct
 
 def detrending(signal):
     """
@@ -56,3 +55,13 @@ def inputs_save(inputs, filename):
     '''
     with open(filename+'.pickle', 'wb') as f:
         pickle.dump(inputs, f, pickle.HIGHEST_PROTOCOL)
+
+def socket_numpy2matlab(path, matrix):
+    '''
+    ---------------------------------------------------------------------------------------------------------
+    Utility method for converting numpy array into a Matlab structure, with field "signal".
+    The method saves a .mat matlab matrix variable, in the path folder, containing the matrix data.
+    ---------------------------------------------------------------------------------------------------------    
+    '''
+    scio.savemat(os.path.join(path,'signal.mat'), {'signal': matrix})
+    return
