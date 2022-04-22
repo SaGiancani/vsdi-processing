@@ -368,13 +368,20 @@ class Session:
 
     def set_md_folder(self):
         session_path = self.header['path_session']
+        if self.header['strategy'] in ['mse', 'mae']: 
+            strat_depend = '_strategy' + str(self.header['strategy']) + \
+                '_n_chunk' + str(self.header['chunks'])
+        elif self.header['strategy'] in ['roi', 'roi_signals', 'ROI']: 
+            strat_depend = '_strategy' + str(self.header['strategy']) + \
+                '_tol' + str(self.header['tolerance'])
+
         folder_name = 'spcbin' + str(self.header['spatial_bin']) \
             + '_timebin' + str(self.header['temporal_bin']) \
             + '_zerofrms' + str(self.header['zero_frames']) \
-            + '_tol' + str(self.header['tolerance'])\
+            + strat_depend\
             + '_mov' + str(self.header['mov_switch'])\
-            + '_deblank' + str(self.header['deblank_switch'])\
-            + '_strategy' + str(self.header['strategy'])
+            + '_deblank' + str(self.header['deblank_switch'])
+        
         folder_path = os.path.join(session_path, 'derivatives/',folder_name)               
         if not os.path.exists(folder_path):
         #if not os.path.exists( path_session+'/'+session_name):
