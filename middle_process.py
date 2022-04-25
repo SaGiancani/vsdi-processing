@@ -61,6 +61,7 @@ class Session:
         self.time_course_signals = None
         self.trials_name = None 
         self.df_fzs = None
+        self.raw_data = None
         self.auto_selected = None
         self.conditions = None
         self.counter_blank = 0        
@@ -99,7 +100,7 @@ class Session:
         #         b = np.array(self.header['conditions_id']).tolist()
         #         return self.session_blks + [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])) in b.remove(self.blank_id)]
 
-    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy):
+    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch):
         header = {}
         header['path_session'] = path_session
         header['spatial_bin'] = spatial_bin
@@ -111,6 +112,7 @@ class Session:
         header['conditions_id'] = conditions_id
         header['chunks'] = chunks
         header['strategy'] = strategy
+        header['raw_switch'] = raw_switch
         return header
 
     def get_condition_ids(self):
@@ -152,35 +154,41 @@ class Session:
             tmp = len(self.cond_names)
             print('Blank id: ' + str(tmp))
             return tmp
-
+    
     def get_session(self):
-        # If blank signal already loaded -or not deblank- come in
-        if self.counter_blank == 0:
-            print('Trials loading starts:')
-            time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.f_f0_blank, self.header['deblank_switch'])
+        # Splitted paths for raw and delta_f computation: it is for avoiding overstoring       
+        if self.header['raw_switch']:
+            raws, conditions = raw_signal_extraction(self.header, self.session_blks)            
             self.conditions = conditions
-            self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
-            self.time_course_signals = time_course_signals
-            #self.motion_indeces = motion_indeces
-        # Otherwise, keep loading other condition a part the blank 
+            self.raw_data = raws
         else:
-            # If the condition is not only the blank one, than I compute the same iteration as up
-            if len(self.header['conditions_id']) > 1:
-                blks = [f for f in self.all_blks \
-                    if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
+            # If blank signal already loaded -or not deblank- come in
+            if self.counter_blank == 0:
                 print('Trials loading starts:')
-                print(self.time_course_signals.shape)
-                print(self.df_fzs.shape)
-                time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
-                self.session_blks = self.session_blks + blks
-                self.conditions = self.conditions + conditions                        
-                self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
-                self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
-                #self.motion_indeces = self.motion_indeces + motion_indeces
-                print(self.time_course_signals.shape)
-                print(self.df_fzs.shape)
+                time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.f_f0_blank, self.header['deblank_switch'])
+                self.conditions = conditions
+                self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
+                self.time_course_signals = time_course_signals
+                #self.motion_indeces = motion_indeces
+            # Otherwise, keep loading other condition a part the blank 
             else:
-                print('Warning: Something weird in get_session')
+                # If the condition is not only the blank one, than I compute the same iteration as up
+                if len(self.header['conditions_id']) > 1:
+                    blks = [f for f in self.all_blks \
+                        if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
+                    print('Trials loading starts:')
+                    print(self.time_course_signals.shape)
+                    print(self.df_fzs.shape)
+                    time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
+                    self.session_blks = self.session_blks + blks
+                    self.conditions = self.conditions + conditions                        
+                    self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
+                    self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
+                    #self.motion_indeces = self.motion_indeces + motion_indeces
+                    print(self.time_course_signals.shape)
+                    print(self.df_fzs.shape)
+                else:
+                    print('Warning: Something weird in get_session')
         return
 
     def autoselection(self, save_switch = True):
@@ -190,7 +198,12 @@ class Session:
         
         self.get_session()
 
-        if strategy in ['mse', 'mae'] and (n_frames%self.header['chunks']==0):
+        if strategy in ['mse', 'mae']:
+            if  n_frames%self.header['chunks']==0:
+                nch = self.header['chunks']
+            else:
+                print('Warning: Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered') 
+                nch = 1
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
@@ -198,22 +211,10 @@ class Session:
             for i, c in enumerate(mod_conds):
                 indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 tc_cond = self.time_course_signals[indeces, :]
-                t = overlap_strategy(tc_cond, n_chunks=self.header['chunks'], loss = strategy)
+                t = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
-        elif strategy in ['mse', 'mae'] and not (n_frames%self.header['chunks']==0):
-            print('Warning: Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered')
-            # Condition per condition
-            uniq_conds = np.unique(self.conditions)
-            mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
-            print(mod_conds)
-            tmp_ = list()
-            for i, c in enumerate(mod_conds):
-                indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
-                tc_cond = self.time_course_signals[indeces, :]
-                t = overlap_strategy(tc_cond, n_chunks=1, loss = strategy)
-                tmp_ = tmp_ + t.tolist()
-            tmp = np.array(tmp_) 
+
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
@@ -429,6 +430,47 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
         print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     return sig, delta_f, conditions#, motion_indeces
 
+def raw_signal_extraction(header, blks):
+    '''
+        The method is the same as the signal_extraction, but in place of delta_f,
+        it stores raw binned signal. 
+        A duplication of methods was requested for avoiding internal conditional 
+        checks and overstoring -deltaf, binned signal and time course at the same
+        time-.
+    '''
+    #motion_indeces, conditions = [], []
+    conditions = []
+    path_rawdata = os.path.join(header['path_session'],'rawdata/')
+    for i, blk_name in enumerate(blks):
+        start_time = datetime.datetime.now().replace(microsecond=0)
+        # If first BLK file, than the header is stored
+        if i == 0:
+            BLK = blk_file.BlkFile(
+                os.path.join(path_rawdata, blk_name),
+                header['spatial_bin'],
+                header['temporal_bin'],
+                header['zero_frames'],
+                header = None)
+
+            header_blk = BLK.header
+            raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+        else:
+            BLK = blk_file.BlkFile(
+                os.path.join(path_rawdata, blk_name), 
+                header['spatial_bin'], 
+                header['temporal_bin'], 
+                header['zero_frames'],
+                header = header_blk)
+        # if header['mov_switch']:
+        #     motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
+        conditions.append(BLK.condition)
+        #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
+        raws[i, :, :, :] =  BLK.binned_signal 
+        #at the end something like (nblks, 70, 1)
+        # The deltaF computing could be avoidable, since ROI signal at the end is plotted
+        print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+    return raws, conditions#, motion_indeces
+
 
 def roi_strategy(matrix, tolerance, zero_frames):
     '''
@@ -448,15 +490,14 @@ def roi_strategy(matrix, tolerance, zero_frames):
     autoselect = np.sum(selected_frames_mask, axis=1)<((size[1]-zero_frames)/2)
     return autoselect
 
-def overlap_strategy(matrix, n_chunks=1, loss = 'mae', save_switch = True):
-    size = np.shape(matrix)
-    if  size[1] % n_chunks == 0:
-        matrix_ = matrix.reshape(size[0], n_chunks, -1)
-        tmp_m_ = np.zeros((n_chunks, size[0], size[0]))
+def overlap_strategy(matrix, n_chunks=1, loss = 'mae', thresh_constant = 0.8, save_switch = True):
+    if  matrix.shape[1] % n_chunks == 0:
+        matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
+        tmp_m_ = np.zeros((n_chunks, matrix.shape[0], matrix.shape[0]))
         
         for m in range(n_chunks):
-            tmp_m = np.zeros((size[0], size[0]))
-            
+            tmp_m = np.zeros((matrix.shape[0], matrix.shape[0]))
+
             for n, i in enumerate(matrix_):
                 tmp = []
 
@@ -470,27 +511,27 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', save_switch = True):
             tmp_m_[m, :, :] = tmp_m
             
         m = np.sum(tmp_m_, axis=1)
-        if save_switch:
-            np.save('chunk_aggregation_values.npy', m)
-        t_whol = [np.where((m[i, :])<np.mean(m[i, :]))[0].tolist() for i in range(n_chunks)]
-        autoselect = list(set.union(*map(set,t_whol)))
-        #t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
-        #util = list(t_whol[0])
-        #set_a = list(set(util))
-        #dict_a = [(k, util.count(k)) for k in set_a] # List of tuples: first element the index of trial, second element number of chunks with the mae/mse value inside the range
-        #tmp = list(zip(*dict_a))
-        #lk = np.array(tmp[0])
-        #consider only the trials with value of mae/mse inside the quartiles for at least half of the chunks
-        #autoselect = lk[np.where(np.array(tmp[1])>= np.ceil(n_chunks*0.5))[0]]
-        # For combatibility with other methods, conversion in mask
-        mask_array = np.zeros(size[0], dtype=int)
-        mask_array[autoselect] = 1
-        print(mask_array)
-        return mask_array
     else:
         # This check has to be done before running the script
         print('Use a proper number of chunks: exact division for the number of frames required')
-        return
+    
+    if save_switch:
+        np.save('chunk_aggregation_values.npy', m)
+    t_whol = [np.where((m[i, :])<np.mean(m[i, :])*thresh_constant)[0].tolist() for i in range(n_chunks)]
+    autoselect = list(set.union(*map(set,t_whol)))
+    #t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
+    #util = list(t_whol[0])
+    #set_a = list(set(util)) 
+    #dict_a = [(k, util.count(k)) for k in set_a] # List of tuples: first element the index of trial, second element number of chunks with the mae/mse value inside the range
+    #tmp = list(zip(*dict_a))
+    #lk = np.array(tmp[0])
+    #consider only the trials with value of mae/mse inside the quartiles for at least half of the chunks
+    #autoselect = lk[np.where(np.array(tmp[1])>= np.ceil(n_chunks*0.5))[0]]
+    # For combatibility with other methods, conversion in mask
+    mask_array = np.zeros(m.shape[1], dtype=int)
+    mask_array[autoselect] = 1
+    print(mask_array)
+    return mask_array
 
 def statistical_strategy(matrix, up=75, bottom=25):
     size = np.shape(matrix)
@@ -555,6 +596,14 @@ if __name__=="__main__":
                         action='store_false')
     parser.set_defaults(deblank_switch=False)
 
+    parser.add_argument('--raw', 
+                        dest='raw_switch',
+                        action='store_true')
+    parser.add_argument('--no-raw', 
+                        dest='raw_switch', 
+                        action='store_false')
+    parser.set_defaults(raw_switch=False)
+    
     parser.add_argument('--cid', 
                     action='append', 
                     dest='conditions_id',
