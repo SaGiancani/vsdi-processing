@@ -108,6 +108,8 @@ if __name__=="__main__":
         print('Considered ids: \n')
         print(ids)
         tmp_matrix = session.raw_data[ids]
-        np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
+        #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
+        utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'cd{i}')
+
 
     print('Time for raw signal storing: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
