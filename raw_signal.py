@@ -92,8 +92,8 @@ if __name__=="__main__":
     start_time = datetime.datetime.now().replace(microsecond=0)
     #Loading session
     session = md.Session(**vars(args))
-    session.get_session()
     np.save('all_blks.npy', np.array(session.all_blks))
+    session.get_session()
     #Creating a storing folder
     folder_path = os.path.join(session.header['path_session'], 'derivatives/raw_data_matlab')               
     if not os.path.exists(folder_path):
