@@ -1,4 +1,5 @@
 import argparse, datetime, os, utils
+import ana_logs as al
 import middle_process as md
 import numpy as np
 
@@ -90,24 +91,33 @@ if __name__=="__main__":
     assert args.spatial_bin > 0, "Insert a value greater than 0"    
     assert args.temporal_bin > 0, "Insert a value greater than 0"    
     start_time = datetime.datetime.now().replace(microsecond=0)
+    report = al.get_basereport(args.path_session)
+    print(f'The number of all the BLK files for the session is {len(md.get_all_blks)}')
+    filt_blks = report.loc[report['behav Correct'] == 1, 'BLK Names'].tolist()
+    print(f'The number of correct behavior BLK files for the same session is {len(filt_blks)}')
     #Loading session
     session = md.Session(**vars(args))
-    np.save('all_blks.npy', np.array(session.all_blks))
+    #np.save('all_blks.npy', np.array(session.all_blks))
     session.get_session()
     #Creating a storing folder
-    folder_path = os.path.join(session.header['path_session'], 'derivatives/raw_data_matlab')               
+    folder_path = os.path.join(session.header['path_session'], 'derivatives/raw_data_matlab')  
+    pos_blks = list(set(session.all_blks).intersection(set(filt_blks)))
+    pos_ids = [session.all_blks.index(i) for i in pos_blks]
+    #pick_blks = np.array(session.all_blks)[[session.all_blks.index(i) for i in pos_blks]].tolist()
     if not os.path.exists(folder_path):
     #if not os.path.exists( path_session+'/'+session_name):
         os.makedirs(folder_path)
         #os.mkdirs(path_session+'/'+session_name)
-
+    print(f'The number of all BLK indeces {len(session.all_blks)}')
+    print(f'The number of selected indeces {len(pos_ids)}')
     #Storing a raw_data matrix per each condition
     for i in np.unique(session.conditions):
         print(f'Condition: {i}')
         ids = np.where(session.conditions == i)[0].tolist()
+        common_ids = list(set(ids).intersection(set(pos_ids)))
         print('Considered ids: \n')
-        print(ids)
-        tmp_matrix = session.raw_data[ids]
+        print(common_ids)
+        tmp_matrix = session.raw_data[common_ids]
         #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
         utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'cd{i}')
 

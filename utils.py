@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.io as scio
-import datetime, os, pickle, struct
+import datetime, fnmatch, os, pickle, struct
+
 
 def detrending(signal):
     """
@@ -34,6 +35,14 @@ def datetime_as_string(raw_bytes):
     print(date_time_)
     return date_time_
     #date_time_.strftime([:23]
+
+def find_file(pattern, path):
+    result = []
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            if fnmatch.fnmatch(name, pattern):
+                result.append(os.path.join(root, name))
+    return result
 
 def inputs_load(filename):
     '''

@@ -31,7 +31,7 @@ class Session:
         """
         self.cond_names = None
         self.header = self.get_session_header(**kwargs)
-        self.all_blks = self.get_all_blks() # all the blks. 
+        self.all_blks = get_all_blks(self.header['path_session']) # all the blks. 
         self.cond_names = self.get_condition_name()
         self.blank_id = self.get_blank_id()
 
@@ -73,14 +73,6 @@ class Session:
             #print(f'Delta F/F0 blank shape: {np.shape(self.df_f0_blank)}')
         else:
             self.time_course_blank, self.f_f0_blank = None, None
-
-
-
-    def get_all_blks(self):
-        '''
-        All the .BLKs filenames, from the considered path_session, are picked.
-        '''
-        return [f.name for f in os.scandir(os.path.join(self.header['path_session'],'rawdata/')) if (f.is_file()) and (f.name.endswith(".BLK"))]
 
     def get_blks(self):
         '''
@@ -542,6 +534,11 @@ def statistical_strategy(matrix, up=75, bottom=25):
     mask_array[autoselect] = 1
     return mask_array
 
+def get_all_blks(path_session):
+    '''
+    All the .BLKs filenames, from the considered path_session, are picked.
+    '''
+    return [f.name for f in os.scandir(os.path.join(path_session,'rawdata/')) if (f.is_file()) and (f.name.endswith(".BLK"))]
 
         
 if __name__=="__main__":
