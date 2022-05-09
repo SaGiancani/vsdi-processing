@@ -93,7 +93,8 @@ if __name__=="__main__":
     start_time = datetime.datetime.now().replace(microsecond=0)
     report = al.get_basereport(args.path_session)
     print(f'The number of all the BLK files for the session is {len(md.get_all_blks(args.path_session))}')
-    filt_blks = report.loc[report['behav Correct'] == 1 and ~report['BLK Names'].isnull(), 'BLK Names'].tolist()
+    filt_blks = report.loc[report['behav Correct'] == 1, 'BLK Names']
+    filt_blks = filt_blks.dropna(subset=['BLK Names']).tolist()
     print(f'The number of correct behavior BLK files for the same session is {len(filt_blks)}')
     #Loading session
     session = md.Session(**vars(args))
