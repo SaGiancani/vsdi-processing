@@ -200,8 +200,8 @@ class Session:
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
             tmp_ = list()
-            for i, c in enumerate(mod_conds):
-                indeces = [i-self.counter_blank for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
+            for c in mod_conds:
+                indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 tc_cond = self.time_course_signals[indeces, :]
                 t = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 tmp_ = tmp_ + t.tolist()
@@ -426,7 +426,7 @@ def raw_signal_extraction(header, blks):
     '''
         The method is the same as the signal_extraction, but in place of delta_f,
         it stores raw binned signal. 
-        A duplication of methods was requested for avoiding internal conditional 
+        A duplication of methods was requested for avoiding inner loops conditional 
         checks and overstoring -deltaf, binned signal and time course at the same
         time-.
     '''
