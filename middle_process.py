@@ -201,7 +201,8 @@ class Session:
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
             tmp_ = list()
             for c in mod_conds:
-                indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
+                #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
+                indeces = np.where(np.array(self.conditions) == c)[0].tolist()
                 tc_cond = self.time_course_signals[indeces, :]
                 t = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 tmp_ = tmp_ + t.tolist()
