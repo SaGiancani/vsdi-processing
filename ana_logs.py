@@ -6,33 +6,18 @@ import pandas as pd
 class Trial:
     def __init__(self, report_series_trial):
         self.blk = None
+        self.name = report_series_trial['BLK Names']
 
-def toogle_from_object(s):
-    return float(s.replace(',','.'))
-
-def get_basereport_header(BaseReport_path, header_dimension = 19):    
-    f = open(BaseReport_path, 'r')
-    dict_ = {}
-    for i in range(0,header_dimension-1):
-        tmp = f.readline()
-        tmp = tmp.split('\n')[0].split(';')
-        if '*' not in tmp[0]:
-            try:
-                dict_[tmp[0]] = toogle_from_object(tmp[1].split('\n')[0])
-            except:
-                dict_[tmp[0]] = tmp[1].split('\n')[0]
-    dict_['Export Log Files'] = bool(dict_['Export Log Files'])
-    format_str = '%d/%m/%Y'
-    dict_['Date'] = (datetime.datetime.strptime(dict_['Date'], format_str).date())
-    return dict_
-
-def get_basereport(session_path, name_report = 'BaseReport.csv'):
-    BaseReport_path = utils.find_file(name_report, session_path)
-    BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=19)
-    BaseReport = add_blknames2basereport(BaseReport, mp.get_all_blks(session_path))
-    return BaseReport
 
 def add_blknames2basereport(BaseReport, all_blks):
+    '''
+    The method gets a BaseReport -pandas.DataFrame- and a list of all the BLK 
+    filenames, and returns a BaseReport -pandas.DataFrame- with same columns
+    plus one, BLK Names with the BLK filenames per each trial with FixCorrect
+    as Preceding Event IT value.
+    In the case that the all blks are less then the trials on the BaseReport,
+    the method allows to find the best matching, discarding the absent BLKfile.
+    '''
     # Bind the all_blks list to the BaseReport metadata
     try:
         # Sorting BLK filenames by date of storing -the one assigned on filename-
@@ -55,6 +40,43 @@ def add_blknames2basereport(BaseReport, all_blks):
     return BaseReport
 
 
+def get_basereport(session_path, name_report = 'BaseReport.csv'):
+    '''
+    Load the BaseReport
+    '''
+    BaseReport_path = utils.find_file(name_report, session_path)
+    BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=19)
+    #Adding BLK Names columns to the dataframe
+    BaseReport = add_blknames2basereport(BaseReport, mp.get_all_blks(session_path))
+    return BaseReport
 
-#Header_time = DateInfo[3].replace('\n', '')
-#[Header_h, Header_min, Header_s] = Header_time.split(':')      
+
+def get_basereport_header(BaseReport_path, header_dimension = 19):    
+    '''
+    BaseReport header builder.
+    '''
+    f = open(BaseReport_path, 'r')
+    dict_ = {}
+    for i in range(0,header_dimension-1):
+        tmp = f.readline()
+        tmp = tmp.split('\n')[0].split(';')
+        if '*' not in tmp[0]:
+            try:
+                dict_[tmp[0]] = toogle_from_object(tmp[1].split('\n')[0])
+            except:
+                dict_[tmp[0]] = tmp[1].split('\n')[0]
+    dict_['Export Log Files'] = bool(dict_['Export Log Files'])
+    format_str = '%d/%m/%Y'
+    dict_['Date'] = (datetime.datetime.strptime(dict_['Date'], format_str).date())
+    return dict_
+
+
+def toogle_from_object(s):
+    '''
+    Utility method
+    '''
+    try:
+        tmp = float(s.replace(',','.'))
+    except:
+        tmp = float(s)
+    return tmp    
