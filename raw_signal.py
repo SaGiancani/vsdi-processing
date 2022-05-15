@@ -92,6 +92,9 @@ if __name__=="__main__":
     assert args.temporal_bin > 0, "Insert a value greater than 0"    
     start_time = datetime.datetime.now().replace(microsecond=0)
     report = al.get_basereport(args.path_session)
+    lat_timing_df = report[['Onset Time_ Behav Correct', 'Onset Time_ Behav Stim']].applymap(al.toogle_from_object)
+    lat_timing_df['BLK Names'] = report[['BLK Names']]
+
     print(f'The number of all the BLK files for the session is {len(md.get_all_blks(args.path_session))}')
     filt_blks = report.loc[report['behav Correct'] == 1]
     filt_blks = filt_blks.dropna(subset=['BLK Names'])['BLK Names'].tolist()
@@ -120,11 +123,15 @@ if __name__=="__main__":
         ids = np.where(session.conditions == i)[0].tolist()
         common_ids = list(set(ids).intersection(set(pos_ids)))
         common_ids_ = list(set(ids).intersection(set(neg_ids)))
+        # Only for positive behav computing latency
+        t = lat_timing_df.loc[lat_timing_df['BLK Names'].isin(session.all_blks[common_ids]), ['Onset Time_ Behav Correct', 'Onset Time_ Behav Stim']]
+        latency = (t['Onset Time_ Behav Correct'] - t['Onset Time_ Behav Stim'] - 500).tolist()
         print('Considered ids: \n')
         print(common_ids)
         tmp_matrix = session.raw_data[common_ids]
         tmp_matrix_ = session.raw_data[common_ids_]
         #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
+        utils.socket_numpy2matlab(folder_path, latency, substring=f'latency_pos_cd{i}')
         utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'pos_cd{i}')
         utils.socket_numpy2matlab(folder_path, tmp_matrix_, substring=f'neg_cd{i}')
 
