@@ -99,12 +99,12 @@ if __name__=="__main__":
     print(f'The number of all the BLK files for the session is {len(md.get_all_blks(args.path_session))}')
     filt_blks = report.loc[report['behav Correct'] == 1]
     filt_blks = filt_blks.dropna(subset=['BLK Names'])['BLK Names'].tolist()
-    filt_blks = sorted(filt_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+    #filt_blks = sorted(filt_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
 
     print(f'The number of correct behavior BLK files for the same session is {len(filt_blks)}')
     filt_blks_ = report.loc[report['behav Correct'] == 0]
     filt_blks_ = filt_blks_.dropna(subset=['BLK Names'])['BLK Names'].tolist()
-    filt_blks_ = sorted(filt_blks_, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+    #filt_blks_ = sorted(filt_blks_, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
 
     print(f'The number of uncorrect behavior BLK files for the same session is {len(filt_blks_)}')    #Loading session
     session = md.Session(**vars(args))
