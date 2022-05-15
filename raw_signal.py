@@ -96,7 +96,9 @@ if __name__=="__main__":
     filt_blks = report.loc[report['behav Correct'] == 1]
     filt_blks = filt_blks.dropna(subset=['BLK Names'])['BLK Names'].tolist()
     print(f'The number of correct behavior BLK files for the same session is {len(filt_blks)}')
-    #Loading session
+    filt_blks_ = report.loc[report['behav Correct'] == 0]
+    filt_blks_ = filt_blks_.dropna(subset=['BLK Names'])['BLK Names'].tolist()
+    print(f'The number of uncorrect behavior BLK files for the same session is {len(filt_blks_)}')    #Loading session
     session = md.Session(**vars(args))
     #np.save('all_blks.npy', np.array(session.all_blks))
     session.get_session()
@@ -104,7 +106,8 @@ if __name__=="__main__":
     folder_path = os.path.join(session.header['path_session'], 'derivatives/raw_data_matlab')  
     pos_blks = list(set(session.all_blks).intersection(set(filt_blks)))
     pos_ids = [session.all_blks.index(i) for i in pos_blks]
-    #pick_blks = np.array(session.all_blks)[[session.all_blks.index(i) for i in pos_blks]].tolist()
+    neg_blks = list(set(session.all_blks).intersection(set(filt_blks_)))
+    neg_ids = [session.all_blks.index(i) for i in neg_blks]    #pick_blks = np.array(session.all_blks)[[session.all_blks.index(i) for i in pos_blks]].tolist()
     if not os.path.exists(folder_path):
     #if not os.path.exists( path_session+'/'+session_name):
         os.makedirs(folder_path)
@@ -116,11 +119,14 @@ if __name__=="__main__":
         print(f'Condition: {i}')
         ids = np.where(session.conditions == i)[0].tolist()
         common_ids = list(set(ids).intersection(set(pos_ids)))
+        common_ids_ = list(set(ids).intersection(set(neg_ids)))
         print('Considered ids: \n')
         print(common_ids)
         tmp_matrix = session.raw_data[common_ids]
+        tmp_matrix_ = session.raw_data[common_ids_]
         #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
-        utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'cd{i}')
+        utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'pos_cd{i}')
+        utils.socket_numpy2matlab(folder_path, tmp_matrix_, substring=f'neg_cd{i}')
 
 
     print('Time for raw signal storing: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
