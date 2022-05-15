@@ -141,7 +141,7 @@ if __name__=="__main__":
         print(common_ids)
         tmp_matrix = session.raw_data[common_ids]
         tmp_matrix_ = session.raw_data[common_ids_]
-        lat_temp = latency[common_ids]
+        lat_temp = np.array(latency[common_ids])
         #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
         utils.socket_numpy2matlab(folder_path, lat_temp, substring=f'latency_pos_cd{i}')
         utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'pos_cd{i}')
