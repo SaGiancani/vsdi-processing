@@ -47,6 +47,7 @@ def get_basereport(session_path, name_report = 'BaseReport.csv'):
     Load the BaseReport
     '''
     BaseReport_path = utils.find_file(name_report, session_path)
+    print(BaseReport_path)
     BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=19)
     #Adding BLK Names columns to the dataframe
     BaseReport = add_blknames2basereport(BaseReport, mp.get_all_blks(session_path))
