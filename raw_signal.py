@@ -91,7 +91,8 @@ if __name__=="__main__":
     assert args.spatial_bin > 0, "Insert a value greater than 0"    
     assert args.temporal_bin > 0, "Insert a value greater than 0"    
     start_time = datetime.datetime.now().replace(microsecond=0)
-    report = al.get_basereport(args.path_session)
+    # Something weird with the original BaseReport
+    report = al.get_basereport(args.path_session, name_report = 'BaseReport_V2.csv', header_dimension = 21)
     report = report.dropna(subset=['BLK Names'])
     #lat_timing_df = report[['Onset Time_ Behav Correct', 'Onset Time_ Behav Stim']].applymap(al.toogle_from_object)
     #lat_timing_df['BLK Names'] = report[['BLK Names']]
