@@ -116,6 +116,7 @@ if __name__=="__main__":
     session.all_blks[:] = [x for x in session.all_blks if x != tris[2]]
     print(len(session.all_blks))
     print(np.shape(session.raw_data))
+    # raw = np.delete(session.raw_data, tris[0],0)
     raw = np.concatenate((session.raw_data[:tris[0]-1, :, :, :], session.raw_data[tris[0]:, :, :, :]))
     print(np.shape(raw))
     all_blks = sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
@@ -134,7 +135,7 @@ if __name__=="__main__":
         #os.mkdirs(path_session+'/'+session_name)
     print(f'The number of all BLK indeces {len(all_blks)}')
     print(f'The number of selected indeces {len(pos_ids)}')
-    latency = (report['Onset Time_ Behav Correct'].applymap(al.toogle_from_object) - report['Onset Time_ Behav Stim'].applymap(al.toogle_from_object) - 500).tolist()
+    latency = (report[['Onset Time_ Behav Correct']].applymap(al.toogle_from_object) - report[['Onset Time_ Behav Stim']].applymap(al.toogle_from_object) - 500).tolist()
 
     #Storing a raw_data matrix per each condition
     for i in np.unique(session.conditions):
