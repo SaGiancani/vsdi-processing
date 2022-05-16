@@ -40,6 +40,8 @@ def add_blknames2basereport(BaseReport, all_blks):
             elif (len(sorted_list)>len(cds)):
                 sorted_list.pop(tris[0])
             print(tris)
+            print([int(i.split('_C')[1][:2]) for i in sorted_list[tris[0]:]])
+            print(cds[tris[0]:])
         # Consider the BLK names, in case of FixCorrect preceding event IT
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = sorted_list
     return BaseReport
