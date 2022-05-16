@@ -112,9 +112,10 @@ if __name__=="__main__":
     #np.save('all_blks.npy', np.array(session.all_blks))
     session.get_session()
     #Sorting the blks for date
-    print(session.all_blks)
+    print(len(session.all_blks))
     session.all_blks[:] = [x for x in session.all_blks if x != tris[2]]
-    print(session.all_blks)
+    print(len(session.all_blks))
+    print(np.shape(session.raw_data))
     raw = np.concatenate((session.raw_data[:tris[0]-1, :, :, :], session.raw_data[tris[0]:, :, :, :]))
     print(np.shape(raw))
     all_blks = sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
