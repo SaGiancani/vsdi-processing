@@ -91,8 +91,8 @@ if __name__=="__main__":
     assert args.spatial_bin > 0, "Insert a value greater than 0"    
     assert args.temporal_bin > 0, "Insert a value greater than 0"    
     start_time = datetime.datetime.now().replace(microsecond=0)
-    # Something weird with the original BaseReport
-    report = al.get_basereport(args.path_session, name_report = 'BaseReport_V2.csv', header_dimension = 21)
+    # Something weird with the original BaseReport: a modified BaseReport is used with bigger header
+    report, tris = al.get_basereport(args.path_session, name_report = 'BaseReport_V2.csv', header_dimension = 21)
     report = report.dropna(subset=['BLK Names'])
     #lat_timing_df = report[['Onset Time_ Behav Correct', 'Onset Time_ Behav Stim']].applymap(al.toogle_from_object)
     #lat_timing_df['BLK Names'] = report[['BLK Names']]
@@ -112,6 +112,11 @@ if __name__=="__main__":
     #np.save('all_blks.npy', np.array(session.all_blks))
     session.get_session()
     #Sorting the blks for date
+    print(session.all_blks)
+    session.all_blks[:] = [x for x in session.all_blks if x != tris[2]]
+    print(session.all_blks)
+    raw = np.concatenate((session.raw_data[:tris[0]-1, :, :, :], session.raw_data[tris[0]:, :, :, :]))
+    print(np.shape(raw))
     all_blks = sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     #Creating a storing folder
     folder_path = os.path.join(session.header['path_session'], 'derivatives/raw_data_matlab')  
@@ -140,8 +145,8 @@ if __name__=="__main__":
         #t = lat_timing_df.loc[lat_timing_df['BLK Names'].isin(all_blks[common_ids]), ['Onset Time_ Behav Correct', 'Onset Time_ Behav Stim']]
         print('Considered ids: \n')
         print(common_ids)
-        tmp_matrix = session.raw_data[common_ids]
-        tmp_matrix_ = session.raw_data[common_ids_]
+        tmp_matrix = raw[common_ids]
+        tmp_matrix_ = raw[common_ids_]
         lat_temp = np.array(latency[common_ids])
         #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
         utils.socket_numpy2matlab(folder_path, lat_temp, substring=f'latency_pos_cd{i}')

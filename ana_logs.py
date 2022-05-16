@@ -26,6 +26,7 @@ def add_blknames2basereport(BaseReport, all_blks):
         print(len(sorted_list))
         print(len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect']))
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = sorted_list
+        tris = None
     except:
         print('Mismatch between BLK files and FixCorrect trials number')
         print('This strategy could solve the problem. It has to be checked\n')    
@@ -40,11 +41,9 @@ def add_blknames2basereport(BaseReport, all_blks):
             elif (len(sorted_list)>len(cds)):
                 sorted_list.pop(tris[0])
             print(tris)
-            print([int(i.split('_C')[1][:2]) for i in sorted_list[tris[0]:]])
-            print(cds[tris[0]:])
         # Consider the BLK names, in case of FixCorrect preceding event IT
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = sorted_list
-    return BaseReport
+    return BaseReport, tris
 
 
 def get_basereport(session_path, name_report = 'BaseReport.csv', header_dimension = 19):
@@ -54,8 +53,8 @@ def get_basereport(session_path, name_report = 'BaseReport.csv', header_dimensio
     BaseReport_path = utils.find_file(name_report, session_path)
     BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
     #Adding BLK Names columns to the dataframe
-    BaseReport = add_blknames2basereport(BaseReport, mp.get_all_blks(session_path))
-    return BaseReport
+    BaseReport, tris = add_blknames2basereport(BaseReport, mp.get_all_blks(session_path))
+    return BaseReport, tris
 
 
 def get_basereport_header(BaseReport_path, header_dimension = 19):    
