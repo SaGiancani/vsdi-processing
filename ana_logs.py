@@ -23,6 +23,8 @@ def add_blknames2basereport(BaseReport, all_blks):
         # Sorting BLK filenames by date of storing -the one assigned on filename-
         sorted_list = sorted(all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
         # Consider the BLK names, in case of FixCorrect preceding event IT
+        print(len(sorted_list))
+        print(len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect']))
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = sorted_list
     except:
         print('Mismatch between BLK files and FixCorrect trials number')
