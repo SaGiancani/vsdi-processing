@@ -31,7 +31,7 @@ def add_blknames2basereport(BaseReport, all_blks):
         print('This strategy could solve the problem. It has to be checked\n')    
         cds = BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'IDcondition'].tolist()
         sorted_list = sorted(all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
-        if len(sorted_list)<len(cds):
+        if (len(sorted_list)<len(cds)) | (len(sorted_list)>len(cds)):
             # If there is mismatch between the condition id in BaseReport and condition id in the BLK filename
             # It stores index, condition number, and BLK filename of the mismatch.
             tris = next( (idx, x, y) for idx, (x, y) in enumerate(zip(cds, sorted_list)) if x!= int(y.split('_C')[1][:2]))
