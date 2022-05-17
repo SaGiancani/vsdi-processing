@@ -29,7 +29,6 @@ def add_blknames2basereport(BaseReport, all_blks):
         tris = None
     except:
         print('Mismatch between BLK files and FixCorrect trials number')
-        print('This strategy could solve the problem. It has to be checked\n')    
         cds = BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'IDcondition'].tolist()
         sorted_list = sorted(all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
         if (len(sorted_list)!=len(cds)):
