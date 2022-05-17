@@ -135,7 +135,7 @@ if __name__=="__main__":
         #os.mkdirs(path_session+'/'+session_name)
     print(f'The number of all BLK indeces {len(all_blks)}')
     print(f'The number of selected indeces {len(pos_ids)}')
-    latency = (report[['Onset Time_ Behav Correct']].applymap(al.toogle_from_object) - report[['Onset Time_ Behav Stim']].applymap(al.toogle_from_object) - 500).tolist()
+    latency = (report[['Onset Time_ Behav Correct']].applymap(al.toogle_from_object)['Onset Time_ Behav Correct'] - report[['Onset Time_ Behav Stim']].applymap(al.toogle_from_object)['Onset Time_ Behav Stim'] -500).tolist()
 
     #Storing a raw_data matrix per each condition
     for i in np.unique(session.conditions):
@@ -147,6 +147,7 @@ if __name__=="__main__":
         #t = lat_timing_df.loc[lat_timing_df['BLK Names'].isin(all_blks[common_ids]), ['Onset Time_ Behav Correct', 'Onset Time_ Behav Stim']]
         print('Considered ids: \n')
         print(common_ids)
+        print(all_blks[common_ids])
         tmp_matrix = raw[common_ids]
         tmp_matrix_ = raw[common_ids_]
         lat_temp = np.array(latency[common_ids])
