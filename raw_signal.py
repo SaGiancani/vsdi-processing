@@ -119,7 +119,7 @@ if __name__=="__main__":
     # raw = np.delete(session.raw_data, tris[0],0)
     raw = np.concatenate((session.raw_data[:tris[0]-1, :, :, :], session.raw_data[tris[0]:, :, :, :]))
     print(np.shape(raw))
-    all_blks = np.array(sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S')))
+    all_blks = sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     #Creating a storing folder
     folder_path = os.path.join(session.header['path_session'], 'derivatives/raw_data_matlab')  
     pos_blks = list(set(all_blks).intersection(set(filt_blks)))
@@ -136,7 +136,7 @@ if __name__=="__main__":
     print(f'The number of all BLK indeces {len(all_blks)}')
     print(f'The number of selected indeces {len(pos_ids)}')
     latency = np.array((report[['Onset Time_ Behav Correct']].applymap(al.toogle_from_object)['Onset Time_ Behav Correct'] - report[['Onset Time_ Behav Stim']].applymap(al.toogle_from_object)['Onset Time_ Behav Stim'] -500))
-
+    tk = np.array(all_blks)
     #Storing a raw_data matrix per each condition
     for i in np.unique(session.conditions):
         print(f'Condition: {i}')
@@ -147,7 +147,7 @@ if __name__=="__main__":
         #t = lat_timing_df.loc[lat_timing_df['BLK Names'].isin(all_blks[common_ids]), ['Onset Time_ Behav Correct', 'Onset Time_ Behav Stim']]
         print('Considered ids: \n')
         print(common_ids)
-        print(all_blks[common_ids])
+        print(tk[common_ids])
         tmp_matrix = raw[common_ids]
         tmp_matrix_ = raw[common_ids_]
         lat_temp = latency[common_ids]
