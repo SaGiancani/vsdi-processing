@@ -42,7 +42,7 @@ def add_blknames2basereport(BaseReport, all_blks):
                 print('A Missing row is added')            
             elif (len(all_blks)>len(cds)):
                 all_blks.pop(tris[0])
-                print(f'File {tris[0]} is deleted')            
+                print(f'File {tris[2]} is deleted')            
             print(tris)
         # Consider the BLK names, in case of FixCorrect preceding event IT
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = all_blks
