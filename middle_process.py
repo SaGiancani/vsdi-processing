@@ -483,7 +483,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     autoselect = np.sum(selected_frames_mask, axis=1)<((size[1]-zero_frames)/2)
     return autoselect
 
-def overlap_strategy(matrix, n_chunks=1, loss = 'mae', thresh_constant = 0.8, save_switch = True):
+def overlap_strategy(matrix, n_chunks=1, loss = 'mae', thresh_constant = 0.75, save_switch = True):
     if  matrix.shape[1] % n_chunks == 0:
         matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
         tmp_m_ = np.zeros((n_chunks, matrix.shape[0], matrix.shape[0]))
@@ -535,12 +535,17 @@ def statistical_strategy(matrix, up=75, bottom=25):
     mask_array[autoselect] = 1
     return mask_array
 
-def get_all_blks(path_session):
+def get_all_blks(path_session, sort = True):
     '''
     All the .BLKs filenames, from the considered path_session, are picked.
+    The list can be sorted by datetime or not, with the boolean variable sort.
+    Sorted by time by default.
     '''
-    return [f.name for f in os.scandir(os.path.join(path_session,'rawdata/')) if (f.is_file()) and (f.name.endswith(".BLK"))]
-
+    tmp = [f.name for f in os.scandir(os.path.join(path_session,'rawdata/')) if (f.is_file()) and (f.name.endswith(".BLK"))]
+    if sort:
+        return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+    else:
+        return tmp
         
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching autoselection pipeline')

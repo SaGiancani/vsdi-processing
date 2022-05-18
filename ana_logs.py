@@ -21,27 +21,31 @@ def add_blknames2basereport(BaseReport, all_blks):
     # Bind the all_blks list to the BaseReport metadata
     try:
         # Sorting BLK filenames by date of storing -the one assigned on filename-
-        sorted_list = sorted(all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+        #sorted_list = sorted(all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
         # Consider the BLK names, in case of FixCorrect preceding event IT
-        print(len(sorted_list))
-        print(len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect']))
-        BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = sorted_list
+        print(f'Number of raw files: {len(all_blks)}')
+        len_ = len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect'])
+        print(f'Number of trials registered in log file: { len_ }')
+        BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = all_blks
         tris = None
     except:
         print('Mismatch between BLK files and FixCorrect trials number')
         cds = BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'IDcondition'].tolist()
-        sorted_list = sorted(all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
-        if (len(sorted_list)!=len(cds)):
-            tris = next( (idx, x, y) for idx, (x, y) in enumerate(zip(cds, sorted_list)) if x!= int(y.split('_C')[1][:2]))
-            if (len(sorted_list)<len(cds)):
+        #sorted_list = sorted(all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+        if (len(all_blks)!=len(cds)):
+            tris = next( (idx, x, y) for idx, (x, y) in enumerate(zip(cds, all_blks)) if x!= int(y.split('_C')[1][:2]))
+            print('Number of elements in BLKs list is changed:')            
+            if (len(all_blks)<len(cds)):
                 # If there is mismatch between the condition id in BaseReport and condition id in the BLK filename
                 # It stores index, condition number, and BLK filename of the mismatch.
-                sorted_list.insert(tris[0], '')
-            elif (len(sorted_list)>len(cds)):
-                sorted_list.pop(tris[0])
+                all_blks.insert(tris[0], 'Missing')
+                print('A Missing row is added')            
+            elif (len(all_blks)>len(cds)):
+                all_blks.pop(tris[0])
+                print(f'File {tris[0]} is deleted')            
             print(tris)
         # Consider the BLK names, in case of FixCorrect preceding event IT
-        BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = sorted_list
+        BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = all_blks
     return BaseReport, tris
 
 
@@ -52,7 +56,7 @@ def get_basereport(session_path, name_report = 'BaseReport.csv', header_dimensio
     BaseReport_path = utils.find_file(name_report, session_path)
     BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
     #Adding BLK Names columns to the dataframe
-    BaseReport, tris = add_blknames2basereport(BaseReport, mp.get_all_blks(session_path))
+    BaseReport, tris = add_blknames2basereport(BaseReport, mp.get_all_blks(session_path, sort = True))
     return BaseReport, tris
 
 
