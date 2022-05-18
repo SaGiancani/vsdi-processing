@@ -83,8 +83,9 @@ class Session:
         if ((self.header['conditions_id'] is None) or (len(self.header['conditions_id']) == len(self.cond_names))): 
             return self.all_blks
         else:
-            return [f for f in self.all_blks \
-                if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+            tmp = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+            return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+
         # else:
         #     print('Warning: session_blks was not None')
         #     id_check = list(set([f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]))]))

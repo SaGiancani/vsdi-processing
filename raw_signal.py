@@ -116,28 +116,28 @@ if __name__=="__main__":
     session.all_blks[:] = [x for x in session.all_blks if x != tris[2]]
     print(len(session.all_blks))
     print(np.shape(session.raw_data))
-    # raw = np.delete(session.raw_data, tris[0],0)
-    raw = np.concatenate((session.raw_data[:tris[0]-1, :, :, :], session.raw_data[tris[0]:, :, :, :]))
+    raw = np.delete(session.raw_data, tris[0],0)
+    #raw = np.concatenate((session.raw_data[:tris[0]-1, :, :, :], session.raw_data[tris[0]:, :, :, :]))
     print(np.shape(raw))
-    all_blks = sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+    #all_blks = sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     #Creating a storing folder
     folder_path = os.path.join(session.header['path_session'], 'derivatives/raw_data_matlab')  
-    pos_blks = list(set(all_blks).intersection(set(filt_blks)))
+    pos_blks = list(set(session.session_blks).intersection(set(filt_blks)))
     pos_blks = sorted(pos_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
-    pos_ids = [all_blks.index(i) for i in pos_blks]
+    pos_ids = [session.session_blks.index(i) for i in pos_blks]
 
-    neg_blks = list(set(all_blks).intersection(set(filt_blks_)))
+    neg_blks = list(set(session.session_blks).intersection(set(filt_blks_)))
     neg_blks = sorted(neg_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
-    neg_ids = [all_blks.index(i) for i in neg_blks]    #pick_blks = np.array(session.all_blks)[[session.all_blks.index(i) for i in pos_blks]].tolist()
+    neg_ids = [session.session_blks.index(i) for i in neg_blks]    #pick_blks = np.array(session.all_blks)[[session.all_blks.index(i) for i in pos_blks]].tolist()
     if not os.path.exists(folder_path):
     #if not os.path.exists( path_session+'/'+session_name):
         os.makedirs(folder_path)
         #os.mkdirs(path_session+'/'+session_name)
-    print(f'The number of all BLK indeces {len(all_blks)}')
+    print(f'The number of all picked BLK indeces {len(session.session_blks)}')
     print(f'The number of selected indeces {len(pos_ids)}')
     latency = np.array((report[['Onset Time_ Behav Correct']].applymap(al.toogle_from_object)['Onset Time_ Behav Correct'] - report[['Onset Time_ Behav Stim']].applymap(al.toogle_from_object)['Onset Time_ Behav Stim'] -500))
-    tk = np.array(all_blks)
-    conditions = np.array([int(i.split('vsd_C')[1][0:2]) for i in all_blks])
+    tk = np.array(session.all_blks)
+    conditions = np.array([int(i.split('vsd_C')[1][0:2]) for i in session.session_blks])
     #Storing a raw_data matrix per each condition
     for i in np.unique(session.conditions):
         print(f'Condition: {i}')
