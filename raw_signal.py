@@ -137,10 +137,11 @@ if __name__=="__main__":
     print(f'The number of selected indeces {len(pos_ids)}')
     latency = np.array((report[['Onset Time_ Behav Correct']].applymap(al.toogle_from_object)['Onset Time_ Behav Correct'] - report[['Onset Time_ Behav Stim']].applymap(al.toogle_from_object)['Onset Time_ Behav Stim'] -500))
     tk = np.array(all_blks)
+    conditions = np.array([int(i.split('vsd_C')[1][0:2]) for i in all_blks])
     #Storing a raw_data matrix per each condition
     for i in np.unique(session.conditions):
         print(f'Condition: {i}')
-        ids = np.where(session.conditions == i)[0].tolist()
+        ids = np.where(conditions == i)[0].tolist()
         common_ids = list(set(ids).intersection(set(pos_ids)))
         common_ids_ = list(set(ids).intersection(set(neg_ids)))
         # Only for positive behav computing latency
