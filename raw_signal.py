@@ -119,7 +119,10 @@ if __name__=="__main__":
     print(len(session.all_blks))
     print(len(session.session_blks))
     print(np.shape(session.raw_data))
-    session.raw_data = np.delete(session.raw_data, session.session_blks.index(tris[2]),0)
+    try:
+        session.raw_data = np.delete(session.raw_data, session.session_blks.index(tris[2]),0)
+    except:
+        session.raw_data = session.raw_data 
     #raw = np.concatenate((session.raw_data[:tris[0]-1, :, :, :], session.raw_data[tris[0]:, :, :, :]))
     print(np.shape(session.raw_data))
     #all_blks = sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
