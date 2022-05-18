@@ -114,6 +114,7 @@ if __name__=="__main__":
     #Sorting the blks for date
     print(len(session.all_blks))
     session.all_blks[:] = [x for x in session.all_blks if x != tris[2]]
+    session.session_blks[:] = [x for x in session.session_blks if x != tris[2]]
     print(len(session.all_blks))
     print(np.shape(session.raw_data))
     raw = np.delete(session.raw_data, tris[0],0)
@@ -136,7 +137,7 @@ if __name__=="__main__":
     print(f'The number of all picked BLK indeces {len(session.session_blks)}')
     print(f'The number of selected indeces {len(pos_ids)}')
     latency = np.array((report[['Onset Time_ Behav Correct']].applymap(al.toogle_from_object)['Onset Time_ Behav Correct'] - report[['Onset Time_ Behav Stim']].applymap(al.toogle_from_object)['Onset Time_ Behav Stim'] -500))
-    tk = np.array(session.all_blks)
+    tk = np.array(session.session_blks)
     conditions = np.array([int(i.split('vsd_C')[1][0:2]) for i in session.session_blks])
     #Storing a raw_data matrix per each condition
     for i in np.unique(session.conditions):
