@@ -113,19 +113,22 @@ if __name__=="__main__":
     session.get_session()
     #Sorting the blks for date
     print(len(session.all_blks))
+    print(len(session.session_blks))
     session.all_blks[:] = [x for x in session.all_blks if x != tris[2]]
     session.session_blks[:] = [x for x in session.session_blks if x != tris[2]]
     print(len(session.all_blks))
+    print(len(session.session_blks))
     print(np.shape(session.raw_data))
-    raw = np.delete(session.raw_data, tris[0],0)
+    session.raw_data = np.delete(session.raw_data, session.session_blks.index(tris[2]),0)
     #raw = np.concatenate((session.raw_data[:tris[0]-1, :, :, :], session.raw_data[tris[0]:, :, :, :]))
-    print(np.shape(raw))
+    print(np.shape(session.raw_data))
     #all_blks = sorted(session.all_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     #Creating a storing folder
     folder_path = os.path.join(session.header['path_session'], 'derivatives/raw_data_matlab')  
     pos_blks = list(set(session.session_blks).intersection(set(filt_blks)))
     pos_blks = sorted(pos_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     pos_ids = [session.session_blks.index(i) for i in pos_blks]
+    pos_ids_lat = [session.all_blks.index(i) for i in pos_blks]
 
     neg_blks = list(set(session.session_blks).intersection(set(filt_blks_)))
     neg_blks = sorted(neg_blks, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
@@ -138,21 +141,27 @@ if __name__=="__main__":
     print(f'The number of selected indeces {len(pos_ids)}')
     latency = np.array((report[['Onset Time_ Behav Correct']].applymap(al.toogle_from_object)['Onset Time_ Behav Correct'] - report[['Onset Time_ Behav Stim']].applymap(al.toogle_from_object)['Onset Time_ Behav Stim'] -500))
     tk = np.array(session.session_blks)
+    tk_ = np.array(session.all_blks)
     conditions = np.array([int(i.split('vsd_C')[1][0:2]) for i in session.session_blks])
+    conditions_lat = np.array([int(i.split('vsd_C')[1][0:2]) for i in session.all_blks])
     #Storing a raw_data matrix per each condition
     for i in np.unique(session.conditions):
         print(f'Condition: {i}')
         ids = np.where(conditions == i)[0].tolist()
+        ids_lat = np.where(conditions_lat == i)[0].tolist()
         common_ids = list(set(ids).intersection(set(pos_ids)))
+        common_ids_lat = list(set(ids_lat).intersection(set(pos_ids_lat)))
         common_ids_ = list(set(ids).intersection(set(neg_ids)))
         # Only for positive behav computing latency
         #t = lat_timing_df.loc[lat_timing_df['BLK Names'].isin(all_blks[common_ids]), ['Onset Time_ Behav Correct', 'Onset Time_ Behav Stim']]
         print('Considered ids: \n')
         print(common_ids)
         print(tk[common_ids])
-        tmp_matrix = raw[common_ids]
-        tmp_matrix_ = raw[common_ids_]
-        lat_temp = latency[common_ids]
+        print('\n')
+        print(tk_[common_ids_lat])
+        tmp_matrix = session.raw_data[common_ids]
+        tmp_matrix_ = session.raw_data[common_ids_]
+        lat_temp = latency[common_ids_lat]
         #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
         utils.socket_numpy2matlab(folder_path, lat_temp, substring=f'latency_pos_cd{i}')
         utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'pos_cd{i}')
