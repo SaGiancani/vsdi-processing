@@ -172,10 +172,10 @@ if __name__=="__main__":
         except:
             shap = np.shape(tmp_matrix)
             shap_ = np.shape(tmp_matrix_)
-            utils.socket_numpy2matlab(folder_path, tmp_matrix[:shap//2, :, : ], substring=f'pos_cd{i}_first')
-            utils.socket_numpy2matlab(folder_path, tmp_matrix[shap//2:, :, : ], substring=f'pos_cd{i}_second')
-            utils.socket_numpy2matlab(folder_path, tmp_matrix_[:shap_//2, :, : ], substring=f'neg_cd{i}_first')
-            utils.socket_numpy2matlab(folder_path, tmp_matrix_[shap_//2:, :, : ], substring=f'neg_cd{i}_second')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[:shap[0]//2, :, : ], substring=f'pos_cd{i}_first')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[shap[0]//2:, :, : ], substring=f'pos_cd{i}_second')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[:shap_[0]//2, :, : ], substring=f'neg_cd{i}_first')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[shap_[0]//2:, :, : ], substring=f'neg_cd{i}_second')
         utils.socket_numpy2matlab(folder_path, lat_temp, substring=f'latency_pos_cd{i}')
 
     print('Time for raw signal storing: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
