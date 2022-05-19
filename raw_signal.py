@@ -166,9 +166,16 @@ if __name__=="__main__":
         tmp_matrix_ = session.raw_data[common_ids_]
         lat_temp = latency[common_ids_lat]
         #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
+        try: 
+            utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'pos_cd{i}')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_, substring=f'neg_cd{i}')
+        except:
+            shap = np.shape(tmp_matrix)
+            shap_ = np.shape(tmp_matrix_)
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[:shap//2, :, : ], substring=f'pos_cd{i}_first')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[shap//2:, :, : ], substring=f'pos_cd{i}_second')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[:shap_//2, :, : ], substring=f'neg_cd{i}_first')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[shap_//2:, :, : ], substring=f'neg_cd{i}_second')
         utils.socket_numpy2matlab(folder_path, lat_temp, substring=f'latency_pos_cd{i}')
-        utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'pos_cd{i}')
-        utils.socket_numpy2matlab(folder_path, tmp_matrix_, substring=f'neg_cd{i}')
-
 
     print('Time for raw signal storing: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
