@@ -72,5 +72,5 @@ def socket_numpy2matlab(path, matrix, substring = ''):
     The method saves a .mat matlab matrix variable, in the path folder, containing the matrix data.
     ---------------------------------------------------------------------------------------------------------    
     '''
-    scio.savemat(os.path.join(path, substring+'_signal.mat'), {'signal': matrix})
+    scio.savemat(os.path.join(path, substring+'_signal.mat'), {'signal': matrix}, do_compression=True)
     return
