@@ -167,15 +167,27 @@ if __name__=="__main__":
         lat_temp = latency[common_ids_lat]
         #np.save(os.path.join(folder_path, f'raw_data_cd{i}.npy'), tmp_matrix)
         try: 
-            utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'pos_cd{i}')
             utils.socket_numpy2matlab(folder_path, tmp_matrix_, substring=f'neg_cd{i}')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix, substring=f'pos_cd{i}')
+            
         except:
             shap = np.shape(tmp_matrix)
             shap_ = np.shape(tmp_matrix_)
-            utils.socket_numpy2matlab(folder_path, tmp_matrix[:shap[0]//2, :, : ], substring=f'pos_cd{i}_first')
-            utils.socket_numpy2matlab(folder_path, tmp_matrix[shap[0]//2:, :, : ], substring=f'pos_cd{i}_second')
-            utils.socket_numpy2matlab(folder_path, tmp_matrix_[:shap_[0]//2, :, : ], substring=f'neg_cd{i}_first')
-            utils.socket_numpy2matlab(folder_path, tmp_matrix_[shap_[0]//2:, :, : ], substring=f'neg_cd{i}_second')
+            inds = np.round(np.linspace(0, shap[0], 7))
+            inds_ = np.round(np.linspace(0, shap_[0], 7))
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[inds[0]:inds[1], :, : ], substring=f'pos_cd{i}_1')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[inds[1]:inds[2], :, : ], substring=f'pos_cd{i}_2')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[inds[2]:inds[3], :, : ], substring=f'pos_cd{i}_3')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[inds[3]:inds[4], :, : ], substring=f'pos_cd{i}_4')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[inds[4]:inds[5], :, : ], substring=f'pos_cd{i}_5')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix[inds[5]:inds[6], :, : ], substring=f'pos_cd{i}_6')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[inds_[0]:inds_[1], :, : ], substring=f'neg_cd{i}_1')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[inds_[1]:inds_[2], :, : ], substring=f'neg_cd{i}_2')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[inds_[2]:inds_[3], :, : ], substring=f'neg_cd{i}_3')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[inds_[3]:inds_[4], :, : ], substring=f'neg_cd{i}_4')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[inds_[4]:inds_[5], :, : ], substring=f'neg_cd{i}_5')
+            utils.socket_numpy2matlab(folder_path, tmp_matrix_[inds_[5]:inds_[6], :, : ], substring=f'neg_cd{i}_6')
+
         utils.socket_numpy2matlab(folder_path, lat_temp, substring=f'latency_pos_cd{i}')
 
     print('Time for raw signal storing: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
