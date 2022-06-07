@@ -511,7 +511,9 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', thresh_constant = 0.75, s
     
     if save_switch:
         np.save('chunk_aggregation_values.npy', m)
-    t_whol = [process.lognorm_thresholding(m[i, :], switch = 'median') for i in range(n_chunks)]
+    t_whol = list()
+    for i in range(n_chunks):
+        t_whol.append(process.lognorm_thresholding(m[i, :], switch = 'median'))
     # Intersection between the selectedones
     autoselect = list(set.intersection(*map(set,t_whol)))
     mask_array = np.zeros(m.shape[1], dtype=int)
