@@ -511,17 +511,9 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', thresh_constant = 0.75, s
     
     if save_switch:
         np.save('chunk_aggregation_values.npy', m)
-    t_whol = [np.where((m[i, :])<np.mean(m[i, :])*thresh_constant)[0].tolist() for i in range(n_chunks)]
-    autoselect = list(set.union(*map(set,t_whol)))
-    #t_whol = np.where((np.percentile(m, q=bottom, axis=1)<np.transpose(m)) & (np.percentile(m, q=up, axis=1)>np.transpose(m)))
-    #util = list(t_whol[0])
-    #set_a = list(set(util)) 
-    #dict_a = [(k, util.count(k)) for k in set_a] # List of tuples: first element the index of trial, second element number of chunks with the mae/mse value inside the range
-    #tmp = list(zip(*dict_a))
-    #lk = np.array(tmp[0])
-    #consider only the trials with value of mae/mse inside the quartiles for at least half of the chunks
-    #autoselect = lk[np.where(np.array(tmp[1])>= np.ceil(n_chunks*0.5))[0]]
-    # For combatibility with other methods, conversion in mask
+    t_whol = [process.lognorm_thresholding(m[i, :], switch = 'median') for i in range(n_chunks)]
+    # Intersection between the selectedones
+    autoselect = list(set.intersection(*map(set,t_whol)))
     mask_array = np.zeros(m.shape[1], dtype=int)
     mask_array[autoselect] = 1
     print(mask_array)

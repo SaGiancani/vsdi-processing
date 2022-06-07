@@ -81,6 +81,39 @@ def gaussian_fitting(td_mat, ax_to_fit, perc_wind = 3):
     popt,pcov = optimize.curve_fit(gauss_1d, ax, proj)#, bounds=bounds) or ,maxfev = 5000)
     return ax, proj, popt, pcov 
 
+def log_norm(y, mu, sigma):
+    return 1/(np.sqrt(2.0*np.pi)*sigma*y)*np.exp(-(np.log(y)-mu)**2/(2.0*sigma*sigma))
+
+def lognorm_fitting(array_to_fit, b= 50):
+    # Normalization
+    tmp = array_to_fit/np.max(array_to_fit)
+    # Histogram computation
+    h = np.histogram(tmp, bins=b)
+    n = h[1]
+    step = (n[1]-n[0])
+    nrm = np.sum(h[0]*step)    
+    fr = h[0]/nrm
+    xx = n - 0.5*step
+    ar = np.zeros((fr.shape[0]+1))
+    ar[1:] = fr
+    # lognormal Fitting
+    params, _ = optimize.curve_fit(log_norm, xx, ar)
+    mu = params[0]
+    sigma = params[1]
+    # Median + StdDev
+    # Median + StdDev
+    return tmp, mu, sigma
+
+def lognorm_thresholding(array_to_fit, switch = 'median'):
+    tmp, mu, sigma = lognorm_fitting(array_to_fit, b= 50)
+    if switch == 'median':
+        thresh = np.exp(mu)
+    elif switch == 'mean':
+        thresh = np.exp(mu + sigma*sigma/2.0)
+    thresh_std = (thresh + 2*np.sqrt((np.exp(sigma*sigma)-1)*np.exp(mu+mu+sigma*sigma)))
+    select_trials_id = np.where(((tmp)<(thresh_std)))[0].tolist()
+    return select_trials_id
+
 def zeta_score(sig_cond, sig_blank, zero_frames = 20):
     eps = 0.00000001
     # Blank mean and stder computation
