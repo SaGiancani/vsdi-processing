@@ -515,7 +515,7 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', thresh_constant = 0.75, s
     for i in range(n_chunks):
         t_whol.append(process.lognorm_thresholding(m[i, :], switch = 'median'))
     # Intersection between the selectedones
-    autoselect = list(set.intersection(*map(set,t_whol)))
+    autoselect = list(set.union(*map(set,t_whol)))
     mask_array = np.zeros(m.shape[1], dtype=int)
     mask_array[autoselect] = 1
     print(mask_array)
