@@ -205,7 +205,9 @@ class Session:
                 #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 indeces = np.where(np.array(self.conditions) == c)[0].tolist()
                 tc_cond = self.time_course_signals[indeces, :]
-                t = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
+                #     return autoselect, mask_array, coords, distr_info, ms_norm
+
+                _, t, _, _, _  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
 
@@ -279,7 +281,7 @@ class Session:
         blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
         size_df_f0 = np.shape(blank_df_f0)
         # Minimum chunks == 2: otherwise an outlier could mess the results up
-        blank_autoselect = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae')
+        _, blank_autoselect, _, _, _   = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae')
         # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
         # But the one for normalization is kept without demean
         self.df_fzs = blank_df_f0 - 1
@@ -484,7 +486,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     autoselect = np.sum(selected_frames_mask, axis=1)<((size[1]-zero_frames)/2)
     return autoselect
 
-def overlap_strategy(matrix, n_chunks=1, loss = 'mae', thresh_constant = 0.75, save_switch = True):
+def overlap_strategy(matrix, n_chunks=1, loss = 'mae', save_switch = True):
     if  matrix.shape[1] % n_chunks == 0:
         matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
         tmp_m_ = np.zeros((n_chunks, matrix.shape[0], matrix.shape[0]))
@@ -512,15 +514,21 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', thresh_constant = 0.75, s
     if save_switch:
         np.save('chunk_aggregation_values.npy', m)
     t_whol = list()
+    coords = list()
+    distr_info = list()
+    ms_norm = list()
     for i in range(n_chunks):
-        t_whol.append(process.lognorm_thresholding(m[i, :], switch = 'median'))
+        t, l, m_norm = process.lognorm_thresholding(m[i, :], switch = 'median')
+        coords.append((l[0], l[3]))
+        t_whol.append(t)
+        distr_info.append(l)
+        ms_norm.append(m_norm)
     # Intersection between the selected ones
     autoselect = list(set.intersection(*map(set,t_whol)))
     mask_array = np.zeros(m.shape[1], dtype=int)
     mask_array[autoselect] = 1
-    print(mask_array)
     # Mask of selected ones
-    return mask_array
+    return autoselect, mask_array, coords, distr_info, ms_norm
 
 def statistical_strategy(matrix, up=75, bottom=25):
     size = np.shape(matrix)
