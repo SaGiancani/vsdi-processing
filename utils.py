@@ -3,6 +3,10 @@ import numpy as np
 import scipy.io as scio
 import datetime, fnmatch, logging, os, pickle, sys, struct
 
+COLORS = colors_a = [  'forestgreen', 'purple', 'orange', 'blue',
+                 'aqua', 'plum', 'tomato', 'lightslategray', 'orangered','gainsboro',
+                 'yellowgreen', 'aliceblue', 'mediumvioletred', 'gold', 'sandybrown',
+                 'aquamarine', 'black','lime', 'pink', 'limegreen', 'royalblue','yellow']
 
 def detrending(signal):
     """

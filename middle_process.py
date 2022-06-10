@@ -206,18 +206,20 @@ class Session:
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
             tmp_ = list()
-            for c in mod_conds:
+            for c_ in mod_conds:
                 #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
-                indeces = np.where(np.array(self.conditions) == c)[0].tolist()
+                indeces = np.where(np.array(self.conditions) == c_)[0].tolist()
                 tc_cond = self.time_course_signals[indeces, :]
-                self.log.info(f'Autoselection for Condition: {c}')
+                self.log.info(f'Autoselection for Condition: {c_}')
                 self.log.info(np.array(self.session_blks)[indeces])
                 self.log.info(indeces)
                 #print(np.array(self.all_blks)[indeces])
                 #print(np.array(self.conditions)[indeces])
                 #     return autoselect, mask_array, coords, distr_info, ms_norm
-                _, t, _, _, _  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
+                _, t, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
+                self.chunk_distribution_visualization(b, d, c, c_, strategy)
                 tmp_ = tmp_ + t.tolist()
+
             tmp = np.array(tmp_) 
 
         elif strategy in ['roi', 'roi_signals', 'ROI']:
@@ -240,7 +242,7 @@ class Session:
         self.log.info(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
         self.trials_name = session_blks[self.auto_selected]
-        self.log.info(self.auto_selected)
+        self.log.info(np.array(self.conditions)[self.auto_selected])
         self.log.info(self.trials_name)
         self.log.info('Autoselection loop time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return
@@ -293,10 +295,12 @@ class Session:
         if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
         # Blank signal extraction
         self.log.info('Blank trials loading starts:')
+        strategy_blank = 'mae'
         blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
         size_df_f0 = np.shape(blank_df_f0)
         # Minimum chunks == 2: otherwise an outlier could mess the results up
-        _, blank_autoselect, _, _, _   = overlap_strategy(blank_sig, n_chunks=1, loss = 'mae')
+        _, blank_autoselect, b, c, d   = overlap_strategy(blank_sig, n_chunks=1, loss = strategy_blank)
+        self.chunk_distribution_visualization(b, d, c, self.blank_id, strategy_blank)
         # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
         # But the one for normalization is kept without demean
         self.df_fzs = blank_df_f0 - 1
@@ -312,6 +316,56 @@ class Session:
         # employed for normalize the signal 
         blank_df = np.mean(blank_df_f0[indeces_select, :, :, :], axis=0)
         return blank_sig_  , blank_df
+
+    def chunk_distribution_visualization(self, coords, m_norm, l, cd_i, strategy):
+        session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
+        colors_a = utils.COLORS
+        xxx=np.linspace(0.001,np.max(list(zip(*coords))[1]),1000)
+        #print(len(l))
+        plt.figure(figsize=(25, 15))
+        for i,j in enumerate(l):
+            plt.subplot(2,3,3)
+            plt.plot(xxx, process.log_norm(xxx, j[1], j[2]), color = colors_a[i], alpha = 0.5)
+            plt.plot(list(zip(*coords))[1], list(zip(*coords))[0], "k", marker=".", markeredgecolor="red", ls = "")
+
+            # Median + StdDev
+            # Median + StdDev
+            mean_o = np.exp(j[1] + j[2]*j[2]/2.0)
+            median_o = np.exp(j[1])
+            median_o_std = (median_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2])))
+            mean_o_std = mean_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2]))
+            #plt.axvline(x=median_o, color = colors_a[-i], linestyle='--')
+            plt.axvline(x=median_o_std, color = colors_a[i], linestyle='-')
+            # Mean + StdDev
+            #plt.axvline(x=mean_o, color = colors_a[i+1], linestyle='--')
+            plt.axvline(x=mean_o_std, color = colors_a[i], linestyle='-')
+
+            # We can set the number of bins with the *bins* keyword argument.
+            #axs[0].hist(dist1, bins=n_bins)
+            #axs[1].hist(dist2, bins=n_bins)
+            plt.subplot(2,3,1)
+            #plt.gca().set_title()
+            plt.gca().set_ylabel(strategy)
+            plt.gca().set_xlabel('Trials')
+            #plt.plot(range(len(mae[i, :])), mae[i, :], marker="o", markeredgecolor="red", markerfacecolor="green", ls="-")    
+            plt.plot(range(len(m_norm[i])), m_norm[i], marker="o", markeredgecolor="red", markerfacecolor=colors_a[i], ls="")#, marker="o", markeredgecolor="red", markerfacecolor="green")
+            #plt.plot(range(len(mse[i, :])), [np.mean(mse[i, :])-0.5*np.std(mse[i, :])]*len(mse[i, :]),  ls="--", color = colors_a[i])
+            plt.plot(range(len(m_norm[i])), [mean_o_std]*len(m_norm[i]),  ls="-", color = colors_a[i])
+            #plt.plot(range(len(mae[i, :])), [median_o_std]*len(mae[i, :]),  ls="-", color = colors_a[-i])
+            
+            #mse[i, :] 
+            #plt.plot(range(0, np.max(mse[0])), )
+            plt.subplot(2,3,2)
+            plt.gca().set_ylabel('Count')
+            plt.gca().set_xlabel(strategy)
+            #plt.gca().set_title(f'Histogram for Condition {cond_num}')
+            a = plt.hist(m_norm[i], bins = 50, color=colors_a[i], alpha=0.8)
+            
+            tmp = self.set_md_folder()
+            if not os.path.exists(os.path.join(tmp,'chunks_analysis')):
+                os.makedirs(os.path.join(tmp,'chunks_analysis'))
+            plt.savefig(os.path.join(tmp,'chunks_analysis', session_name+'_chunks_0'+str(cd_i)+'.png'))
+        return
 
     def roi_plots(self):
         sig = self.time_course_signals
@@ -369,8 +423,6 @@ class Session:
                         ax_ = subfig.subplots(1, 1)
                         for id_trial in cdi_select:
                             ax_.plot(list(range(0,np.shape(sig)[1])), sig[id_trial, :], 'lightsteelblue')
-                            ax.set_title(np.array(self.session_blks)[id_trial])
-
                         ax_.plot(list(range(0,np.shape(sig)[1])), np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Condition Signal', linewidth = 5)
                         ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
                         ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
@@ -523,7 +575,9 @@ def roi_strategy(matrix, tolerance, zero_frames):
         tolerance*(np.std(tmp, axis=0)/np.sqrt(np.shape(tmp)[0]))
     #This could be tricky: not on all the frames.
     autoselect = np.sum(selected_frames_mask, axis=1)<((size[1]-zero_frames)/2)
-    return autoselect
+    mask_array = np.zeros(size[0], dtype=int)
+    mask_array[autoselect] = 1
+    return mask_array
 
 def overlap_strategy(matrix, n_chunks=1, loss = 'mae', save_switch = True):
     if  matrix.shape[1] % n_chunks == 0:
