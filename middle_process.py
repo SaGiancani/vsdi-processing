@@ -29,6 +29,10 @@ class Session:
         filename : str
             The path of the external file, containing the raw image
         """
+        if logger is None:
+            self.log = utils.setup_custom_logger('myapp')
+        else:
+            self.log = logger              
         self.cond_names = None
         self.header = self.get_session_header(**kwargs)
         self.all_blks = get_all_blks(self.header['path_session']) # all the blks. 
@@ -64,12 +68,7 @@ class Session:
         self.raw_data = None
         self.auto_selected = None
         self.conditions = None
-        self.counter_blank = 0
-
-        if logger is None:
-            self.log = utils.setup_custom_logger('myapp')
-        else:
-            self.log = logger        
+        self.counter_blank = 0  
         
         if self.header['deblank_switch']:
             # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
