@@ -156,8 +156,10 @@ class Session:
             self.raw_data = raws
         else:
             # If blank signal already loaded -or not deblank- come in
+            print('No blank signal yet, or deblank mode activated')
             if self.counter_blank == 0:
                 print('Trials loading starts:')
+                print(f'session_blks list: {self.session_blks}')
                 time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.f_f0_blank, self.header['deblank_switch'])
                 self.conditions = conditions
                 self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
@@ -167,31 +169,30 @@ class Session:
             else:
                 # If the condition is not only the blank one, than I compute the same iteration as up
                 if len(self.header['conditions_id']) > 1:
+                    print('No blank signal yet, or deblank mode activated')
                     blks = [f for f in self.all_blks \
                         if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
                     print('Trials loading starts:')
-                    print(self.time_course_signals.shape)
-                    print(self.df_fzs.shape)
+                    print(f'session_blks list: {self.session_blks}')
                     time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
                     self.session_blks = self.session_blks + blks
                     self.conditions = self.conditions + conditions                        
                     self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
                     self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
                     #self.motion_indeces = self.motion_indeces + motion_indeces
-                    print(self.time_course_signals.shape)
-                    print(self.df_fzs.shape)
+
                 else:
                     print('Warning: Something weird in get_session')
         return
 
     def autoselection(self, save_switch = True):
-        start_time = datetime.datetime.now().replace(microsecond=0)
         strategy = self.header['strategy']
         n_frames = self.header['n_frames']
-        
         self.get_session()
 
+        start_time = datetime.datetime.now().replace(microsecond=0)
         if strategy in ['mse', 'mae']:
+            print('Chunks division strategy choosen')
             if  n_frames%self.header['chunks']==0:
                 nch = self.header['chunks']
             else:
@@ -205,8 +206,10 @@ class Session:
                 #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 indeces = np.where(np.array(self.conditions) == c)[0].tolist()
                 tc_cond = self.time_course_signals[indeces, :]
+                print(f'Autoselection for Condition: {c}')
+                print(np.array(self.session_blks)[indeces])
+                print(np.array(self.conditions)[indeces])
                 #     return autoselect, mask_array, coords, distr_info, ms_norm
-
                 _, t, _, _, _  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 tmp_ = tmp_ + t.tolist()
             tmp = np.array(tmp_) 
@@ -217,12 +220,17 @@ class Session:
         elif strategy in ['statistic', 'statistical', 'quartiles']:
             tmp = statistical_strategy(self.time_course_signals[self.counter_blank:, :])
 
+        # If autoselected list is empty store the autoselection
         if (self.auto_selected is None) or (len(self.header['conditions_id'])==1):
             self.auto_selected = tmp
+        # Otherwise append            
         else :
             self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist())
+        
+        # Storing for local analysis
         if save_switch:
             np.save('time_courses.npy', self.time_course_signals)
+        
         print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
         self.trials_name = session_blks[self.auto_selected]
@@ -416,6 +424,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 header['zero_frames'],
                 header = header_blk)
         # if header['mov_switch']:
+        print(f'The blk file {blk_name} is loaded')
+        print(f'Condition {BLK.condition}')
         #     motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
         conditions.append(BLK.condition)
         #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
