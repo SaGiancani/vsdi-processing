@@ -90,10 +90,10 @@ def setup_custom_logger(name):
     It is used for log files for background processes.
     -------------------------------------------------------------------------------------------------------------
     '''
-    PATH_LOGS = './logs/log_'
+    PATH_LOGS = './logs'
     formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
                                   datefmt='%Y-%m-%d %H:%M:%S')
-    handler = logging.FileHandler(os.path.join(PATH_LOGS, str(datetime.datetime.now().replace(microsecond=0))+'.txt'), mode='w')
+    handler = logging.FileHandler(os.path.join(PATH_LOGS, 'log_'+str(datetime.datetime.now().replace(microsecond=0))+'.txt'), mode='w')
     handler.setFormatter(formatter)
     screen_handler = logging.StreamHandler(stream=sys.stdout)
     screen_handler.setFormatter(formatter)
