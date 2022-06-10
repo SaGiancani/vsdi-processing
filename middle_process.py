@@ -208,10 +208,14 @@ class Session:
                 tc_cond = self.time_course_signals[indeces, :]
                 print(f'Autoselection for Condition: {c}')
                 print(np.array(self.session_blks)[indeces])
-                print(np.array(self.conditions)[indeces])
+                print(indeces)
+                print(np.array(self.session_blks)[indeces])
+                #print(np.array(self.all_blks)[indeces])
+                #print(np.array(self.conditions)[indeces])
                 #     return autoselect, mask_array, coords, distr_info, ms_norm
                 _, t, _, _, _  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 tmp_ = tmp_ + t.tolist()
+                print
             tmp = np.array(tmp_) 
 
         elif strategy in ['roi', 'roi_signals', 'ROI']:
