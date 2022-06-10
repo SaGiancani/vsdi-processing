@@ -1,6 +1,7 @@
+from gettext import find
 import numpy as np
 import scipy.io as scio
-import datetime, fnmatch, os, pickle, struct
+import datetime, fnmatch, logging, os, pickle, sys, struct
 
 
 def detrending(signal):
@@ -36,13 +37,19 @@ def datetime_as_string(raw_bytes):
     return date_time_
     #date_time_.strftime([:23]
 
-def find_file(pattern, path):
+def find_thing(pattern, path, what ='file'):
     result = []
     for root, dirs, files in os.walk(path):
-        for name in files:
-            if fnmatch.fnmatch(name, pattern):
-                result.append(os.path.join(root, name))
+        if what == 'file':
+            for name in files:
+                if fnmatch.fnmatch(name, pattern):
+                    result.append(os.path.join(root, name))
+        elif what == 'dir':
+            for name in dirs:
+                if fnmatch.fnmatch(name, pattern):
+                    result.append(os.path.join(root, name))           
     return result
+
 
 def inputs_load(filename):
     '''
@@ -74,3 +81,24 @@ def socket_numpy2matlab(path, matrix, substring = ''):
     '''
     scio.savemat(os.path.join(path, substring+'_signal.mat'), {'signal': matrix}, do_compression=True)
     return
+
+def setup_custom_logger(name):
+    '''
+    -------------------------------------------------------------------------------------------------------------
+    Logger for printing and debugging
+    
+    It is used for log files for background processes.
+    -------------------------------------------------------------------------------------------------------------
+    '''
+    PATH_LOGS = './logs/log_'
+    formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
+                                  datefmt='%Y-%m-%d %H:%M:%S')
+    handler = logging.FileHandler(os.path.join(PATH_LOGS, str(datetime.datetime.now().replace(microsecond=0))+'.txt'), mode='w')
+    handler.setFormatter(formatter)
+    screen_handler = logging.StreamHandler(stream=sys.stdout)
+    screen_handler.setFormatter(formatter)
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+    logger.addHandler(screen_handler)
+    return logger

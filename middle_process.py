@@ -10,7 +10,7 @@ LABEL_CONDS_PATH = 'metadata/labelConds.txt'
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
 class Session:
-    def __init__(self, **kwargs):
+    def __init__(self, logger = None, **kwargs):
         """
         Initializes attributes
         Default values for:
@@ -64,7 +64,12 @@ class Session:
         self.raw_data = None
         self.auto_selected = None
         self.conditions = None
-        self.counter_blank = 0        
+        self.counter_blank = 0
+
+        if logger is None:
+            self.log = utils.setup_custom_logger('myapp')
+        else:
+            self.log = logger        
         
         if self.header['deblank_switch']:
             # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
@@ -124,11 +129,11 @@ class Session:
                 contents = f.readlines()
             return [i.split('\n')[0] for i in contents]
         except FileNotFoundError:
-            print('Check the labelConds.txt presence inside the metadata subfolder')
+            self.log.info('Check the labelConds.txt presence inside the metadata subfolder')
             cds = self.get_condition_ids()
             return ['Condition ' + str(c) for c in cds]
         except NotADirectoryError:
-            print(os.path.join(self.header['path_session'], LABEL_CONDS_PATH) +' path does not exist')
+            self.log.info(os.path.join(self.header['path_session'], LABEL_CONDS_PATH) +' path does not exist')
             cds = self.get_condition_ids()
             return ['Condition ' + str(c) for c in cds]
 
@@ -140,12 +145,12 @@ class Session:
         '''
         try:
             tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][0]+1
-            print('Blank id: ' + str(tmp))
+            self.log.info('Blank id: ' + str(tmp))
             return tmp
         except IndexError:
-            print('No clear blank condition was identified: the last condition has picked')
+            self.log.info('No clear blank condition was identified: the last condition has picked')
             tmp = len(self.cond_names)
-            print('Blank id: ' + str(tmp))
+            self.log.info('Blank id: ' + str(tmp))
             return tmp
     
     def get_session(self):
@@ -156,10 +161,10 @@ class Session:
             self.raw_data = raws
         else:
             # If blank signal already loaded -or not deblank- come in
-            print('No blank signal yet, or deblank mode activated')
             if self.counter_blank == 0:
-                print('Trials loading starts:')
-                print(f'session_blks list: {self.session_blks}')
+                self.log.info('No blank signal yet, or deblank mode deactivated')
+                self.log.info('Trials loading starts:')
+                self.log.info(f'session_blks list: {self.session_blks}')
                 time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.f_f0_blank, self.header['deblank_switch'])
                 self.conditions = conditions
                 self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
@@ -169,20 +174,20 @@ class Session:
             else:
                 # If the condition is not only the blank one, than I compute the same iteration as up
                 if len(self.header['conditions_id']) > 1:
-                    print('No blank signal yet, or deblank mode activated')
+                    self.log.info('Blank signal already computed')
                     blks = [f for f in self.all_blks \
                         if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
-                    print('Trials loading starts:')
-                    print(f'session_blks list: {self.session_blks}')
+                    self.log.info('Trials loading starts:')
                     time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
                     self.session_blks = self.session_blks + blks
+                    self.log.info(f'session_blks list: {self.session_blks}')
                     self.conditions = self.conditions + conditions                        
                     self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
                     self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
                     #self.motion_indeces = self.motion_indeces + motion_indeces
 
                 else:
-                    print('Warning: Something weird in get_session')
+                    self.log.info('Warning: Something weird in get_session')
         return
 
     def autoselection(self, save_switch = True):
@@ -192,11 +197,11 @@ class Session:
 
         start_time = datetime.datetime.now().replace(microsecond=0)
         if strategy in ['mse', 'mae']:
-            print('Chunks division strategy choosen')
+            self.log.info('Chunks division strategy choosen')
             if  n_frames%self.header['chunks']==0:
                 nch = self.header['chunks']
             else:
-                print('Warning: Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered') 
+                self.log.info('Warning: Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered') 
                 nch = 1
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
@@ -206,16 +211,15 @@ class Session:
                 #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 indeces = np.where(np.array(self.conditions) == c)[0].tolist()
                 tc_cond = self.time_course_signals[indeces, :]
-                print(f'Autoselection for Condition: {c}')
-                print(np.array(self.session_blks)[indeces])
-                print(indeces)
-                print(np.array(self.session_blks)[indeces])
+                self.log.info(f'Autoselection for Condition: {c}')
+                self.log.info(np.array(self.session_blks)[indeces])
+                self.log.info(indeces)
+                self.log.info(np.array(self.session_blks)[indeces])
                 #print(np.array(self.all_blks)[indeces])
                 #print(np.array(self.conditions)[indeces])
                 #     return autoselect, mask_array, coords, distr_info, ms_norm
                 _, t, _, _, _  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 tmp_ = tmp_ + t.tolist()
-                print
             tmp = np.array(tmp_) 
 
         elif strategy in ['roi', 'roi_signals', 'ROI']:
@@ -235,11 +239,11 @@ class Session:
         if save_switch:
             np.save('time_courses.npy', self.time_course_signals)
         
-        print(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
+        self.log.info(str(sum(self.auto_selected)) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
         self.trials_name = session_blks[self.auto_selected]
-        print(self.auto_selected)
-        print('Autoselection loop time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+        self.log.info(self.auto_selected)
+        self.log.info('Autoselection loop time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return
 
     def deltaf_visualization(self, start_frame, n_frames_showed, end_frame):
@@ -249,7 +253,7 @@ class Session:
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         # Array with indeces of considered frames: it starts from the last considerd zero_frames
         considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
-        print(considered_frames)
+        self.log.info(considered_frames)
         conditions = np.unique(self.conditions)
         for cd_i in conditions:
             indeces_cdi = np.where(self.conditions == cd_i)
@@ -271,7 +275,7 @@ class Session:
             if not os.path.exists(os.path.join(tmp,'activity_maps')):
                 os.makedirs(os.path.join(tmp,'activity_maps'))
             plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_0'+str(cd_i)+'.png'))
-        print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+        self.log.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
     
     def get_averaged_signal(self, id):
@@ -289,7 +293,7 @@ class Session:
         blks = [f for f in self.all_blks \
         if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
         # Blank signal extraction
-        print('Blank trials loading starts:')
+        self.log.info('Blank trials loading starts:')
         blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
         size_df_f0 = np.shape(blank_df_f0)
         # Minimum chunks == 2: otherwise an outlier could mess the results up
@@ -318,7 +322,7 @@ class Session:
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         conditions = np.unique(self.conditions)
         blank_sign = self.time_course_blank
-        print(self.conditions)
+        self.log.info(self.conditions)
         for cd_i in conditions:
             indeces_cdi = np.where(np.array(self.conditions) == cd_i)
             indeces_cdi = indeces_cdi[0].tolist()
@@ -347,10 +351,11 @@ class Session:
                 axs = subfig.subplots(nrows=1, ncols=columns, sharex=True)#, sharey=True)
                 for i, ax in enumerate(axs):
                     count = row*columns + i
-                    color = 'r'
                     if count < len(indeces_cdi):
                         if indeces_cdi[count] in cdi_select:
                             color = 'b'
+                        else:
+                            color = 'r'
                         ax.plot(sig[indeces_cdi[count], :], color)
                         ax.errorbar([i for i in range(np.shape(sig[cdi_select, :])[1])], np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
                         ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
@@ -646,21 +651,24 @@ if __name__=="__main__":
                         required=False,
                         help='Strategy for the autoselection: choose between mse/mae, statistical, roi -kevin equation-')     
 
+    logger = utils.setup_custom_logger('myapp')
+    logger.info('Start\n')
     args = parser.parse_args()
-    print(args)
-    
+    logger.info(args)
     # Check on quality of inserted data
     assert args.spatial_bin > 0, "Insert a value greater than 0"    
     assert args.temporal_bin > 0, "Insert a value greater than 0"    
     assert args.zero_frames > 0, "Insert a value greater than 0"    
     assert args.strategy in ['mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'], "Insert a valid name strategy: 'mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'"    
     start_time = datetime.datetime.now().replace(microsecond=0)
-    session = Session(**vars(args))
+    session = Session(logger = logger, **vars(args))
     session.autoselection()
-    print('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+    logger.info('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+    logger.info(session.session_blks)
+    logger.info(session.conditions)
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
-    utils.inputs_save(session, 'session_prova')
+    #utils.inputs_save(session, 'session_prova')
     utils.inputs_save(session.session_blks, 'blk_names')
     #print(session.trials_name)
 
