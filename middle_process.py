@@ -213,7 +213,6 @@ class Session:
                 self.log.info(f'Autoselection for Condition: {c}')
                 self.log.info(np.array(self.session_blks)[indeces])
                 self.log.info(indeces)
-                self.log.info(np.array(self.session_blks)[indeces])
                 #print(np.array(self.all_blks)[indeces])
                 #print(np.array(self.conditions)[indeces])
                 #     return autoselect, mask_array, coords, distr_info, ms_norm
@@ -242,6 +241,7 @@ class Session:
         session_blks = np.array(self.session_blks)
         self.trials_name = session_blks[self.auto_selected]
         self.log.info(self.auto_selected)
+        self.log.info(self.trials_name)
         self.log.info('Autoselection loop time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return
 
@@ -356,6 +356,7 @@ class Session:
                         else:
                             color = 'r'
                         ax.plot(sig[indeces_cdi[count], :], color)
+                        ax.set_title(np.array(self.session_blks)[indeces_cdi[count]])
                         ax.errorbar([i for i in range(np.shape(sig[cdi_select, :])[1])], np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
                         ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                         #ax.set_ylim(-0.002,0.002)
@@ -368,6 +369,8 @@ class Session:
                         ax_ = subfig.subplots(1, 1)
                         for id_trial in cdi_select:
                             ax_.plot(list(range(0,np.shape(sig)[1])), sig[id_trial, :], 'lightsteelblue')
+                            ax.set_title(np.array(self.session_blks)[id_trial])
+
                         ax_.plot(list(range(0,np.shape(sig)[1])), np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Condition Signal', linewidth = 5)
                         ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
                         ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
@@ -403,12 +406,18 @@ class Session:
         return folder_path
 
 
-def signal_extraction(header, blks, blank_s, blnk_switch):
+def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
-    print(f'The blank_signal exist: {blank_s is not None}')
-    print(f'The blank switch is: {blnk_switch}')
+    
+    if log is None:
+        print(f'The blank_signal exist: {blank_s is not None}')
+        print(f'The blank switch is: {blnk_switch}')
+    else:
+        log.info(f'The blank_signal exist: {blank_s is not None}')
+        log.info(f'The blank switch is: {blnk_switch}')
+
     for i, blk_name in enumerate(blks):
         start_time = datetime.datetime.now().replace(microsecond=0)
         # If first BLK file, than the header is stored
@@ -431,9 +440,13 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
                 header['temporal_bin'], 
                 header['zero_frames'],
                 header = header_blk)
-        # if header['mov_switch']:
-        print(f'The blk file {blk_name} is loaded')
-        print(f'Condition {BLK.condition}')
+        
+        # Log prints
+        if log is None:
+            print(f'The blk file {blk_name} is loaded')
+        else:
+            log.info(f'The blk file {blk_name} is loaded')
+            
         #     motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
         conditions.append(BLK.condition)
         #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
@@ -441,10 +454,15 @@ def signal_extraction(header, blks, blank_s, blnk_switch):
         sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
-        print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+
+        # Log prints
+        if log is None:
+            print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+        else:
+            log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     return sig, delta_f, conditions#, motion_indeces
 
-def raw_signal_extraction(header, blks):
+def raw_signal_extraction(header, blks, log = None):
     '''
         The method is the same as the signal_extraction, but in place of delta_f,
         it stores raw binned signal. 
@@ -482,7 +500,10 @@ def raw_signal_extraction(header, blks):
         raws[i, :, :, :] =  BLK.binned_signal 
         #at the end something like (nblks, 70, 1)
         # The deltaF computing could be avoidable, since ROI signal at the end is plotted
-        print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+        if log is None:
+            print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+        else:
+            log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     return raws, conditions#, motion_indeces
 
 
@@ -529,18 +550,21 @@ def overlap_strategy(matrix, n_chunks=1, loss = 'mae', save_switch = True):
         # This check has to be done before running the script
         print('Use a proper number of chunks: exact division for the number of frames required')
     
-    if save_switch:
-        np.save('chunk_aggregation_values.npy', m)
+    # This save is useless: overlap_strategy usually called iteratively
+    #if save_switch:
+    #    np.save('chunk_aggregation_values.npy', m)
     t_whol = list()
     coords = list()
     distr_info = list()
     ms_norm = list()
+
     for i in range(n_chunks):
         t, l, m_norm = process.lognorm_thresholding(m[i, :], switch = 'median')
         coords.append((l[0], l[3]))
         t_whol.append(t)
         distr_info.append(l)
         ms_norm.append(m_norm)
+
     # Intersection between the selected ones
     autoselect = list(set.intersection(*map(set,t_whol)))
     mask_array = np.zeros(m.shape[1], dtype=int)
