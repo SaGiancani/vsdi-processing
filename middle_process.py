@@ -232,6 +232,7 @@ class Session:
         
         self.log.info(str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
+        self.log.info(self.auto_selected)
         self.trials_name = session_blks[self.auto_selected]
         #self.log.info(np.array(self.conditions)[self.auto_selected])
         #self.log.info(self.trials_name)
