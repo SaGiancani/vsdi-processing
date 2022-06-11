@@ -200,7 +200,7 @@ class Session:
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
-            tmp = np.zeros(len(self.conditions), dtype=int)
+            tmp = np.zeros(len(self.conditions[self.counter_blank:]), dtype=int)
             for c_ in mod_conds:
                 #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 indeces = np.where(np.array(self.conditions) == c_)[0]
@@ -211,7 +211,9 @@ class Session:
                 t, _, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 self.chunk_distribution_visualization(b, d, c, c_, strategy)
                 # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
-                tmp[indeces[t].tolist()] = 1
+                # This imply deleting the first blanks time courses -counter_blank variable-
+                ids = indeces[t] - self.counter_blank
+                tmp[ids.tolist()] = 1
 
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
@@ -571,7 +573,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     mask_array[autoselect] = 1
     return mask_array
 
-def overlap_strategy(matrix, n_chunks=1, loss = 'mae', save_switch = True):
+def overlap_strategy(matrix, n_chunks=1, loss = 'mae'):
     if  matrix.shape[1] % n_chunks == 0:
         matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
         tmp_m_ = np.zeros((n_chunks, matrix.shape[0], matrix.shape[0]))
