@@ -200,7 +200,7 @@ class Session:
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
-            tmp = np.zeros(len(self.conditions))
+            tmp = np.zeros(len(self.conditions), dtype=int)
             for c_ in mod_conds:
                 #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 indeces = np.where(np.array(self.conditions) == c_)[0]
@@ -221,10 +221,10 @@ class Session:
 
         # If autoselected list is empty store the autoselection
         if (self.auto_selected is None) or (len(self.header['conditions_id'])==1):
-            self.auto_selected = tmp.astype(int)
+            self.auto_selected = tmp
         # Otherwise append            
         else :
-            self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist())
+            self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist(), dtype=int)
         
         # Storing for local analysis
         if save_switch:
