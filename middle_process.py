@@ -200,7 +200,7 @@ class Session:
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
-            tmp_ = np.zeros(len(self.conditions))
+            tmp = np.zeros(len(self.conditions))
             for c_ in mod_conds:
                 #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
                 indeces = np.where(np.array(self.conditions) == c_)[0]
@@ -211,8 +211,8 @@ class Session:
                 t, _, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 self.chunk_distribution_visualization(b, d, c, c_, strategy)
                 # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
-                tmp_[indeces[t].tolist()] = 1
-
+                tmp[indeces[t].tolist()] = 1
+            
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
