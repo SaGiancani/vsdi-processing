@@ -212,7 +212,7 @@ class Session:
                 self.chunk_distribution_visualization(b, d, c, c_, strategy)
                 # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
                 tmp[indeces[t].tolist()] = 1
-            tmp = tmp.tolist()
+                
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
@@ -233,8 +233,8 @@ class Session:
         self.log.info(str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
         self.trials_name = session_blks[self.auto_selected]
-        self.log.info(np.array(self.conditions)[self.auto_selected])
-        self.log.info(self.trials_name)
+        #self.log.info(np.array(self.conditions)[self.auto_selected])
+        #self.log.info(self.trials_name)
         self.log.info('Autoselection loop time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return
 
