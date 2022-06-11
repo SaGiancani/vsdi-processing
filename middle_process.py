@@ -212,7 +212,7 @@ class Session:
                 self.chunk_distribution_visualization(b, d, c, c_, strategy)
                 # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
                 tmp[indeces[t].tolist()] = 1
-                
+
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
 
@@ -221,7 +221,7 @@ class Session:
 
         # If autoselected list is empty store the autoselection
         if (self.auto_selected is None) or (len(self.header['conditions_id'])==1):
-            self.auto_selected = tmp
+            self.auto_selected = tmp.astype(int)
         # Otherwise append            
         else :
             self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist())
