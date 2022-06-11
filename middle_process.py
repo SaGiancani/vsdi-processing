@@ -84,18 +84,13 @@ class Session:
         '''
 #        if self.session_blks is None:
         #This condition check is an overkill
-        if ((self.header['conditions_id'] is None) or (len(self.header['conditions_id']) == len(self.cond_names))): 
+        if ((self.header['conditions_id'] is None) or (len(self.header['conditions_id']) == len(self.cond_names))):
+            self.log.info('BLKs for all conditions sorted by time creation')
             return self.all_blks
         else:
+            self.log.info('BLKs for conditions ' + str(self.header['conditions_id']) + 'sorted by time creation')
             tmp = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
             return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
-
-        # else:
-        #     print('Warning: session_blks was not None')
-        #     id_check = list(set([f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]))]))
-        #     if len(id_check) == 1 and self.blank_id in id_check:
-        #         b = np.array(self.header['conditions_id']).tolist()
-        #         return self.session_blks + [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])) in b.remove(self.blank_id)]
 
     def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch):
         header = {}
@@ -205,22 +200,18 @@ class Session:
             # Condition per condition
             uniq_conds = np.unique(self.conditions)
             mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
-            tmp_ = list()
+            tmp_ = np.zeros(len(self.conditions))
             for c_ in mod_conds:
                 #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
-                indeces = np.where(np.array(self.conditions) == c_)[0].tolist()
-                tc_cond = self.time_course_signals[indeces, :]
+                indeces = np.where(np.array(self.conditions) == c_)[0]
+                tc_cond = self.time_course_signals[indeces.tolist(), :]
                 self.log.info(f'Autoselection for Condition: {c_}')
-                self.log.info(np.array(self.session_blks)[indeces])
+                self.log.info(np.array(self.session_blks)[indeces.tolist()])
                 self.log.info(indeces)
-                #print(np.array(self.all_blks)[indeces])
-                #print(np.array(self.conditions)[indeces])
-                #     return autoselect, mask_array, coords, distr_info, ms_norm
-                _, t, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
+                t, _, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 self.chunk_distribution_visualization(b, d, c, c_, strategy)
-                tmp_ = tmp_ + t.tolist()
-
-            tmp = np.array(tmp_) 
+                # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
+                tmp_[indeces[t].tolist()] = 1
 
         elif strategy in ['roi', 'roi_signals', 'ROI']:
             tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
