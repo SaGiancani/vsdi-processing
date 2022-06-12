@@ -1,4 +1,5 @@
 import argparse, blk_file, datetime, process
+from re import X
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -212,6 +213,7 @@ class Session:
                 self.chunk_distribution_visualization(b, d, c, c_, strategy)
                 # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
                 # This imply deleting the first blanks time courses -counter_blank variable-
+                # Considering to use two variables for time course: one blanks, one no blank
                 ids = indeces[t] - self.counter_blank
                 tmp[ids.tolist()] = 1
 
@@ -374,6 +376,7 @@ class Session:
             indeces_cdi = np.where(np.array(self.conditions) == cd_i)
             indeces_cdi = indeces_cdi[0].tolist()
             cdi_select = list(set(indeces_select).intersection(set(indeces_cdi)))
+            cdi_unselect = list(set(indeces_cdi).difference(set(indeces_select)))
             # Number of possible columns
             b = [4,5,6]
             a = [len(indeces_cdi)%i for i in b]
@@ -387,7 +390,7 @@ class Session:
             except:
                 None
             fig.suptitle(title)# Session name
-            # Countercheck this height_ratios logic implementation
+            # Height_ratios logic implementation
             rat = [1]*(int(np.ceil(len(indeces_cdi)/columns))+1)
             rat[-1] = 3
             subfigs = fig.subfigures(nrows=int(np.ceil(len(indeces_cdi)/columns))+1, ncols=1, height_ratios=rat)
@@ -415,10 +418,16 @@ class Session:
                     elif row == len(subfigs)-1:
                         ax.axis('off')
                         ax_ = subfig.subplots(1, 1)
-                        for id_trial in cdi_select:
-                            ax_.plot(list(range(0,np.shape(sig)[1])), sig[id_trial, :], 'lightsteelblue')
-                        ax_.plot(list(range(0,np.shape(sig)[1])), np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Condition Signal', linewidth = 5)
-                        ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
+                        x = list(range(0,np.shape(sig)[1]))
+                        for i in sig[cdi_select[:-1], :]:
+                            ax_.plot(x, i, 'gray', linewidth = 0.5)
+                        ax_.plot(x, sig[cdi_select[-1], :], 'gray', linewidth = 0.5, label = 'Trials')
+                        ax_.plot(x, np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
+                        ax_.plot(x, np.mean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
+                        ax_.plot(x, np.mean(sig[indeces_cdi, :], axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
+                        ax_.plot(x, blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 2)
+                        #ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
+                        ax_.legend(loc="upper left")                
                         ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     
             tmp = self.set_md_folder()
