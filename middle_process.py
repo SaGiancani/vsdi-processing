@@ -11,7 +11,7 @@ LABEL_CONDS_PATH = 'metadata/labelConds.txt'
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
 class Session:
-    def __init__(self, logger = None, **kwargs):
+    def __init__(self, logger = None, condid = None,**kwargs):
         """
         Initializes attributes
         Default values for:
@@ -20,7 +20,7 @@ class Session:
         *header = a dictionary with the kwargs value. See get_session_header method for details
         *session_blks = all the .BLK, per condition, considered for the processing. It is a subset of all_blks. It is a list of strings
         *motion_indeces = unused
-        *roi_signals = all the roi signals of the considered BLKs. It is a numpy array of shape n_session_blk, n_frames, 1
+        *time_course_signals = all the time courses of the considered BLKs. It is a numpy array of shape n_session_blk, n_frames, 1
         *trials_name = the .BLKs' filename of each selected trial. It is a list of strings
         *df_fz = deltaF/F0 for each selected trial. It is a numpy array of shape selected_trials, width, height
         *auto_selected = list of integers: 0 for not selected trial, 1 for selected. 
@@ -38,7 +38,7 @@ class Session:
         self.header = self.get_session_header(**kwargs)
         self.all_blks = get_all_blks(self.header['path_session']) # all the blks. 
         self.cond_names = self.get_condition_name()
-        self.blank_id = self.get_blank_id()
+        self.blank_id = self.get_blank_id(cond_id=condid)
 
         # This can be automatized, with zero_frames, extracting parameters from BaseReport
         # Avoiding to load a BLK file
@@ -132,21 +132,26 @@ class Session:
             cds = self.get_condition_ids()
             return ['Condition ' + str(c) for c in cds]
 
-    def get_blank_id(self):
+    def get_blank_id(self, cond_id = None):
         '''
-        The method returns the index of blank condition. It checks between the condition names: if labelConds.txt
+        The method returns the index of blank condition.
+        Some session require a specific condition index: cond_id variable designed for manual setting.
+        If it is None -by default-, the method checks among the condition names: if labelConds.txt
         file exists, than the position of "blank" label is picked. Otherwise the position of last condition 
         is picked.
         '''
-        try:
-            tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][0]+1
-            self.log.info('Blank id: ' + str(tmp))
-            return tmp
-        except IndexError:
-            self.log.info('No clear blank condition was identified: the last condition has picked')
-            tmp = len(self.cond_names)
-            self.log.info('Blank id: ' + str(tmp))
-            return tmp
+        if cond_id is None:
+            try:
+                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][0]+1
+                self.log.info('Blank id: ' + str(tmp))
+                return tmp
+            except IndexError:
+                self.log.info('No clear blank condition was identified: the last condition has picked')
+                tmp = len(self.cond_names)
+                self.log.info('Blank id: ' + str(tmp))
+                return tmp
+        else:
+            return cond_id
     
     def get_session(self):
         # Splitted paths for raw and delta_f computation: it is for avoiding overstoring       
@@ -582,41 +587,70 @@ def roi_strategy(matrix, tolerance, zero_frames):
     mask_array[autoselect] = 1
     return mask_array
 
-def overlap_strategy(matrix, n_chunks=1, loss = 'mae'):
-    if  matrix.shape[1] % n_chunks == 0:
-        matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
-        tmp_m_ = np.zeros((n_chunks, matrix.shape[0], matrix.shape[0]))
-        
-        for m in range(n_chunks):
-            tmp_m = np.zeros((matrix.shape[0], matrix.shape[0]))
-
-            for n, i in enumerate(matrix_):
-                tmp = []
-
-                for j in matrix_:    
-                    if loss == 'mae':
-                        tmp.append(np.abs(np.subtract(i[m, :], j[m, :])).mean())
-                    elif loss == 'mse':
-                        tmp.append(np.square(np.subtract(i[m, :], j[m, :])).mean())
-
-                tmp_m[n, :] = np.asarray(tmp)    
-            tmp_m_[m, :, :] = tmp_m
+def overlap_strategy(matrix, separators = None, n_chunks = 1, loss = 'mae', threshold = 'median'):
+    if separators is None:
+        if  matrix.shape[1] % n_chunks == 0:
+            matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
+            tmp_m_ = np.zeros((n_chunks, matrix.shape[0], matrix.shape[0]))
             
-        m = np.sum(tmp_m_, axis=1)
+            for m in range(n_chunks):
+                tmp_m = np.zeros((matrix.shape[0], matrix.shape[0]))
+
+                for n, i in enumerate(matrix_):
+                    tmp = []
+
+                    for j in matrix_:    
+                        if loss == 'mae':
+                            tmp.append(np.abs(np.subtract(i[m, :], j[m, :])).mean())
+                        elif loss == 'mse':
+                            tmp.append(np.square(np.subtract(i[m, :], j[m, :])).mean())
+
+                    tmp_m[n, :] = np.asarray(tmp)    
+                tmp_m_[m, :, :] = tmp_m
+                
+            m = np.sum(tmp_m_, axis=1)
+        else:
+            # This check has to be done before running the script
+            print('Use a proper number of chunks: exact division for the number of frames required')
+                
     else:
-        # This check has to be done before running the script
-        print('Use a proper number of chunks: exact division for the number of frames required')
-    
-    # This save is useless: overlap_strategy usually called iteratively
-    #if save_switch:
-    #    np.save('chunk_aggregation_values.npy', m)
+        #print(f'The separators are: {separators}')
+        tmp_list = list()
+        for i, n in enumerate(separators):
+            if i == 0:
+                tmp_list.append(matrix[:, 0:n])
+                tmp_list.append(matrix[:, n:separators[i+1]])
+            elif len(separators)-1 == i:
+                tmp_list.append(matrix[:, n:])
+            else:
+                tmp_list.append(matrix[:, n:separators[i+1]])
+        for i in tmp_list:
+            print(i.shape)
+        
+        tmp_m_ = list()
+        n_chunks = len(tmp_list)
+        for m in range(n_chunks):
+            tmp_m = list()
+
+            for i in tmp_list[m]:
+                tmp = []
+                for j in tmp_list[m]:    
+                    if loss == 'mae':
+                        tmp.append(np.abs(np.subtract(i[:], j[:])).mean())
+                    elif loss == 'mse':
+                        tmp.append(np.square(np.subtract(i[:], j[:])).mean())
+                tmp_m.append(tmp)    
+            tmp_m_.append(tmp_m)
+            #print(np.shape(tmp_list))
+        m = np.sum(tmp_m_, axis=1)
+
     t_whol = list()
     coords = list()
     distr_info = list()
     ms_norm = list()
 
     for i in range(n_chunks):
-        t, l, m_norm = process.lognorm_thresholding(m[i, :], switch = 'median')
+        t, l, m_norm = process.lognorm_thresholding(m[i, :], switch = threshold)
         coords.append((l[0], l[3]))
         t_whol.append(t)
         distr_info.append(l)
