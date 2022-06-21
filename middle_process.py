@@ -403,9 +403,10 @@ class Session:
             #if int(np.ceil(len(indeces_cdi)/columns)) >1:
             for row, subfig in enumerate(subfigs):
                 #subfig.suptitle('Bottom title')
-                axs = subfig.subplots(nrows=1, ncols=columns, sharex=True)#, sharey=True)
+                axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
                 for i, ax in enumerate(axs):
                     count = row*columns + i
+                    ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.05, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.05)
                     if count < len(indeces_cdi):
                         if indeces_cdi[count] in cdi_select:
                             color = 'b'
@@ -423,6 +424,7 @@ class Session:
                     elif row == len(subfigs)-1:
                         ax.axis('off')
                         ax_ = subfig.subplots(1, 1)
+                        ax_.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.05, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.05)
                         x = list(range(0,np.shape(sig)[1]))
                         for i in sig[cdi_select[:-1], :]:
                             ax_.plot(x, i, 'gray', linewidth = 0.5)
