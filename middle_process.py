@@ -214,8 +214,8 @@ class Session:
                 self.log.info(f'Autoselection for Condition: {c_}')
                 self.log.info(np.array(self.session_blks)[indeces.tolist()])
                 self.log.info(indeces)
-                t, _, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
-                self.chunk_distribution_visualization(b, d, c, c_, strategy)
+                t, m, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
+                self.chunk_distribution_visualization(b, d, c, c_, strategy, tc_cond, t, m)
                 # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
                 # This imply deleting the first blanks time courses -counter_blank variable-
                 # Considering to use two variables for time course: one blanks, one no blank
@@ -241,7 +241,6 @@ class Session:
         
         self.log.info(str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
         session_blks = np.array(self.session_blks)
-        self.log.info(self.auto_selected)
         self.trials_name = session_blks[self.auto_selected]
         #self.log.info(np.array(self.conditions)[self.auto_selected])
         #self.log.info(self.trials_name)
@@ -300,15 +299,15 @@ class Session:
         blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
         size_df_f0 = np.shape(blank_df_f0)
         # Minimum chunks == 2: otherwise an outlier could mess the results up
-        _, blank_autoselect, b, c, d   = overlap_strategy(blank_sig, n_chunks=1, loss = strategy_blank)
-        self.chunk_distribution_visualization(b, d, c, self.blank_id, strategy_blank)
+        blank_sel, blank_mask, b, c, d   = overlap_strategy(blank_sig, n_chunks=1, loss = strategy_blank)
         # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
         # But the one for normalization is kept without demean
         self.df_fzs = blank_df_f0 - 1
         self.time_course_signals = blank_sig - 1
+        self.chunk_distribution_visualization(b, d, c, self.blank_id, strategy_blank, self.time_course_signals, blank_sel, blank_mask)
         self.conditions = blank_conditions
         self.counter_blank = size_df_f0[0] # Countercheck this value
-        self.auto_selected = blank_autoselect
+        self.auto_selected = blank_mask
         self.session_blks = blks
         indeces_select = np.where(self.auto_selected==1)
         indeces_select = indeces_select[0].tolist()        
@@ -318,16 +317,21 @@ class Session:
         blank_df = np.mean(blank_df_f0[indeces_select, :, :, :], axis=0)
         return blank_sig_  , blank_df
 
-    def chunk_distribution_visualization(self, coords, m_norm, l, cd_i, strategy):
+    def chunk_distribution_visualization(self, coords, m_norm, l, cd_i, strategy, tc, indeces_select, mask_array):
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         colors_a = utils.COLORS
         xxx=np.linspace(0.001,np.max(list(zip(*coords))[1]),1000)
         #print(len(l))
-        plt.figure(figsize=(25, 15))
+        title = f'Condition #{cd_i}' 
+        fig = plt.figure(constrained_layout = True, figsize=(25, 10))
+        fig.suptitle(title)# Session name
+        #plt.title(f'Condition {cond_num}')
+        subfigs = fig.subfigures(nrows=2, ncols=1, height_ratios=[2,1.25])
+        axs = subfigs[0].subplots(nrows=1, ncols=3)#, sharey=True)
+
         for i,j in enumerate(l):
-            plt.subplot(2,3,3)
-            plt.plot(xxx, process.log_norm(xxx, j[1], j[2]), color = colors_a[i], alpha = 0.5)
-            plt.plot(list(zip(*coords))[1], list(zip(*coords))[0], "k", marker=".", markeredgecolor="red", ls = "")
+            axs[2].plot(xxx, process.log_norm(xxx, j[1], j[2]), color = colors_a[i], alpha = 0.5)
+            axs[2].plot(list(zip(*coords))[1], list(zip(*coords))[0], "k", marker=".", markeredgecolor="red", ls = "")
 
             # Median + StdDev
             # Median + StdDev
@@ -336,36 +340,64 @@ class Session:
             median_o_std = (median_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2])))
             mean_o_std = mean_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2]))
             #plt.axvline(x=median_o, color = colors_a[-i], linestyle='--')
-            plt.axvline(x=median_o_std, color = colors_a[i], linestyle='-')
+            axs[2].axvline(x=median_o_std, color = colors_a[i], linestyle='-')
             # Mean + StdDev
             #plt.axvline(x=mean_o, color = colors_a[i+1], linestyle='--')
-            plt.axvline(x=mean_o_std, color = colors_a[i], linestyle='-')
+            axs[2].axvline(x=mean_o_std, color = colors_a[i], linestyle='-')
 
-            # We can set the number of bins with the *bins* keyword argument.
+
+                # We can set the number of bins with the *bins* keyword argument.
             #axs[0].hist(dist1, bins=n_bins)
             #axs[1].hist(dist2, bins=n_bins)
-            plt.subplot(2,3,1)
             #plt.gca().set_title()
-            plt.gca().set_ylabel(strategy)
-            plt.gca().set_xlabel('Trials')
+            axs[0].set_ylabel(strategy)
+            axs[0].set_xlabel('Trials')
             #plt.plot(range(len(mae[i, :])), mae[i, :], marker="o", markeredgecolor="red", markerfacecolor="green", ls="-")    
-            plt.plot(range(len(m_norm[i])), m_norm[i], marker="o", markeredgecolor="red", markerfacecolor=colors_a[i], ls="")#, marker="o", markeredgecolor="red", markerfacecolor="green")
+            axs[0].plot(range(len(m_norm[i])), m_norm[i], marker="o", markeredgecolor="red", markerfacecolor=colors_a[i], ls="")#, marker="o", markeredgecolor="red", markerfacecolor="green")
             #plt.plot(range(len(mse[i, :])), [np.mean(mse[i, :])-0.5*np.std(mse[i, :])]*len(mse[i, :]),  ls="--", color = colors_a[i])
-            plt.plot(range(len(m_norm[i])), [mean_o_std]*len(m_norm[i]),  ls="-", color = colors_a[i])
+            axs[0].plot(range(len(m_norm[i])), [mean_o_std]*len(m_norm[i]),  ls="-", color = colors_a[i])
             #plt.plot(range(len(mae[i, :])), [median_o_std]*len(mae[i, :]),  ls="-", color = colors_a[-i])
             
             #mse[i, :] 
             #plt.plot(range(0, np.max(mse[0])), )
-            plt.subplot(2,3,2)
-            plt.gca().set_ylabel('Count')
-            plt.gca().set_xlabel(strategy)
+            axs[1].set_ylabel('Count')
+            axs[1].set_xlabel(strategy)
             #plt.gca().set_title(f'Histogram for Condition {cond_num}')
-            a = plt.hist(m_norm[i], bins = 50, color=colors_a[i], alpha=0.8)
+            axs[1].hist(m_norm[i], bins = 50, color=colors_a[i], alpha=0.8)
+
+        axs = subfigs[1].subplots(nrows=1, ncols=2)#, sharey=True)
+
+        unselected = []
+        for l, (i, sel) in enumerate(zip(tc, mask_array)):
+            if sel == 0:
+                col = 'crimson'
+                alp = 1
+                tmp_u = i
+                unselected.append(l)
+            #else:
+                #col = 'grey'
+                #alp = 1
+                #tmp_s = i
+                axs[0].plot(i, color = col, linewidth = 0.5, alpha = alp)
+        #axs[0].plot(np.arange(60),tmp_s, color = 'grey', label = 'Selected trials' )
+        axs[0].plot(np.arange(60), tmp_u, color = 'crimson', linewidth = 0.5, label = 'Unselected trials')
+        axs[0].plot(np.arange(60), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
+        axs[0].plot(np.arange(60), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
+        axs[0].legend(loc = 'upper left')
+        axs[0].set_ylim(np.min(tc[indeces_select]) - (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05, np.max(tc[indeces_select]) + (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05)
+        #plt.subplot(2,3,5)
+        for k, i in enumerate(tc[indeces_select[:-1]]):
+            axs[1].plot(i, 'gray', linewidth = 0.5)
+        axs[1].plot(tc[indeces_select[-1]], 'gray', linewidth = 0.5, label = 'Trials')
+        axs[1].plot(np.arange(60), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
+        axs[1].plot(np.arange(60), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
+        axs[1].set_ylim(np.min(tc[indeces_select]) - 0.0005, np.max(tc[indeces_select]) + 0.0005)    
+        axs[1].legend(loc = 'upper left')
             
-            tmp = self.set_md_folder()
-            if not os.path.exists(os.path.join(tmp,'chunks_analysis')):
-                os.makedirs(os.path.join(tmp,'chunks_analysis'))
-            plt.savefig(os.path.join(tmp,'chunks_analysis', session_name+'_chunks_0'+str(cd_i)+'.png'))
+        tmp = self.set_md_folder()
+        if not os.path.exists(os.path.join(tmp,'chunks_analysis')):
+            os.makedirs(os.path.join(tmp,'chunks_analysis'))
+        plt.savefig(os.path.join(tmp,'chunks_analysis', session_name+'_chunks_0'+str(cd_i)+'.png'))
         return
 
     def roi_plots(self):
@@ -406,7 +438,7 @@ class Session:
                 axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
                 for i, ax in enumerate(axs):
                     count = row*columns + i
-                    ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.05, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.05)
+                    ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
                     if count < len(indeces_cdi):
                         if indeces_cdi[count] in cdi_select:
                             color = 'b'
@@ -424,7 +456,7 @@ class Session:
                     elif row == len(subfigs)-1:
                         ax.axis('off')
                         ax_ = subfig.subplots(1, 1)
-                        ax_.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.05, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.05)
+                        ax_.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
                         x = list(range(0,np.shape(sig)[1]))
                         for i in sig[cdi_select[:-1], :]:
                             ax_.plot(x, i, 'gray', linewidth = 0.5)
@@ -780,12 +812,9 @@ if __name__=="__main__":
     session = Session(logger = logger, **vars(args))
     session.autoselection()
     logger.info('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-    logger.info(session.session_blks)
-    logger.info(session.conditions)
     session.roi_plots()
     session.deltaf_visualization(session.header['zero_frames'], 20, 60)
     #utils.inputs_save(session, 'session_prova')
-    utils.inputs_save(session.session_blks, 'blk_names')
-    #print(session.trials_name)
+    #utils.inputs_save(session.session_blks, 'blk_names')
 
 # 38, 18, 38
