@@ -264,8 +264,8 @@ class Session:
             fig.suptitle(f'Session {session_name}')# Session name
             subfigs = fig.subfigures(nrows=len(cdi_select), ncols=1)
             # Borders for caxis
-            min_border = np.min(self.df_fzs[cdi_select, :, :, :]) - (np.max(self.df_fzs[cdi_select, :, :, :]) - np.min(self.df_fzs[cdi_select, :, :, :]))*0.005
-            max_border = np.max(self.df_fzs[cdi_select, :, :, :]) + (np.max(self.df_fzs[cdi_select, :, :, :]) - np.min(self.df_fzs[cdi_select, :, :, :]))*0.005
+            min_border = np.min(self.time_course_signals[cdi_select, :]) - (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.005
+            max_border = np.max(self.time_course_signals[cdi_select, :]) + (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.005
             for row, subfig in enumerate(subfigs):
                 subfig.suptitle(f'Trial # {cdi_select[row]}')
                 axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
