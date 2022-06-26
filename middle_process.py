@@ -269,7 +269,7 @@ class Session:
                 for df_id, ax in zip(considered_frames, axs):
                     Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
                     ax.axis('off')
-                    pc = ax.pcolormesh(Y, vmin=-0.005, vmax=0.005)
+                    pc = ax.pcolormesh(Y, vmin=np.min(self.df_fzs[cdi_select, :, :, :]) - (np.max(self.df_fzs[cdi_select, :, :, :]) - np.min(self.df_fzs[cdi_select, :, :, :]))*0.005, vmax=np.max(self.df_fzs[cdi_select, :, :, :]) + (np.max(self.df_fzs[cdi_select, :, :, :]) - np.min(self.df_fzs[cdi_select, :, :, :]))*0.005)
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             
             tmp = self.set_md_folder()
