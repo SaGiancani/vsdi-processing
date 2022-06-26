@@ -263,13 +263,16 @@ class Session:
             fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(cdi_select)), dpi = 80)
             fig.suptitle(f'Session {session_name}')# Session name
             subfigs = fig.subfigures(nrows=len(cdi_select), ncols=1)
+            # Borders for caxis
+            min_border = np.min(self.df_fzs[cdi_select, :, :, :]) - (np.max(self.df_fzs[cdi_select, :, :, :]) - np.min(self.df_fzs[cdi_select, :, :, :]))*0.005
+            max_border = np.max(self.df_fzs[cdi_select, :, :, :]) + (np.max(self.df_fzs[cdi_select, :, :, :]) - np.min(self.df_fzs[cdi_select, :, :, :]))*0.005
             for row, subfig in enumerate(subfigs):
                 subfig.suptitle(f'Trial # {cdi_select[row]}')
                 axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
                 for df_id, ax in zip(considered_frames, axs):
                     Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
                     ax.axis('off')
-                    pc = ax.pcolormesh(Y, vmin=np.min(self.df_fzs[cdi_select, :, :, :]) - (np.max(self.df_fzs[cdi_select, :, :, :]) - np.min(self.df_fzs[cdi_select, :, :, :]))*0.005, vmax=np.max(self.df_fzs[cdi_select, :, :, :]) + (np.max(self.df_fzs[cdi_select, :, :, :]) - np.min(self.df_fzs[cdi_select, :, :, :]))*0.005)
+                    pc = ax.pcolormesh(Y, vmin= min_border, vmax=max_border)
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             
             tmp = self.set_md_folder()
