@@ -268,7 +268,7 @@ class Session:
                 min_border = np.min(self.time_course_signals[cdi_select, :]) - (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.05
             else:
                 min_border = 0.00001
-            max_border = np.max(self.time_course_signals[cdi_select, :]) + (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.05
+            max_border = np.max(self.time_course_signals[cdi_select, :]) - (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.05
             for row, subfig in enumerate(subfigs):
                 subfig.suptitle(f'Trial # {cdi_select[row]}')
                 axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
