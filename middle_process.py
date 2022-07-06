@@ -264,14 +264,14 @@ class Session:
             fig.suptitle(f'Session {session_name}')# Session name
             subfigs = fig.subfigures(nrows=len(cdi_select), ncols=1)
             # Borders for caxis
-            if cd_i == self.blank_id:
-                min_border = np.min(self.time_course_signals[cdi_select, :]) + (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.05
-            else:
-                min_border = 0.00001
-            max_border = np.max(self.time_course_signals[cdi_select, :]) - (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.05
             for row, subfig in enumerate(subfigs):
                 subfig.suptitle(f'Trial # {cdi_select[row]}')
                 axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
+                if cd_i == self.blank_id:
+                    min_border = np.min(self.time_course_signals[cdi_select[row], :]) - (np.max(self.time_course_signals[cdi_select[row]]) - np.min(self.time_course_signals[cdi_select[row]]))*0.05
+                else:
+                    min_border = 0.00001
+                max_border = np.max(self.time_course_signals[cdi_select[row], :]) + (np.max(self.time_course_signals[cdi_select[row]]) - np.min(self.time_course_signals[cdi_select[row]]))*0.05
                 for df_id, ax in zip(considered_frames, axs):
                     Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
                     ax.axis('off')
