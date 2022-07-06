@@ -265,7 +265,7 @@ class Session:
             subfigs = fig.subfigures(nrows=len(cdi_select), ncols=1)
             # Borders for caxis
             if cd_i == self.blank_id:
-                min_border = np.min(self.time_course_signals[cdi_select, :]) - (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.05
+                min_border = np.min(self.time_course_signals[cdi_select, :]) + (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.05
             else:
                 min_border = 0.00001
             max_border = np.max(self.time_course_signals[cdi_select, :]) - (np.max(self.time_course_signals[cdi_select]) - np.min(self.time_course_signals[cdi_select]))*0.05
