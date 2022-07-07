@@ -274,8 +274,10 @@ class Session:
                     t_l = np.array([np.mean(i) for i in Y])
                     max_b = np.max(t_l)
                     min_b = np.min(t_l)
+                    max_bord = max_b#+(max_b - min_b)
+                    min_bord = min_b#-(max_b - min_b)
                     ax.axis('off')
-                    pc = ax.pcolormesh(Y, vmin= min_b-(max_b - min_b), vmax=max_b+(max_b - min_b), cmap='viridis')
+                    pc = ax.pcolormesh(Y, vmin= min_bord, vmax= max_bord, cmap='viridis')
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             
             tmp = self.set_md_folder()
