@@ -262,23 +262,20 @@ class Session:
             fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(cdi_select)), dpi = 80)
             fig.suptitle(f'Session {session_name}')# Session name
             subfigs = fig.subfigures(nrows=len(cdi_select), ncols=1)
-            Y = self.df_fzs[cdi_select, :, :, :]
-            # Borders for caxis
             for row, subfig in enumerate(subfigs):
                 subfig.suptitle(f'Trial # {cdi_select[row]}')
                 axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
-                #min_border = np.min(self.time_course_signals[cdi_select[row], :])/5 #- (np.max(self.time_course_signals[cdi_select[row]]) - np.min(self.time_course_signals[cdi_select[row]]))*0.05
-                #max_border = np.max(self.time_course_signals[cdi_select[row], :])/5 #+ (np.max(self.time_course_signals[cdi_select[row]]) - np.min(self.time_course_signals[cdi_select[row]]))*0.05
-                t_l = np.mean(np.mean(Y[row, :, :, :], axis=1), axis=1)
+                # Borders for caxis
+                t_l = np.mean(np.mean(self.df_fzs[cdi_select[row], :, :, :], axis=1), axis=1)
                 max_b = np.max(t_l)
                 min_b = np.min(t_l)
                 max_bord = max_b+(max_b - min_b)
                 min_bord = min_b-(max_b - min_b)
-
+                # Showing each frame
                 for df_id, ax in zip(considered_frames, axs):
-                    #Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
+                    Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
                     ax.axis('off')
-                    pc = ax.pcolormesh(Y[row, int(df_id), :, :], vmin = min_bord, vmax = max_bord, cmap='viridis')
+                    pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             
             tmp = self.set_md_folder()
