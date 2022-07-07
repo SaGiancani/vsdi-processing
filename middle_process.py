@@ -271,6 +271,8 @@ class Session:
                 min_b = np.min(t_l)
                 max_bord = max_b+(max_b - min_b)
                 min_bord = min_b-(max_b - min_b)
+                print(max_bord)
+                print(min_bord)                
                 # Showing each frame
                 for df_id, ax in zip(considered_frames, axs):
                     Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
