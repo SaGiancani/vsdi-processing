@@ -1,6 +1,4 @@
 import argparse, blk_file, datetime, process
-from ana_logs import Trial
-from re import X
 import matplotlib.pyplot as plt
 import numpy as np
 import os
