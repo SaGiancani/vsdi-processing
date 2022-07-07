@@ -267,12 +267,15 @@ class Session:
             for row, subfig in enumerate(subfigs):
                 subfig.suptitle(f'Trial # {cdi_select[row]}')
                 axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
-                min_border = np.min(self.time_course_signals[cdi_select[row], :])/5 #- (np.max(self.time_course_signals[cdi_select[row]]) - np.min(self.time_course_signals[cdi_select[row]]))*0.05
-                max_border = np.max(self.time_course_signals[cdi_select[row], :])/5 #+ (np.max(self.time_course_signals[cdi_select[row]]) - np.min(self.time_course_signals[cdi_select[row]]))*0.05
+                #min_border = np.min(self.time_course_signals[cdi_select[row], :])/5 #- (np.max(self.time_course_signals[cdi_select[row]]) - np.min(self.time_course_signals[cdi_select[row]]))*0.05
+                #max_border = np.max(self.time_course_signals[cdi_select[row], :])/5 #+ (np.max(self.time_course_signals[cdi_select[row]]) - np.min(self.time_course_signals[cdi_select[row]]))*0.05
                 for df_id, ax in zip(considered_frames, axs):
                     Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
+                    t_l = np.array([np.mean(i) for i in Y])
+                    max_b = np.max(t_l)
+                    min_b = np.min(t_l)
                     ax.axis('off')
-                    pc = ax.pcolormesh(Y, vmin= min_border, vmax=max_border, cmap='viridis')
+                    pc = ax.pcolormesh(Y, vmin= min_b-(max_b - min_b), vmax=max_b+(max_b - min_b), cmap='viridis')
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             
             tmp = self.set_md_folder()
