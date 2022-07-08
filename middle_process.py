@@ -320,7 +320,7 @@ class Session:
                 Y = averaged_sign[int(df_id), :, :]
                 ax.axis('off')
                 pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
-            subfigs.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
+            subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
 
         tmp = self.set_md_folder()
         if not os.path.exists(os.path.join(tmp,'activity_maps')):
