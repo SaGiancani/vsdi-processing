@@ -298,15 +298,15 @@ class Session:
         self.log.info(considered_frames)
         conditions = np.unique(self.conditions)
         fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(conditions)), dpi = 80)
-        for cd_i in conditions:
+        fig.suptitle(f'Session {session_name}')# Session name
+        subfigs = fig.subfigures(nrows=len(conditions), ncols=1)
+        for cd_i, subfig in zip(conditions, subfigs):
             indeces_cdi = np.where(self.conditions == cd_i)
             indeces_cdi = indeces_cdi[0].tolist()
             cdi_select = list(set(indeces_select).intersection(set(indeces_cdi)))
-            fig.suptitle(f'Session {session_name}')# Session name
-            subfigs = fig.subfigures(nrows=1, ncols=1)
-            subfigs.suptitle(f'Condition # {cd_i}')
-            axs = subfigs.subplots(nrows=1, ncols=n_frames_showed)
-    
+            subfig.suptitle(f'Condition # {cd_i}')
+            axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
+            
             # Boundaries for caxis
             averaged_sign = np.mean(self.df_fzs[cdi_select, :, :, :], axis=0)
             t_l = np.mean(np.mean(averaged_sign, axis=1), axis=1)
@@ -314,14 +314,14 @@ class Session:
             min_b = np.min(t_l)
             max_bord = max_b+(max_b - min_b)
             min_bord = min_b-(max_b - min_b)
-    
+                        
             # Showing each frame
             for df_id, ax in zip(considered_frames, axs):
                 Y = averaged_sign[int(df_id), :, :]
                 ax.axis('off')
                 pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
             subfigs.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
-            
+
         tmp = self.set_md_folder()
         if not os.path.exists(os.path.join(tmp,'activity_maps')):
             os.makedirs(os.path.join(tmp,'activity_maps'))
