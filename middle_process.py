@@ -287,6 +287,49 @@ class Session:
         self.log.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
     
+
+    def time_seq_averaged(self, start_frame, n_frames_showed, end_frame):
+        start_time = datetime.datetime.now().replace(microsecond=0)
+        indeces_select = np.where(self.auto_selected==1)
+        indeces_select = indeces_select[0].tolist()
+        session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
+        # Array with indeces of considered frames: it starts from the last considerd zero_frames
+        considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
+        self.log.info(considered_frames)
+        conditions = np.unique(self.conditions)
+        fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(conditions)), dpi = 80)
+        for cd_i in conditions:
+            indeces_cdi = np.where(self.conditions == cd_i)
+            indeces_cdi = indeces_cdi[0].tolist()
+            cdi_select = list(set(indeces_select).intersection(set(indeces_cdi)))
+            fig.suptitle(f'Session {session_name}')# Session name
+            subfigs = fig.subfigures(nrows=1, ncols=1)
+            subfigs.suptitle(f'Condition # {cd_i}')
+            axs = subfigs.subplots(nrows=1, ncols=n_frames_showed)
+    
+            # Boundaries for caxis
+            averaged_sign = np.mean(self.df_fzs[cdi_select, :, :, :], axis=0)
+            t_l = np.mean(np.mean(averaged_sign, axis=1), axis=1)
+            max_b = np.max(t_l)
+            min_b = np.min(t_l)
+            max_bord = max_b+(max_b - min_b)
+            min_bord = min_b-(max_b - min_b)
+    
+            # Showing each frame
+            for df_id, ax in zip(considered_frames, axs):
+                Y = averaged_sign[int(df_id), :, :]
+                ax.axis('off')
+                pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
+            subfigs.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
+            
+        tmp = self.set_md_folder()
+        if not os.path.exists(os.path.join(tmp,'activity_maps')):
+            os.makedirs(os.path.join(tmp,'activity_maps'))
+        plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_averaged_cds.png'))
+        self.log.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+        return 
+
+
     def get_averaged_signal(self, id):
         indeces_select = np.where(self.auto_selected==1)
         indeces_select = indeces_select[0].tolist()        
@@ -822,7 +865,8 @@ if __name__=="__main__":
     session.autoselection()
     logger.info('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     session.roi_plots()
-    session.deltaf_visualization(session.header['zero_frames'], 20, 60)
+    #session.deltaf_visualization(session.header['zero_frames'], 20, 60)
+    session.time_seq_averaged(session.header['zero_frames'], 20, 60)
     #utils.inputs_save(session, 'session_prova')
     #utils.inputs_save(session.session_blks, 'blk_names')
 
