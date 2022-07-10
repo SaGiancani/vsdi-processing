@@ -1,4 +1,5 @@
 import argparse, blk_file, datetime, process
+from importlib.resources import path
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -10,7 +11,7 @@ LABEL_CONDS_PATH = 'metadata/labelConds.txt'
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
 class Session:
-    def __init__(self, logger = None, condid = None,**kwargs):
+    def __init__(self, logger = None, condid = None, full_storage = False, average_switch= True, data_vis_switch = True, end_frame = 60, **kwargs):
         """
         Initializes attributes
         Default values for:
@@ -49,7 +50,7 @@ class Session:
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
-        
+        self.header['ending_frame'] = end_frame
         # If considered conditions are not explicitly indicated, then all the conditions are considered
         # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
         if self.header['conditions_id'] is None:
@@ -57,11 +58,11 @@ class Session:
         else:
             self.header['conditions_id'] = list(set(self.header['conditions_id']+[self.blank_id]))
         # only the used blks for the selection
-        self.session_blks = self.get_blks() 
 
         if self.header['mov_switch']:
             self.motion_indeces = None
         
+        self.session_blks = None
         self.time_course_signals = None
         self.trials_name = None 
         self.df_fzs = None
@@ -70,13 +71,130 @@ class Session:
         self.conditions = None
         self.counter_blank = 0  
         
-        if self.header['deblank_switch']:
-            # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
-            self.time_course_blank, self.f_f0_blank = self.get_blank_signal()
-            #print(f'Time Course blank shape: {np.shape(self.time_course_blank)}')
-            #print(f'Delta F/F0 blank shape: {np.shape(self.df_f0_blank)}')
+        #if self.header['deblank_switch']:
+        # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
+        self.time_course_blank = None
+        self.f_f0_blank = None
+        self.get_signal(self.blank_id)
+
+        self.average_switch = average_switch
+        self.visualization_switch = data_vis_switch
+        self.storage_switch = full_storage
+
+        if self.average_switch:
+            self.avrgd_time_courses = None
+            self.avrgd_df_fz = None
+
+
+    def get_averaged_signal(self, tc, df_):
+        #indeces_select = np.where(self.auto_selected==1)
+        #indeces_select = indeces_select[0].tolist()        
+        #cdi = np.where(np.array(self.conditions) == id)
+        #cdi = cdi[0].tolist()
+        #cdi = list(set(indeces_select).intersection(set(cdi)))
+        sig = np.mean(tc, axis=0)
+        df = np.mean(df_, axis=0)
+        return sig, df
+
+    def get_blank_id(self, cond_id = None):
+        '''
+        The method returns the index of blank condition.
+        Some session require a specific condition index: cond_id variable designed for manual setting.
+        If it is None -by default-, the method checks among the condition names: if labelConds.txt
+        file exists, than the position of "blank" label is picked. Otherwise the position of last condition 
+        is picked.
+        '''
+        if cond_id is None:
+            try:
+                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][0]+1
+                self.log.info('Blank id: ' + str(tmp))
+                return tmp
+            except IndexError:
+                self.log.info('No clear blank condition was identified: the last condition has picked')
+                tmp = len(self.cond_names)
+                self.log.info('Blank id: ' + str(tmp))
+                return tmp
         else:
-            self.time_course_blank, self.f_f0_blank = None, None
+            return cond_id
+
+    def get_blank_signal(self):
+        # All the blank blks
+        blks = [f for f in self.all_blks \
+        if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
+        # Blank signal extraction
+        self.log.info('Blank trials loading starts:')
+        strategy_blank = 'mae'
+        blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
+        size_df_f0 = np.shape(blank_df_f0)
+        # Minimum chunks == 2: otherwise an outlier could mess the results up
+        blank_sel, blank_mask, b, c, d  = overlap_strategy(blank_sig, self.blank_id, self.set_md_folder(), self.header,  n_chunks=1, loss = strategy_blank)
+        # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
+        # But the one for normalization is kept without demean
+        self.df_fzs = blank_df_f0 - 1
+        self.time_course_signals = blank_sig - 1
+        self.chunk_distribution_visualization(b, d, c, self.blank_id, strategy_blank, self.time_course_signals, blank_sel, blank_mask)
+        self.conditions = blank_conditions
+        self.counter_blank = size_df_f0[0]
+        self.auto_selected = blank_mask
+        self.session_blks = blks
+        indeces_select = np.where(self.auto_selected==1)
+        indeces_select = indeces_select[0].tolist()        
+        blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
+        # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
+        # employed for normalize the signal 
+        blank_df = np.mean(blank_df_f0[indeces_select, :, :, :], axis=0)
+        return blank_sig_  , blank_df
+
+
+    def get_signal(self, condition):
+        # All the blank blks
+        blks = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])==condition)]
+        # Blank signal extraction
+        self.log.info(f'Trials of condition {condition} loading starts:')
+        if condition == self.blank_id:
+            #strategy_blank = 'mae'
+            sig, df_f0, conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
+            size_df_f0 = np.shape(df_f0)
+            # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
+            # But the one for normalization is kept without demean
+            if self.storage_switch:
+                self.df_fzs = df_f0 - 1
+                self.time_course_signals = sig - 1
+            self.counter_blank = size_df_f0[0]
+            mask = self.get_selection_trials(condition, sig)
+            self.conditions = conditions
+            self.auto_selected = mask
+            self.session_blks = blks
+            indeces_select = np.where(self.auto_selected==1)
+            indeces_select = indeces_select[0].tolist()      
+            self.avrgd_df_fz = np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            self.avrgd_time_courses = np.mean(self.time_course_signals[indeces_select, :], axis=0)
+            self.time_course_blank = self.avrgd_time_courses
+            self.f_f0_blank = self.avrgd_df_fz
+            if self.log is not None:
+                self.log.info('Blank signal computed')
+            else:
+                print('Blank signal computed!')
+
+        else:
+            sig, df_f0, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
+            self.df_fzs = np.append(self.df_fzs, df_f0, axis=0)
+            self.time_course_signals = np.append(self.time_course_signals, sig, axis=0)
+            mask = self.get_selection_trials(condition, sig)
+            self.conditions = self.conditions + conditions
+            self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
+            self.session_blks = self.session_blks + blks
+            indeces_select = np.where(np.array(mask)==1)
+            indeces_select = indeces_select[0].tolist() 
+            self.avrgd_df_fz = np.append(self.avrgd_df_fz, np.mean(df_f0[indeces_select, :, :, :], axis=0), axis=0) 
+            self.avrgd_time_courses = np.append(self.avrgd_time_courses,  np.mean(sig[indeces_select, :], axis=0), axis=0) 
+        
+        print(blks)
+        print(conditions)
+        # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
+        # employed for normalize the signal 
+        return sig, df_f0, mask
+
 
     def get_blks(self):
         '''
@@ -91,21 +209,6 @@ class Session:
             self.log.info('BLKs for conditions ' + str(self.header['conditions_id']) + 'sorted by time creation')
             tmp = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
             return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
-
-    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch):
-        header = {}
-        header['path_session'] = path_session
-        header['spatial_bin'] = spatial_bin
-        header['temporal_bin'] = temporal_bin
-        header['zero_frames'] = zero_frames
-        header['tolerance'] = tolerance
-        header['mov_switch'] = mov_switch
-        header['deblank_switch'] = deblank_switch
-        header['conditions_id'] = conditions_id
-        header['chunks'] = chunks
-        header['strategy'] = strategy
-        header['raw_switch'] = raw_switch
-        return header
 
     def get_condition_ids(self):
         '''
@@ -131,65 +234,84 @@ class Session:
             cds = self.get_condition_ids()
             return ['Condition ' + str(c) for c in cds]
 
-    def get_blank_id(self, cond_id = None):
-        '''
-        The method returns the index of blank condition.
-        Some session require a specific condition index: cond_id variable designed for manual setting.
-        If it is None -by default-, the method checks among the condition names: if labelConds.txt
-        file exists, than the position of "blank" label is picked. Otherwise the position of last condition 
-        is picked.
-        '''
-        if cond_id is None:
-            try:
-                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][0]+1
-                self.log.info('Blank id: ' + str(tmp))
-                return tmp
-            except IndexError:
-                self.log.info('No clear blank condition was identified: the last condition has picked')
-                tmp = len(self.cond_names)
-                self.log.info('Blank id: ' + str(tmp))
-                return tmp
-        else:
-            return cond_id
+    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch):
+        header = {}
+        header['path_session'] = path_session
+        header['spatial_bin'] = spatial_bin
+        header['temporal_bin'] = temporal_bin
+        header['zero_frames'] = zero_frames
+        header['tolerance'] = tolerance
+        header['mov_switch'] = mov_switch
+        header['deblank_switch'] = deblank_switch
+        header['conditions_id'] = conditions_id
+        header['chunks'] = chunks
+        header['strategy'] = strategy
+        header['raw_switch'] = raw_switch
+        return header
     
     def get_session(self):
-        # Splitted paths for raw and delta_f computation: it is for avoiding overstoring       
+        # Splitted paths for raw and delta_f computation: it is for avoiding overstoring   
+        # HAS TO BE MODIFIED FOR CONDITION PER CONDITION COMPUTATION    
         if self.header['raw_switch']:
             raws, conditions = raw_signal_extraction(self.header, self.session_blks)            
             self.conditions = conditions
             self.raw_data = raws
         else:
-            # If blank signal already loaded -or not deblank- come in
-            if self.counter_blank == 0:
-                self.log.info('No blank signal yet, or deblank mode deactivated')
-                self.log.info('Trials loading starts:')
-                #self.log.info(f'session_blks list: {self.session_blks}')
-                time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.f_f0_blank, self.header['deblank_switch'])
-                self.conditions = conditions
-                self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
-                self.time_course_signals = time_course_signals
-                #self.motion_indeces = motion_indeces
-            # Otherwise, keep loading other condition a part the blank 
-            else:
-                # If the condition is not only the blank one, than I compute the same iteration as up
-                if len(self.header['conditions_id']) > 1:
-                    self.log.info('Blank signal already computed')
-                    blks = [f for f in self.all_blks \
-                        if ((int(f.split('vsd_C')[1][0:2]) != self.blank_id) and (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id']))]
-                    self.log.info('Trials loading starts:')
-                    time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
-                    self.session_blks = self.session_blks + blks
-                    #self.log.info(f'session_blks list: {self.session_blks}')
-                    self.conditions = self.conditions + conditions                        
-                    self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
-                    self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
-                    #self.motion_indeces = self.motion_indeces + motion_indeces
+            # If the condition is not only the blank one, than I compute the same iteration as up
+            if len(self.header['conditions_id']) > 1:
+                cds = [i for i in self.header['conditions_id'] if i != self.blank_id]
+                cds.sort()
+                for cd, c_name in zip(cds, self.cond_names):
+                    self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
+                    self.log.info('Condition name: ' + c_name)                        
+                    sig, df, tmp = self.get_signal(cd)
 
-                else:
-                    self.log.info('Warning: Something weird in get_session')
+                    if self.visualization_switch:
+                        self.roi_plots(cd, sig, tmp, self.session_blks[:-len(sig)])
+                        self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], cd, tmp, self.avrgd_df_fz[-1, :, :, :])                        
+                    
+                    self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
+                        
+                self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
+                session_blks = np.array(self.session_blks)
+                self.trials_name = session_blks[self.auto_selected]
+                    
+            else:
+                self.log.info('Warning: Something weird in get_session')
         return
 
-    def autoselection(self, save_switch = True):
+    def get_selection_trials(self, condition, time_course):
+        strategy = self.header['strategy']
+        n_frames = self.header['n_frames']
+
+        start_time = datetime.datetime.now().replace(microsecond=0)
+        self.log.info(f'Autoselection for Condition: {condition}')
+        if strategy in ['mse', 'mae']:
+            self.log.info('Chunks division strategy choosen')
+            if  n_frames%self.header['chunks']==0:
+                nch = self.header['chunks']
+            else:
+                self.log.info('Warning: Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered') 
+                nch = 1
+            # Condition per condition
+            #tmp = np.zeros(np.shape(time_course)[0], dtype=int)
+            #self.log.info(np.array(self.session_blks)[indeces.tolist()])
+            #self.log.info(indeces)
+            t, tmp, b, c, d  = overlap_strategy(time_course, condition, self.set_md_folder(), self.header, n_chunks=nch, loss = strategy)
+            #indeces = np.arange(0, np.shape(time_course)[0], dtype=int)
+
+        elif strategy in ['roi', 'roi_signals', 'ROI']:
+            tmp = roi_strategy(time_course, self.header['tolerance'], self.header['zero_frames'])
+
+        elif strategy in ['statistic', 'statistical', 'quartiles']:
+            tmp = statistical_strategy(time_course)
+
+        #self.log.info(np.array(self.conditions)[self.auto_selected])
+        #self.log.info(self.trials_name)
+        self.log.info('Autoselection loop time for condition ' +str(condition)+ ': ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+        return tmp
+
+    def autoselection(self, save_switch = False):
         strategy = self.header['strategy']
         n_frames = self.header['n_frames']
         self.get_session()
@@ -213,8 +335,7 @@ class Session:
                 self.log.info(f'Autoselection for Condition: {c_}')
                 #self.log.info(np.array(self.session_blks)[indeces.tolist()])
                 #self.log.info(indeces)
-                t, m, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
-                self.chunk_distribution_visualization(b, d, c, c_, strategy, tc_cond, t, m)
+                t, m, b, c, d  = overlap_strategy(tc_cond, c_, self.set_md_folder(), self.header, n_chunks=nch, loss = strategy)
                 # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
                 # This imply deleting the first blanks time courses -counter_blank variable-
                 # Considering to use two variables for time course: one blanks, one no blank
@@ -288,39 +409,34 @@ class Session:
         return 
     
 
-    def time_seq_averaged(self, start_frame, n_frames_showed, end_frame):
+    def time_seq_averaged(self, start_frame, n_frames_showed, end_frame, cd_i, mask, averaged_sign):
         start_time = datetime.datetime.now().replace(microsecond=0)
-        indeces_select = np.where(self.auto_selected==1)
+        indeces_select = np.where(mask==1)
         indeces_select = indeces_select[0].tolist()
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         # Array with indeces of considered frames: it starts from the last considerd zero_frames
         considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
-        self.log.info(considered_frames)
-        conditions = np.unique(self.conditions)
-        fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(conditions)), dpi = 80)
+        fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, 2), dpi = 80)
         fig.suptitle(f'Session {session_name}')# Session name
-        subfigs = fig.subfigures(nrows=len(conditions), ncols=1)
-        for cd_i, subfig in zip(conditions, subfigs):
-            indeces_cdi = np.where(self.conditions == cd_i)
-            indeces_cdi = indeces_cdi[0].tolist()
-            cdi_select = list(set(indeces_select).intersection(set(indeces_cdi)))
-            subfig.suptitle(f'Condition # {cd_i}')
-            axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
-            
-            # Boundaries for caxis
-            averaged_sign = np.mean(self.df_fzs[cdi_select, :, :, :], axis=0)
-            t_l = np.mean(np.mean(averaged_sign, axis=1), axis=1)
-            max_b = np.max(t_l)
-            min_b = np.min(t_l)
-            max_bord = max_b+(max_b - min_b)
-            min_bord = min_b-(max_b - min_b)
-                        
-            # Showing each frame
-            for df_id, ax in zip(considered_frames, axs):
-                Y = averaged_sign[int(df_id), :, :]
-                ax.axis('off')
-                pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
-            subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
+        subfig = fig.subfigures(nrows=1, ncols=1)
+        indeces_cdi = np.where(self.conditions == cd_i)
+        indeces_cdi = indeces_cdi[0].tolist()
+        cdi_select = indeces_select
+        subfig.suptitle(f'Condition # {cd_i}')
+        axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
+        # Boundaries for caxis
+        t_l = np.mean(np.mean(averaged_sign, axis=1), axis=1)
+        max_b = np.max(t_l)
+        min_b = np.min(t_l)
+        max_bord = max_b+(max_b - min_b)
+        min_bord = min_b-(max_b - min_b)
+                    
+        # Showing each frame
+        for df_id, ax in zip(considered_frames, axs):
+            Y = averaged_sign[int(df_id), :, :]
+            ax.axis('off')
+            pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
+        subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
 
         tmp = self.set_md_folder()
         if not os.path.exists(os.path.join(tmp,'activity_maps')):
@@ -329,130 +445,8 @@ class Session:
         self.log.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
 
+    def roi_plots(self, cd_i, sig, mask, blks):
 
-    def get_averaged_signal(self, id):
-        indeces_select = np.where(self.auto_selected==1)
-        indeces_select = indeces_select[0].tolist()        
-        cdi = np.where(np.array(self.conditions) == id)
-        cdi = cdi[0].tolist()
-        cdi = list(set(indeces_select).intersection(set(cdi)))
-        sig = np.mean(self.time_course_signals[cdi, :], axis=0)
-        df = np.mean(self.df_fz[cdi, :], axis=0)
-        return sig, df
-
-    def get_blank_signal(self):
-        # All the blank blks
-        blks = [f for f in self.all_blks \
-        if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
-        # Blank signal extraction
-        self.log.info('Blank trials loading starts:')
-        strategy_blank = 'mae'
-        blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
-        size_df_f0 = np.shape(blank_df_f0)
-        # Minimum chunks == 2: otherwise an outlier could mess the results up
-        blank_sel, blank_mask, b, c, d   = overlap_strategy(blank_sig, n_chunks=1, loss = strategy_blank)
-        # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
-        # But the one for normalization is kept without demean
-        self.df_fzs = blank_df_f0 - 1
-        self.time_course_signals = blank_sig - 1
-        self.chunk_distribution_visualization(b, d, c, self.blank_id, strategy_blank, self.time_course_signals, blank_sel, blank_mask)
-        self.conditions = blank_conditions
-        self.counter_blank = size_df_f0[0] # Countercheck this value
-        self.auto_selected = blank_mask
-        self.session_blks = blks
-        indeces_select = np.where(self.auto_selected==1)
-        indeces_select = indeces_select[0].tolist()        
-        blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
-        # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
-        # employed for normalize the signal 
-        blank_df = np.mean(blank_df_f0[indeces_select, :, :, :], axis=0)
-        return blank_sig_  , blank_df
-
-    def chunk_distribution_visualization(self, coords, m_norm, l, cd_i, strategy, tc, indeces_select, mask_array):
-        session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
-        colors_a = utils.COLORS
-        xxx=np.linspace(0.001,np.max(list(zip(*coords))[1]),1000)
-        #print(len(l))
-        title = f'Condition #{cd_i}' 
-        fig = plt.figure(constrained_layout = True, figsize=(25, 10))
-        fig.suptitle(title)# Session name
-        #plt.title(f'Condition {cond_num}')
-        subfigs = fig.subfigures(nrows=2, ncols=1, height_ratios=[2,1.25])
-        axs = subfigs[0].subplots(nrows=1, ncols=3)#, sharey=True)
-
-        for i,j in enumerate(l):
-            axs[2].plot(xxx, process.log_norm(xxx, j[1], j[2]), color = colors_a[i], alpha = 0.5)
-            axs[2].plot(list(zip(*coords))[1], list(zip(*coords))[0], "k", marker=".", markeredgecolor="red", ls = "")
-
-            # Median + StdDev
-            # Median + StdDev
-            mean_o = np.exp(j[1] + j[2]*j[2]/2.0)
-            median_o = np.exp(j[1])
-            median_o_std = (median_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2])))
-            mean_o_std = mean_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2]))
-            #plt.axvline(x=median_o, color = colors_a[-i], linestyle='--')
-            axs[2].axvline(x=median_o_std, color = colors_a[i], linestyle='-')
-            # Mean + StdDev
-            #plt.axvline(x=mean_o, color = colors_a[i+1], linestyle='--')
-            axs[2].axvline(x=mean_o_std, color = colors_a[i], linestyle='-')
-
-
-                # We can set the number of bins with the *bins* keyword argument.
-            #axs[0].hist(dist1, bins=n_bins)
-            #axs[1].hist(dist2, bins=n_bins)
-            #plt.gca().set_title()
-            axs[0].set_ylabel(strategy)
-            axs[0].set_xlabel('Trials')
-            #plt.plot(range(len(mae[i, :])), mae[i, :], marker="o", markeredgecolor="red", markerfacecolor="green", ls="-")    
-            axs[0].plot(range(len(m_norm[i])), m_norm[i], marker="o", markeredgecolor="red", markerfacecolor=colors_a[i], ls="")#, marker="o", markeredgecolor="red", markerfacecolor="green")
-            #plt.plot(range(len(mse[i, :])), [np.mean(mse[i, :])-0.5*np.std(mse[i, :])]*len(mse[i, :]),  ls="--", color = colors_a[i])
-            axs[0].plot(range(len(m_norm[i])), [mean_o_std]*len(m_norm[i]),  ls="-", color = colors_a[i])
-            #plt.plot(range(len(mae[i, :])), [median_o_std]*len(mae[i, :]),  ls="-", color = colors_a[-i])
-            
-            #mse[i, :] 
-            #plt.plot(range(0, np.max(mse[0])), )
-            axs[1].set_ylabel('Count')
-            axs[1].set_xlabel(strategy)
-            #plt.gca().set_title(f'Histogram for Condition {cond_num}')
-            axs[1].hist(m_norm[i], bins = 50, color=colors_a[i], alpha=0.8)
-
-        axs = subfigs[1].subplots(nrows=1, ncols=2)#, sharey=True)
-
-        unselected = []
-        for l, (i, sel) in enumerate(zip(tc, mask_array)):
-            if sel == 0:
-                col = 'crimson'
-                alp = 1
-                tmp_u = i
-                unselected.append(l)
-            #else:
-                #col = 'grey'
-                #alp = 1
-                #tmp_s = i
-                axs[0].plot(i, color = col, linewidth = 0.5, alpha = alp)
-        #axs[0].plot(np.arange(60),tmp_s, color = 'grey', label = 'Selected trials' )
-        shapes = np.shape(tc)
-        axs[0].plot(np.arange(shapes[1]), tmp_u, color = 'crimson', linewidth = 0.5, label = 'Unselected trials')
-        axs[0].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
-        axs[0].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
-        axs[0].legend(loc = 'upper left')
-        axs[0].set_ylim(np.min(tc[indeces_select]) - (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05, np.max(tc[indeces_select]) + (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05)
-        #plt.subplot(2,3,5)
-        for k, i in enumerate(tc[indeces_select[:-1]]):
-            axs[1].plot(i, 'gray', linewidth = 0.5)
-        axs[1].plot(tc[indeces_select[-1]], 'gray', linewidth = 0.5, label = 'Trials')
-        axs[1].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
-        axs[1].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
-        axs[1].set_ylim(np.min(tc[indeces_select]) - 0.0005, np.max(tc[indeces_select]) + 0.0005)    
-        axs[1].legend(loc = 'upper left')
-            
-        tmp = self.set_md_folder()
-        if not os.path.exists(os.path.join(tmp,'chunks_analysis')):
-            os.makedirs(os.path.join(tmp,'chunks_analysis'))
-        plt.savefig(os.path.join(tmp,'chunks_analysis', session_name+'_chunks_0'+str(cd_i)+'.png'))
-        return
-
-    def roi_plots(self):
         sig = self.time_course_signals
         indeces_select = np.where(self.auto_selected==1)
         indeces_select = indeces_select[0].tolist()
@@ -460,18 +454,17 @@ class Session:
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         conditions = np.unique(self.conditions)
         blank_sign = self.time_course_blank
-        self.log.info(self.conditions)
         for cd_i in conditions:
-            indeces_cdi = np.where(np.array(self.conditions) == cd_i)
-            indeces_cdi = indeces_cdi[0].tolist()
-            cdi_select = list(set(indeces_select).intersection(set(indeces_cdi)))
-            cdi_unselect = list(set(indeces_cdi).difference(set(indeces_select)))
+            #indeces_cdi = np.where(np.array(self.conditions) == cd_i)
+            #indeces_cdi = indeces_cdi[0].tolist()
+            cdi_select = list(np.where(mask==1))
+            cdi_unselect = list(np.where(mask==0))
             # Number of possible columns
             b = [4,5,6]
-            a = [len(indeces_cdi)%i for i in b]
+            a = [len(mask)%i for i in b]
             columns = b[a.index(min(a))]
 
-            fig = plt.figure(constrained_layout=True, figsize = (columns*4, int(np.ceil(len(indeces_cdi)/columns)+1)*2), dpi = 80)
+            fig = plt.figure(constrained_layout=True, figsize = (columns*4, int(np.ceil(len(mask)/columns)+1)*2), dpi = 80)
             title = f'Condition #{cd_i}' 
             try:
                 if self.cond_names is not None:
@@ -480,24 +473,24 @@ class Session:
                 None
             fig.suptitle(title)# Session name
             # Height_ratios logic implementation
-            rat = [1]*(int(np.ceil(len(indeces_cdi)/columns))+1)
+            rat = [1]*(int(np.ceil(len(mask)/columns))+1)
             rat[-1] = 3
-            subfigs = fig.subfigures(nrows=int(np.ceil(len(indeces_cdi)/columns))+1, ncols=1, height_ratios=rat)
+            subfigs = fig.subfigures(nrows=int(np.ceil(len(mask)/columns))+1, ncols=1, height_ratios=rat)
 
             #if int(np.ceil(len(indeces_cdi)/columns)) >1:
             for row, subfig in enumerate(subfigs):
                 #subfig.suptitle('Bottom title')
                 axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
                 for i, ax in enumerate(axs):
-                    count = row*columns + i
+                    #count = row*columns + i
                     ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
-                    if count < len(indeces_cdi):
-                        if indeces_cdi[count] in cdi_select:
+                    if i < len(mask):
+                        if mask[i]==1:
                             color = 'b'
                         else:
                             color = 'r'
-                        ax.plot(sig[indeces_cdi[count], :], color)
-                        ax.set_title(np.array(self.session_blks)[indeces_cdi[count]])
+                        ax.plot(sig[i, :], color)
+                        ax.set_title(np.array(blks)[i])
                         ax.errorbar([i for i in range(np.shape(sig[cdi_select, :])[1])], np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
                         ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                         #ax.set_ylim(-0.002,0.002)
@@ -515,7 +508,7 @@ class Session:
                         ax_.plot(x, sig[cdi_select[-1], :], 'gray', linewidth = 0.5, label = 'Trials')
                         ax_.plot(x, np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
                         ax_.plot(x, np.mean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
-                        ax_.plot(x, np.mean(sig[indeces_cdi, :], axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
+                        ax_.plot(x, np.mean(sig[i, :], axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
                         ax_.plot(x, blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 2)
                         #ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
                         ax_.legend(loc="upper left")                
@@ -673,7 +666,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     mask_array[autoselect] = 1
     return mask_array
 
-def overlap_strategy(matrix, separators = None, n_chunks = 1, loss = 'mae', threshold = 'median'):
+def overlap_strategy(matrix, cd_i, path, header, separators = None, n_chunks = 1, loss = 'mae', threshold = 'median'):
     if separators is None:
         if  matrix.shape[1] % n_chunks == 0:
             matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
@@ -746,6 +739,9 @@ def overlap_strategy(matrix, separators = None, n_chunks = 1, loss = 'mae', thre
     autoselect = list(set.intersection(*map(set,t_whol)))
     mask_array = np.zeros(m.shape[1], dtype=int)
     mask_array[autoselect] = 1
+
+    chunk_distribution_visualization(coords, ms_norm, distr_info, cd_i, header['strategy'], matrix, autoselect, mask_array, path)
+
     # Mask of selected ones
     return autoselect, mask_array, coords, distr_info, ms_norm
 
@@ -769,7 +765,92 @@ def get_all_blks(path_session, sort = True):
         return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     else:
         return tmp
+
+def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indeces_select, mask_array, path):
+    strategy = header['strategy']
+    session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
+    colors_a = utils.COLORS
+    xxx=np.linspace(0.001,np.max(list(zip(*coords))[1]),1000)
+    #print(len(l))
+    title = f'Condition #{cd_i}' 
+    fig = plt.figure(constrained_layout = True, figsize=(25, 10))
+    fig.suptitle(title)# Session name
+    #plt.title(f'Condition {cond_num}')
+    subfigs = fig.subfigures(nrows=2, ncols=1, height_ratios=[2,1.25])
+    axs = subfigs[0].subplots(nrows=1, ncols=3)#, sharey=True)
+
+    for i,j in enumerate(l):
+        axs[2].plot(xxx, process.log_norm(xxx, j[1], j[2]), color = colors_a[i], alpha = 0.5)
+        axs[2].plot(list(zip(*coords))[1], list(zip(*coords))[0], "k", marker=".", markeredgecolor="red", ls = "")
+
+        # Median + StdDev
+        # Median + StdDev
+        mean_o = np.exp(j[1] + j[2]*j[2]/2.0)
+        median_o = np.exp(j[1])
+        median_o_std = (median_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2])))
+        mean_o_std = mean_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2]))
+        #plt.axvline(x=median_o, color = colors_a[-i], linestyle='--')
+        axs[2].axvline(x=median_o_std, color = colors_a[i], linestyle='-')
+        # Mean + StdDev
+        #plt.axvline(x=mean_o, color = colors_a[i+1], linestyle='--')
+        axs[2].axvline(x=mean_o_std, color = colors_a[i], linestyle='-')
+
+
+            # We can set the number of bins with the *bins* keyword argument.
+        #axs[0].hist(dist1, bins=n_bins)
+        #axs[1].hist(dist2, bins=n_bins)
+        #plt.gca().set_title()
+        axs[0].set_ylabel(strategy)
+        axs[0].set_xlabel('Trials')
+        #plt.plot(range(len(mae[i, :])), mae[i, :], marker="o", markeredgecolor="red", markerfacecolor="green", ls="-")    
+        axs[0].plot(range(len(m_norm[i])), m_norm[i], marker="o", markeredgecolor="red", markerfacecolor=colors_a[i], ls="")#, marker="o", markeredgecolor="red", markerfacecolor="green")
+        #plt.plot(range(len(mse[i, :])), [np.mean(mse[i, :])-0.5*np.std(mse[i, :])]*len(mse[i, :]),  ls="--", color = colors_a[i])
+        axs[0].plot(range(len(m_norm[i])), [mean_o_std]*len(m_norm[i]),  ls="-", color = colors_a[i])
+        #plt.plot(range(len(mae[i, :])), [median_o_std]*len(mae[i, :]),  ls="-", color = colors_a[-i])
         
+        #mse[i, :] 
+        #plt.plot(range(0, np.max(mse[0])), )
+        axs[1].set_ylabel('Count')
+        axs[1].set_xlabel(strategy)
+        #plt.gca().set_title(f'Histogram for Condition {cond_num}')
+        axs[1].hist(m_norm[i], bins = 50, color=colors_a[i], alpha=0.8)
+
+    axs = subfigs[1].subplots(nrows=1, ncols=2)#, sharey=True)
+
+    unselected = []
+    for l, (i, sel) in enumerate(zip(tc, mask_array)):
+        if sel == 0:
+            col = 'crimson'
+            alp = 1
+            tmp_u = i
+            unselected.append(l)
+        #else:
+            #col = 'grey'
+            #alp = 1
+            #tmp_s = i
+            axs[0].plot(i, color = col, linewidth = 0.5, alpha = alp)
+    #axs[0].plot(np.arange(60),tmp_s, color = 'grey', label = 'Selected trials' )
+    shapes = np.shape(tc)
+    axs[0].plot(np.arange(shapes[1]), tmp_u, color = 'crimson', linewidth = 0.5, label = 'Unselected trials')
+    axs[0].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
+    axs[0].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
+    axs[0].legend(loc = 'upper left')
+    axs[0].set_ylim(np.min(tc[indeces_select]) - (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05, np.max(tc[indeces_select]) + (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05)
+    #plt.subplot(2,3,5)
+    for k, i in enumerate(tc[indeces_select[:-1]]):
+        axs[1].plot(i, 'gray', linewidth = 0.5)
+    axs[1].plot(tc[indeces_select[-1]], 'gray', linewidth = 0.5, label = 'Trials')
+    axs[1].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
+    axs[1].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
+    axs[1].set_ylim(np.min(tc[indeces_select]) - 0.0005, np.max(tc[indeces_select]) + 0.0005)    
+    axs[1].legend(loc = 'upper left')
+        
+    tmp = path
+    if not os.path.exists(os.path.join(tmp,'chunks_analysis')):
+        os.makedirs(os.path.join(tmp,'chunks_analysis'))
+    plt.savefig(os.path.join(tmp,'chunks_analysis', session_name+'_chunks_0'+str(cd_i)+'.png'))
+    return
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching autoselection pipeline')
     
@@ -862,11 +943,10 @@ if __name__=="__main__":
     assert args.strategy in ['mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'], "Insert a valid name strategy: 'mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'"    
     start_time = datetime.datetime.now().replace(microsecond=0)
     session = Session(logger = logger, **vars(args))
-    session.autoselection()
+    #session.autoselection()
+    session.get_session()
     logger.info('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-    session.roi_plots()
     #session.deltaf_visualization(session.header['zero_frames'], 20, 60)
-    session.time_seq_averaged(session.header['zero_frames'], 20, 60)
     #utils.inputs_save(session, 'session_prova')
     #utils.inputs_save(session.session_blks, 'blk_names')
 
