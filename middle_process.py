@@ -86,7 +86,7 @@ class Session:
         sig, df, tmp = self.get_signal(self.blank_id)
         if self.visualization_switch:
             self.roi_plots(self.blank_id, sig, tmp, self.session_blks[-len(sig):])
-            self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], self.blank_id, tmp, self.avrgd_df_fz[-1, :, :, :])     
+            self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], self.blank_id, tmp, self.f_f0_blank)     
 
 
     def get_averaged_signal(self, tc, df_):
@@ -192,6 +192,7 @@ class Session:
             indeces_select = np.where(np.array(mask)==1)
             indeces_select = indeces_select[0].tolist() 
             self.avrgd_df_fz = np.append(self.avrgd_df_fz, np.mean(df_f0[indeces_select, :, :, :], axis=0), axis=0) 
+            print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
             self.avrgd_time_courses = np.append(self.avrgd_time_courses,  np.mean(sig[indeces_select, :], axis=0), axis=0) 
         
         print(blks)
@@ -490,8 +491,6 @@ class Session:
                         color = 'r'
                     ax.plot(sig[i, :], color)
                     ax.set_title(blks[i])
-                    print(len(sig))
-                    print(cdi_select)
                     ax.errorbar(x, np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
                     ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     #ax.set_ylim(-0.002,0.002)
