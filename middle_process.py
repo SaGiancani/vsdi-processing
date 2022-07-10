@@ -479,6 +479,7 @@ class Session:
         for row, subfig in enumerate(subfigs):
             #subfig.suptitle('Bottom title')
             axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
+            x = np.arange(0, self.header['n_frames'])
             for i, ax in enumerate(axs):
                 #count = row*columns + i
                 ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
@@ -491,7 +492,7 @@ class Session:
                     ax.set_title(blks[i])
                     print(len(sig))
                     print(cdi_select)
-                    ax.errorbar(np.arange(0, self.header['n_frames']), np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
+                    ax.errorbar(x, np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
                     ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     #ax.set_ylim(-0.002,0.002)
                 if row<len(subfigs)-2:
@@ -502,13 +503,12 @@ class Session:
                     ax.axis('off')
                     ax_ = subfig.subplots(1, 1)
                     ax_.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
-                    x = list(range(0,np.shape(sig)[1]))
                     for i in sig[cdi_select[:-1], :]:
                         ax_.plot(x, i, 'gray', linewidth = 0.5)
                     ax_.plot(x, sig[cdi_select[-1], :], 'gray', linewidth = 0.5, label = 'Trials')
                     ax_.plot(x, np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
                     ax_.plot(x, np.mean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
-                    ax_.plot(x, np.mean(sig[i, :], axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
+                    ax_.plot(x, np.mean(sig, axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
                     ax_.plot(x, blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 2)
                     #ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
                     ax_.legend(loc="upper left")                
