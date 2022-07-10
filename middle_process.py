@@ -157,9 +157,10 @@ class Session:
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
+            temporary = sig - 1
             if self.storage_switch:
                 self.df_fzs = df_f0 - 1
-                self.time_course_signals = sig - 1
+                self.time_course_signals = temporary
             self.counter_blank = size_df_f0[0]
             mask = self.get_selection_trials(condition, sig)
             self.conditions = conditions
@@ -168,7 +169,7 @@ class Session:
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()      
             self.avrgd_df_fz = np.mean(df_f0[indeces_select, :, :, :], axis=0)
-            self.avrgd_time_courses = np.mean(self.time_course_signals[indeces_select, :], axis=0)
+            self.avrgd_time_courses = np.mean(temporary[indeces_select, :], axis=0)
             self.time_course_blank = self.avrgd_time_courses
             self.f_f0_blank = self.avrgd_df_fz
             if self.log is not None:
@@ -178,8 +179,9 @@ class Session:
 
         else:
             sig, df_f0, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
-            self.df_fzs = np.append(self.df_fzs, df_f0, axis=0)
-            self.time_course_signals = np.append(self.time_course_signals, sig, axis=0)
+            if self.storage_switch:
+                self.df_fzs = np.append(self.df_fzs, df_f0, axis=0)
+                self.time_course_signals = np.append(self.time_course_signals, sig, axis=0)
             mask = self.get_selection_trials(condition, sig)
             self.conditions = self.conditions + conditions
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
