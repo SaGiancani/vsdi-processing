@@ -449,7 +449,6 @@ class Session:
 
     def roi_plots(self, cd_i, sig, mask, blks):
 
-        sig = self.time_course_signals
         indeces_select = np.where(self.auto_selected==1)
         indeces_select = indeces_select[0].tolist()
         
@@ -459,8 +458,9 @@ class Session:
         for cd_i in conditions:
             #indeces_cdi = np.where(np.array(self.conditions) == cd_i)
             #indeces_cdi = indeces_cdi[0].tolist()
-            cdi_select = list(np.where(mask==1))
-            cdi_unselect = list(np.where(mask==0))
+            cdi_select = list(np.where(np.array(mask)==1))
+            print(cdi_select)
+            cdi_unselect = list(np.where(np.array(mask)==0))
             # Number of possible columns
             b = [4,5,6]
             a = [len(mask)%i for i in b]
