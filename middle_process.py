@@ -453,9 +453,10 @@ class Session:
     def roi_plots(self, cd_i, sig, mask, blks):
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         blank_sign = self.time_course_blank
-        cdi_select = list(np.where(mask==1)).tolist()
-        print(cdi_select)
-        cdi_unselect = list(np.where(mask==0)).tolist()
+        cdi_select = np.where(mask==1)
+        cdi_select = cdi_select[0].tolist()
+        cdi_unselect = np.where(mask==0)
+        cdi_unselect = cdi_unselect[0].tolist()
         # Number of possible columns
         b = [4,5,6]
         a = [len(mask)%i for i in b]
