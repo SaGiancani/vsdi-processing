@@ -71,12 +71,6 @@ class Session:
         self.conditions = None
         self.counter_blank = 0  
         
-        #if self.header['deblank_switch']:
-        # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
-        self.time_course_blank = None
-        self.f_f0_blank = None
-        self.get_signal(self.blank_id)
-
         self.average_switch = average_switch
         self.visualization_switch = data_vis_switch
         self.storage_switch = full_storage
@@ -84,6 +78,12 @@ class Session:
         if self.average_switch:
             self.avrgd_time_courses = None
             self.avrgd_df_fz = None
+
+        #if self.header['deblank_switch']:
+        # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
+        self.time_course_blank = None
+        self.f_f0_blank = None
+        self.get_signal(self.blank_id)
 
 
     def get_averaged_signal(self, tc, df_):
