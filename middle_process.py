@@ -83,7 +83,10 @@ class Session:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
         self.time_course_blank = None
         self.f_f0_blank = None
-        self.get_signal(self.blank_id)
+        sig, df, tmp = self.get_signal(self.blank_id)
+        if self.visualization_switch:
+            self.roi_plots(self.blank_id, sig, tmp, self.session_blks[:-len(sig)])
+            self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], self.blank_id, tmp, self.avrgd_df_fz[-1, :, :, :])     
 
 
     def get_averaged_signal(self, tc, df_):
@@ -453,74 +456,72 @@ class Session:
         indeces_select = indeces_select[0].tolist()
         
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
-        conditions = np.unique(self.conditions)
         blank_sign = self.time_course_blank
-        for cd_i in conditions:
-            #indeces_cdi = np.where(np.array(self.conditions) == cd_i)
-            #indeces_cdi = indeces_cdi[0].tolist()
-            cdi_select = list(np.where(np.array(mask)==1))
-            print(cdi_select)
-            cdi_unselect = list(np.where(np.array(mask)==0))
-            # Number of possible columns
-            b = [4,5,6]
-            a = [len(mask)%i for i in b]
-            columns = b[a.index(min(a))]
+        #indeces_cdi = np.where(np.array(self.conditions) == cd_i)
+        #indeces_cdi = indeces_cdi[0].tolist()
+        cdi_select = list(np.where(np.array(mask)==1))
+        print(cdi_select)
+        cdi_unselect = list(np.where(np.array(mask)==0))
+        # Number of possible columns
+        b = [4,5,6]
+        a = [len(mask)%i for i in b]
+        columns = b[a.index(min(a))]
 
-            fig = plt.figure(constrained_layout=True, figsize = (columns*4, int(np.ceil(len(mask)/columns)+1)*2), dpi = 80)
-            title = f'Condition #{cd_i}' 
-            try:
-                if self.cond_names is not None:
-                    title = title + ': ' + self.cond_names[cd_i-1]
-            except:
-                None
-            fig.suptitle(title)# Session name
-            # Height_ratios logic implementation
-            rat = [1]*(int(np.ceil(len(mask)/columns))+1)
-            rat[-1] = 3
-            subfigs = fig.subfigures(nrows=int(np.ceil(len(mask)/columns))+1, ncols=1, height_ratios=rat)
+        fig = plt.figure(constrained_layout=True, figsize = (columns*4, int(np.ceil(len(mask)/columns)+1)*2), dpi = 80)
+        title = f'Condition #{cd_i}' 
+        try:
+            if self.cond_names is not None:
+                title = title + ': ' + self.cond_names[cd_i-1]
+        except:
+            None
+        fig.suptitle(title)# Session name
+        # Height_ratios logic implementation
+        rat = [1]*(int(np.ceil(len(mask)/columns))+1)
+        rat[-1] = 3
+        subfigs = fig.subfigures(nrows=int(np.ceil(len(mask)/columns))+1, ncols=1, height_ratios=rat)
 
-            #if int(np.ceil(len(indeces_cdi)/columns)) >1:
-            for row, subfig in enumerate(subfigs):
-                #subfig.suptitle('Bottom title')
-                axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
-                for i, ax in enumerate(axs):
-                    #count = row*columns + i
-                    ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
-                    if i < len(mask):
-                        if mask[i]==1:
-                            color = 'b'
-                        else:
-                            color = 'r'
-                        ax.plot(sig[i, :], color)
-                        ax.set_title(np.array(blks)[i])
-                        ax.errorbar([i for i in range(np.shape(sig[cdi_select, :])[1])], np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
-                        ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
-                        #ax.set_ylim(-0.002,0.002)
-                    if row<len(subfigs)-2:
-                        ax.get_xaxis().set_visible(False)
-                    elif row<len(subfigs)-1:
-                        ax.get_xaxis().set_visible(True)
-                    elif row == len(subfigs)-1:
-                        ax.axis('off')
-                        ax_ = subfig.subplots(1, 1)
-                        ax_.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
-                        x = list(range(0,np.shape(sig)[1]))
-                        for i in sig[cdi_select[:-1], :]:
-                            ax_.plot(x, i, 'gray', linewidth = 0.5)
-                        ax_.plot(x, sig[cdi_select[-1], :], 'gray', linewidth = 0.5, label = 'Trials')
-                        ax_.plot(x, np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
-                        ax_.plot(x, np.mean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
-                        ax_.plot(x, np.mean(sig[i, :], axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
-                        ax_.plot(x, blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 2)
-                        #ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
-                        ax_.legend(loc="upper left")                
-                        ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
-                    
-            tmp = self.set_md_folder()
-            if not os.path.exists(os.path.join(tmp,'time_course')):
-                os.makedirs(os.path.join(tmp,'time_course'))
-            plt.savefig(os.path.join(tmp,'time_course', session_name+'_tc_0'+str(cd_i)+'.png'))
-            #plt.savefig((path_session+'/'session_name +'/'+ session_name+'_roi_0'+str(cd_i)+'.png')
+        #if int(np.ceil(len(indeces_cdi)/columns)) >1:
+        for row, subfig in enumerate(subfigs):
+            #subfig.suptitle('Bottom title')
+            axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
+            for i, ax in enumerate(axs):
+                #count = row*columns + i
+                ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
+                if i < len(mask):
+                    if mask[i]==1:
+                        color = 'b'
+                    else:
+                        color = 'r'
+                    ax.plot(sig[i, :], color)
+                    ax.set_title(np.array(blks)[i])
+                    ax.errorbar([i for i in range(np.shape(sig[cdi_select, :])[1])], np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
+                    ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
+                    #ax.set_ylim(-0.002,0.002)
+                if row<len(subfigs)-2:
+                    ax.get_xaxis().set_visible(False)
+                elif row<len(subfigs)-1:
+                    ax.get_xaxis().set_visible(True)
+                elif row == len(subfigs)-1:
+                    ax.axis('off')
+                    ax_ = subfig.subplots(1, 1)
+                    ax_.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
+                    x = list(range(0,np.shape(sig)[1]))
+                    for i in sig[cdi_select[:-1], :]:
+                        ax_.plot(x, i, 'gray', linewidth = 0.5)
+                    ax_.plot(x, sig[cdi_select[-1], :], 'gray', linewidth = 0.5, label = 'Trials')
+                    ax_.plot(x, np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
+                    ax_.plot(x, np.mean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
+                    ax_.plot(x, np.mean(sig[i, :], axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
+                    ax_.plot(x, blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 2)
+                    #ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
+                    ax_.legend(loc="upper left")                
+                    ax_.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
+                
+        tmp = self.set_md_folder()
+        if not os.path.exists(os.path.join(tmp,'time_course')):
+            os.makedirs(os.path.join(tmp,'time_course'))
+        plt.savefig(os.path.join(tmp,'time_course', session_name+'_tc_0'+str(cd_i)+'.png'))
+        #plt.savefig((path_session+'/'session_name +'/'+ session_name+'_roi_0'+str(cd_i)+'.png')
         return
 
     def set_md_folder(self):
