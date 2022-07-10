@@ -451,14 +451,8 @@ class Session:
         return 
 
     def roi_plots(self, cd_i, sig, mask, blks):
-
-        indeces_select = np.where(self.auto_selected==1)
-        indeces_select = indeces_select[0].tolist()
-        
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         blank_sign = self.time_course_blank
-        #indeces_cdi = np.where(np.array(self.conditions) == cd_i)
-        #indeces_cdi = indeces_cdi[0].tolist()
         cdi_select = list(np.where(mask==1)).tolist()
         print(cdi_select)
         cdi_unselect = list(np.where(mask==0)).tolist()
