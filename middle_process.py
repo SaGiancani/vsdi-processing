@@ -85,7 +85,7 @@ class Session:
         self.f_f0_blank = None
         sig, df, tmp = self.get_signal(self.blank_id)
         if self.visualization_switch:
-            self.roi_plots(self.blank_id, sig, tmp, self.session_blks[:-len(sig)])
+            self.roi_plots(self.blank_id, sig, tmp, self.session_blks[-len(sig):])
             self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], self.blank_id, tmp, self.avrgd_df_fz[-1, :, :, :])     
 
 
