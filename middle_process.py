@@ -163,7 +163,7 @@ class Session:
             if self.counter_blank == 0:
                 self.log.info('No blank signal yet, or deblank mode deactivated')
                 self.log.info('Trials loading starts:')
-                self.log.info(f'session_blks list: {self.session_blks}')
+                #self.log.info(f'session_blks list: {self.session_blks}')
                 time_course_signals, delta_f, conditions = signal_extraction(self.header, self.session_blks, self.f_f0_blank, self.header['deblank_switch'])
                 self.conditions = conditions
                 self.df_fzs = delta_f # This storing process is heavy. HAS TO BE TESTED AND CAN BE AVOIDED
@@ -179,7 +179,7 @@ class Session:
                     self.log.info('Trials loading starts:')
                     time_course_signals, delta_f, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
                     self.session_blks = self.session_blks + blks
-                    self.log.info(f'session_blks list: {self.session_blks}')
+                    #self.log.info(f'session_blks list: {self.session_blks}')
                     self.conditions = self.conditions + conditions                        
                     self.df_fzs = np.append(self.df_fzs, delta_f, axis=0)
                     self.time_course_signals = np.append(self.time_course_signals, time_course_signals, axis=0)
@@ -211,8 +211,8 @@ class Session:
                 indeces = np.where(np.array(self.conditions) == c_)[0]
                 tc_cond = self.time_course_signals[indeces.tolist(), :]
                 self.log.info(f'Autoselection for Condition: {c_}')
-                self.log.info(np.array(self.session_blks)[indeces.tolist()])
-                self.log.info(indeces)
+                #self.log.info(np.array(self.session_blks)[indeces.tolist()])
+                #self.log.info(indeces)
                 t, m, b, c, d  = overlap_strategy(tc_cond, n_chunks=nch, loss = strategy)
                 self.chunk_distribution_visualization(b, d, c, c_, strategy, tc_cond, t, m)
                 # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
