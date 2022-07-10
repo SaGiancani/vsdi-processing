@@ -493,7 +493,7 @@ class Session:
                     else:
                         color = 'r'
                     ax.plot(sig[i, :], color)
-                    ax.set_title(np.array(blks)[i])
+                    ax.set_title(blks[i])
                     ax.errorbar([i for i in range(np.shape(sig[cdi_select, :])[1])], np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
                     ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     #ax.set_ylim(-0.002,0.002)
