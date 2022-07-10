@@ -740,7 +740,7 @@ def overlap_strategy(matrix, cd_i, path, header, separators = None, n_chunks = 1
     mask_array = np.zeros(m.shape[1], dtype=int)
     mask_array[autoselect] = 1
 
-    chunk_distribution_visualization(coords, ms_norm, distr_info, cd_i, header['strategy'], matrix, autoselect, mask_array, path)
+    chunk_distribution_visualization(coords, ms_norm, distr_info, cd_i, header, matrix, autoselect, mask_array, path)
 
     # Mask of selected ones
     return autoselect, mask_array, coords, distr_info, ms_norm
