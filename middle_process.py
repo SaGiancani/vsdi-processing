@@ -422,7 +422,7 @@ class Session:
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
         # Array with indeces of considered frames: it starts from the last considerd zero_frames
         considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
-        fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, 2), dpi = 80)
+        fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, 1), dpi = 80)
         fig.suptitle(f'Session {session_name}')# Session name
         subfig = fig.subfigures(nrows=1, ncols=1)
         indeces_cdi = np.where(self.conditions == cd_i)
@@ -482,15 +482,15 @@ class Session:
             axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
             x = np.arange(0, self.header['n_frames'])
             for i, ax in enumerate(axs):
-                #count = row*columns + i
+                count = row*columns + i
                 ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
                 if i < len(mask):
-                    if mask[i]==1:
+                    if mask[count]==1:
                         color = 'b'
                     else:
                         color = 'r'
-                    ax.plot(sig[i, :], color)
-                    ax.set_title(blks[i])
+                    ax.plot(sig[count, :], color)
+                    ax.set_title(blks[count])
                     ax.errorbar(x, np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
                     ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     #ax.set_ylim(-0.002,0.002)
