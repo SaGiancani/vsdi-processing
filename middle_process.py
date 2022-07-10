@@ -459,9 +459,9 @@ class Session:
         blank_sign = self.time_course_blank
         #indeces_cdi = np.where(np.array(self.conditions) == cd_i)
         #indeces_cdi = indeces_cdi[0].tolist()
-        cdi_select = list(np.where(np.array(mask)==1))
+        cdi_select = list(np.where(mask==1))
         print(cdi_select)
-        cdi_unselect = list(np.where(np.array(mask)==0))
+        cdi_unselect = list(np.where(mask==0))
         # Number of possible columns
         b = [4,5,6]
         a = [len(mask)%i for i in b]
@@ -494,7 +494,7 @@ class Session:
                         color = 'r'
                     ax.plot(sig[i, :], color)
                     ax.set_title(blks[i])
-                    ax.errorbar([i for i in range(np.shape(sig[cdi_select, :])[1])], np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
+                    ax.errorbar(np.arange(0, self.header['n_frames']), np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
                     ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     #ax.set_ylim(-0.002,0.002)
                 if row<len(subfigs)-2:
