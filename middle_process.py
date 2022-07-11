@@ -173,7 +173,8 @@ class Session:
             indeces_select = indeces_select[0].tolist()      
             tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
             self.avrgd_df_fz = np.reshape(tmp, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
-            self.avrgd_time_courses = np.mean(temporary[indeces_select, :], axis=0)
+            tmp_ = np.mean(temporary[indeces_select, :], axis=0)
+            self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             self.time_course_blank = self.avrgd_time_courses
             self.f_f0_blank = self.avrgd_df_fz
             if self.log is not None:
@@ -196,7 +197,8 @@ class Session:
             t =  np.mean(df_f0[indeces_select, :, :, :], axis=0)
             self.avrgd_df_fz = np.concatenate((self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2])), axis=0) 
             print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
-            self.avrgd_time_courses = np.append(self.avrgd_time_courses,  np.mean(sig[indeces_select, :], axis=0), axis=0) 
+            t_ =  np.mean(sig[indeces_select, :], axis=0)
+            self.avrgd_time_courses = np.concatenate(self.avrgd_time_courses,  t_.reshape(1,  t_.shape[0]), axis=0) 
             print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
 
         if self.visualization_switch:
