@@ -195,7 +195,7 @@ class Session:
             #df_f0 = df_f0.reshape(1, df_f0.shape[1], df_f0.shape[2], df_f0.shape[3] ) 
             print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
             t =  np.mean(df_f0[indeces_select, :, :, :], axis=0)
-            self.avrgd_df_fz = np.concatenate(self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2]), axis=0) 
+            self.avrgd_df_fz = np.concatenate((self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2])), axis=0) 
             print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
             self.avrgd_time_courses = np.append(self.avrgd_time_courses,  np.mean(sig[indeces_select, :], axis=0), axis=0) 
 
