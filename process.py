@@ -1,3 +1,4 @@
+import cv2 as cv
 import numpy as np
 from scipy.ndimage.filters import uniform_filter1d
 from scipy import optimize
@@ -116,6 +117,19 @@ def lognorm_thresholding(array_to_fit, switch = 'median'):
     select_trials_id = np.where(((array_to_fit)<(thresh_std)))[0].tolist()
     return select_trials_id, (tmp, mu, sigma, xx), array_to_fit.tolist()
     
+def sobel_filter(im, k, N):
+    (nrows, ncols) = im.shape
+    sobelx = cv.Sobel(im,ddepth=cv.CV_64F, dx=1,dy=0,ksize=k) #cv.CV_64F
+    sobely = cv.Sobel(im,ddepth=cv.CV_64F, dx=0,dy=1,ksize=k)
+    sobel = np.zeros(im.shape)
+    if N=='self':
+        sobel = np.sqrt(sobelx**2 + sobely**2)
+        sobel = sobel/np.amax(sobel)
+    else: 
+        sobel = np.sqrt(sobelx**2 + sobely**2)/N
+    return sobel
+
+
 def zeta_score(sig_cond, sig_blank, zero_frames = 20):
     eps = 0.00000001
     # Blank mean and stder computation
