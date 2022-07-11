@@ -175,6 +175,8 @@ class Session:
             self.avrgd_df_fz = np.reshape(tmp, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             tmp_ = np.mean(temporary[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
+            # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
+            # employed for normalize the signal             
             self.time_course_blank = tmp_
             self.f_f0_blank = tmp
             if self.log is not None:
@@ -198,7 +200,7 @@ class Session:
             self.avrgd_df_fz = np.concatenate((self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2])), axis=0) 
             print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
             t_ =  np.mean(sig[indeces_select, :], axis=0)
-            self.avrgd_time_courses = np.concatenate(self.avrgd_time_courses,  t_.reshape(1,  t_.shape[0]), axis=0) 
+            self.avrgd_time_courses = np.concatenate((self.avrgd_time_courses,  t_.reshape(1,  t_.shape[0])), axis=0) 
             print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
 
         if self.visualization_switch:
