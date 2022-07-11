@@ -139,11 +139,13 @@ class Session:
             # employed for normalize the signal             
             self.time_course_blank = tmp_
             self.f_f0_blank = tmp
+            df_f0 = df_f0 - 1
+
             if self.log is not None:
                 self.log.info('Blank signal computed')
             else:
                 print('Blank signal computed!')
-
+            
         else:
             sig, df_f0, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
             if self.storage_switch:
@@ -167,8 +169,6 @@ class Session:
             self.roi_plots(condition, sig, mask, blks)
             time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
-        # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
-        # employed for normalize the signal 
         return sig, df_f0, mask
 
     def get_blks(self):
