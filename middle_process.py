@@ -782,16 +782,12 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     pieces = int(np.ceil(len(data)/max_trials))
     tmp_list = list()
-    separators = np.linspace(0, len(data), pieces, endpoint=True)
+    separators = np.linspace(0, len(data), pieces+1, endpoint=True)
+    print(separators)
     # Implementation for splitting big matrices for storing
     for i, n in enumerate(separators):
-        if i == 0:
-            tmp_list.append(data[0:n, :, :, :])
-            tmp_list.append(data[n:separators[i+1], :, :, :])
-        elif len(separators)-1 == i:
-            tmp_list.append(data[n:,:, :, :])
-        else:
-            tmp_list.append(data[n:separators[i+1], :, :, :])
+        if i != 0:
+            tmp_list.append(data[n-1:n, :, :, :])
     for i in tmp_list:
         print(i.shape)
     count = 0
