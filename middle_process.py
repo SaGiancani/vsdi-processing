@@ -172,7 +172,7 @@ class Session:
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()      
             tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
-            self.avrgd_df_fz = tmp[np.newaxis, ...]
+            self.avrgd_df_fz = np.reshape(tmp, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             self.avrgd_time_courses = np.mean(temporary[indeces_select, :], axis=0)
             self.time_course_blank = self.avrgd_time_courses
             self.f_f0_blank = self.avrgd_df_fz
@@ -191,11 +191,13 @@ class Session:
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
             self.session_blks = self.session_blks + blks
             indeces_select = np.where(np.array(mask)==1)
-            indeces_select = indeces_select[0].tolist() 
-            self.avrgd_df_fz = np.append(self.avrgd_df_fz, np.mean(df_f0[indeces_select, :, :, :], axis=0), axis=0) 
+            indeces_select = indeces_select[0].tolist()
+            #df_f0 = df_f0.reshape(1, df_f0.shape[1], df_f0.shape[2], df_f0.shape[3] ) 
             print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
-            self.avrgd_time_courses = np.append(self.avrgd_time_courses,  np.mean(sig[indeces_select, :], axis=0), axis=0) 
+            t =  np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            self.avrgd_df_fz = np.concatenate(self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2]), axis=0) 
             print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
+            self.avrgd_time_courses = np.append(self.avrgd_time_courses,  np.mean(sig[indeces_select, :], axis=0), axis=0) 
 
         if self.visualization_switch:
             self.roi_plots(condition, sig, mask, blks)
