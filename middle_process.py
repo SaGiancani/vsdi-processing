@@ -475,13 +475,12 @@ class Session:
         rat = [1]*(int(np.ceil(len(mask)/columns))+1)
         rat[-1] = 3
         subfigs = fig.subfigures(nrows=int(np.ceil(len(mask)/columns))+1, ncols=1, height_ratios=rat)
-
-        #if int(np.ceil(len(indeces_cdi)/columns)) >1:
         for row, subfig in enumerate(subfigs):
             #subfig.suptitle('Bottom title')
             axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
             x = np.arange(0, self.header['n_frames'])
             for i, ax in enumerate(axs):
+                print(len(subfigs)*columns + len(axs))
                 count = row*columns + i
                 ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
                 if i < len(mask):
