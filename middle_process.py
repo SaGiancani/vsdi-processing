@@ -787,7 +787,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Implementation for splitting big matrices for storing
     for i, n in enumerate(separators):
         if i != 0:
-            tmp_list.append(data[n-1:n, :, :, :])
+            tmp_list.append(data[separators[i-1]:n, :, :, :])
     for i in tmp_list:
         print(i.shape)
     count = 0

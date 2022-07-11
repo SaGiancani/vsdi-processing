@@ -11,6 +11,10 @@ class Trial:
         self.condition = int(report_series_trial['IDcondition'])
         self.fix_correct = report_series_trial['Preceding Event IT'] == 'FixCorrect'
         self.correct_behav = report_series_trial['behav Correct'] == 1
+        if self.fix_correct and self.correct_behav and self.condition != blank_cond:
+            self.behav_latency = int(report_series_trial['Onset Time_ Behav Correct']) -  int(report_series_trial['Onset Time_ Behav Stim']) - 500
+        else:
+            self.behav_latency = None
         self.id_trial = int(report_series_trial['Total Trial Number']) - 1
         pngfile_path = utils.find_thing('PNGfiles', os.path.join(session_path, 'sources'))
 
@@ -105,14 +109,18 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
     for i in range(0,header_dimension-1):
         tmp = f.readline()
         tmp = tmp.split('\n')[0].split(';')
+
         if '*' not in tmp[0]:
             try:
                 dict_[tmp[0]] = separator_converter(tmp[1].split('\n')[0])
             except:
                 dict_[tmp[0]] = tmp[1].split('\n')[0]
+            if tmp[0] == 'Date':
+                # Datetime day, month, year, hour, minute, seconds
+                format_str = '%d/%m/%Y'
+                dict_['Date'] =  (datetime.datetime.strptime(dict_['Date'], format_str).date())
+                dict_['Date'] = datetime.datetime.strptime(str(tmp[3]) + ':00', '%H:%M:%S').replace(year=dict_['Date'].year,month=dict_['Date'].month,day=dict_['Date'].day)
     dict_['Export Log Files'] = bool(dict_['Export Log Files'])
-    format_str = '%d/%m/%Y'
-    dict_['Date'] = (datetime.datetime.strptime(dict_['Date'], format_str).date())
     return dict_
 
 
