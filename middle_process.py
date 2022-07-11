@@ -9,8 +9,9 @@ import utils
 LABEL_CONDS_PATH = 'metadata/labelConds.txt' 
 
 class Condition:
-    def __init__(self):
-        self.cond_name = None
+    def __init__(self, condition_name, condition_numb):
+        self.cond_name = condition_name
+        self.cond_id = condition_numb
 
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
@@ -40,8 +41,9 @@ class Session:
             self.log = logger              
         self.cond_names = None
         self.header = self.get_session_header(**kwargs)
-        self.all_blks = get_all_blks(self.header['path_session']) # all the blks. 
-        self.cond_names = self.get_condition_name()
+        self.all_blks = get_all_blks(self.header['path_session']) # all the blks.
+        self.cond_dict = self.get_condition_name()
+        self.cond_names = list(self.cond_dict.values())
         self.blank_id = self.get_blank_id(cond_id=condid)
 
         # This can be automatized, with zero_frames, extracting parameters from BaseReport
@@ -199,15 +201,15 @@ class Session:
         try:
             with open(os.path.join(self.header['path_session'], LABEL_CONDS_PATH)) as f:
                 contents = f.readlines()
-            return [i.split('\n')[0] for i in contents]
+            return {j+1:i.split('\n')[0] for j, i in enumerate(contents)}
         except FileNotFoundError:
             self.log.info('Check the labelConds.txt presence inside the metadata subfolder')
             cds = self.get_condition_ids()
-            return ['Condition ' + str(c) for c in cds]
+            return {j+1:'Condition ' + str(c) for j, c in enumerate(cds)}
         except NotADirectoryError:
             self.log.info(os.path.join(self.header['path_session'], LABEL_CONDS_PATH) +' path does not exist')
             cds = self.get_condition_ids()
-            return ['Condition ' + str(c) for c in cds]
+            return {j+1:'Condition ' + str(c) for j, c in enumerate(cds)}
 
     def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch):
         header = {}
@@ -234,13 +236,13 @@ class Session:
         else:
             # If the condition is not only the blank one, than I compute the same iteration as up
             if len(self.header['conditions_id']) > 1:
-                cds = [i for i in self.header['conditions_id'] if i != self.blank_id]
-                cds.sort()
-                for cd, c_name in zip(cds, self.cond_names):
-                    self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
-                    self.log.info('Condition name: ' + c_name)                        
-                    _, _, tmp = self.get_signal(cd)             
-                    self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
+                for cd, c_name in self.cond_dict.items():
+                    if cd != self.blank_id:
+                        cond = Condition(c_name, cd)
+                        self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
+                        self.log.info('Condition name: ' + c_name)                        
+                        _, _, tmp = self.get_signal(cd)             
+                        self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
                         
                 self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
                 session_blks = np.array(self.session_blks)
