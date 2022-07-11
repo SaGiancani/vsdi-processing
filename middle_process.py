@@ -175,8 +175,8 @@ class Session:
             self.avrgd_df_fz = np.reshape(tmp, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             tmp_ = np.mean(temporary[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
-            self.time_course_blank = self.avrgd_time_courses
-            self.f_f0_blank = self.avrgd_df_fz
+            self.time_course_blank = tmp_
+            self.f_f0_blank = tmp
             if self.log is not None:
                 self.log.info('Blank signal computed')
             else:
