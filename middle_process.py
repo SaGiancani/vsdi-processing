@@ -794,24 +794,23 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     for i, matrix in enumerate(tmp_list):
         fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(matrix)), dpi = 80)
         fig.suptitle(f'Session {session_name}')# Session name
-        for sequence in matrix:
-            subfigs = fig.subfigures(nrows=len(matrix), ncols=1)
-            for subfig in subfigs:
-                subfig.suptitle(f'Trial # {titles[count]}')
-                axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
-                # Borders for caxis
-                t_l = np.mean(np.mean(sequence, axis=1), axis=1)
-                max_b = np.max(t_l)
-                min_b = np.min(t_l)
-                max_bord = max_b+(max_b - min_b)
-                min_bord = min_b-(max_b - min_b)                
-                # Showing each frame
-                for df_id, ax in zip(considered_frames, axs):
-                    Y = sequence[int(df_id), :, :]
-                    ax.axis('off')
-                    pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
-                subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
-                count +=1
+        subfigs = fig.subfigures(nrows=len(matrix), ncols=1)
+        for sequence, subfig in zip(matrix, subfigs):
+            subfig.suptitle(f'Trial # {titles[count]}')
+            axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
+            # Borders for caxis
+            t_l = np.mean(np.mean(sequence, axis=1), axis=1)
+            max_b = np.max(t_l)
+            min_b = np.min(t_l)
+            max_bord = max_b+(max_b - min_b)
+            min_bord = min_b-(max_b - min_b)                
+            # Showing each frame
+            for df_id, ax in zip(considered_frames, axs):
+                Y = sequence[int(df_id), :, :]
+                ax.axis('off')
+                pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
+            subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
+            count +=1
             
         tmp = path_
         if not os.path.exists(os.path.join(tmp,'activity_maps')):
