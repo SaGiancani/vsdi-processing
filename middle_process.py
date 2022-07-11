@@ -83,10 +83,10 @@ class Session:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
         self.time_course_blank = None
         self.f_f0_blank = None
-        sig, df, tmp = self.get_signal(self.blank_id)
-        if self.visualization_switch:
-            self.roi_plots(self.blank_id, sig, tmp, self.session_blks[-len(sig):])
-            self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], self.blank_id, tmp, self.f_f0_blank)     
+        _, _, _ = self.get_signal(self.blank_id)
+        
+        #if self.visualization_switch:
+        #    self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], self.blank_id, tmp, self.f_f0_blank)     
 
 
     def get_averaged_signal(self, tc, df_):
@@ -171,7 +171,8 @@ class Session:
             self.session_blks = blks
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()      
-            self.avrgd_df_fz = np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            self.avrgd_df_fz = tmp[np.newaxis, ...]
             self.avrgd_time_courses = np.mean(temporary[indeces_select, :], axis=0)
             self.time_course_blank = self.avrgd_time_courses
             self.f_f0_blank = self.avrgd_df_fz
@@ -194,9 +195,10 @@ class Session:
             self.avrgd_df_fz = np.append(self.avrgd_df_fz, np.mean(df_f0[indeces_select, :, :, :], axis=0), axis=0) 
             print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
             self.avrgd_time_courses = np.append(self.avrgd_time_courses,  np.mean(sig[indeces_select, :], axis=0), axis=0) 
-        
-        print(blks)
-        print(conditions)
+            print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
+
+        if self.visualization_switch:
+            self.roi_plots(condition, sig, mask, blks)
         # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
         # employed for normalize the signal 
         return sig, df_f0, mask
@@ -270,10 +272,9 @@ class Session:
                 for cd, c_name in zip(cds, self.cond_names):
                     self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
                     self.log.info('Condition name: ' + c_name)                        
-                    sig, df, tmp = self.get_signal(cd)
+                    sig, _, tmp = self.get_signal(cd)
 
                     if self.visualization_switch:
-                        self.roi_plots(cd, sig, tmp, self.session_blks[:-len(sig)])
                         self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], cd, tmp, self.avrgd_df_fz[-1, :, :, :])                        
                     
                     self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
