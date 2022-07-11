@@ -8,10 +8,14 @@ import utils
 
 LABEL_CONDS_PATH = 'metadata/labelConds.txt' 
 
+class Condition:
+    def __init__(self):
+        self.cond_name = None
+
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
 class Session:
-    def __init__(self, logger = None, condid = None, full_storage = False, average_switch= True, data_vis_switch = True, end_frame = 60, **kwargs):
+    def __init__(self, logger = None, condid = None, full_storage = False, data_vis_switch = True, end_frame = 60, **kwargs):
         """
         Initializes attributes
         Default values for:
@@ -71,33 +75,18 @@ class Session:
         self.conditions = None
         self.counter_blank = 0  
         
-        self.average_switch = average_switch
         self.visualization_switch = data_vis_switch
         self.storage_switch = full_storage
 
-        if self.average_switch:
-            self.avrgd_time_courses = None
-            self.avrgd_df_fz = None
+        self.avrgd_time_courses = None
+        self.avrgd_df_fz = None
 
         #if self.header['deblank_switch']:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
         self.time_course_blank = None
         self.f_f0_blank = None
         _, _, _ = self.get_signal(self.blank_id)
-        
-        #if self.visualization_switch:
-        #    self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], self.blank_id, tmp, self.f_f0_blank)     
 
-
-    def get_averaged_signal(self, tc, df_):
-        #indeces_select = np.where(self.auto_selected==1)
-        #indeces_select = indeces_select[0].tolist()        
-        #cdi = np.where(np.array(self.conditions) == id)
-        #cdi = cdi[0].tolist()
-        #cdi = list(set(indeces_select).intersection(set(cdi)))
-        sig = np.mean(tc, axis=0)
-        df = np.mean(df_, axis=0)
-        return sig, df
 
     def get_blank_id(self, cond_id = None):
         '''
@@ -119,35 +108,6 @@ class Session:
                 return tmp
         else:
             return cond_id
-
-    def get_blank_signal(self):
-        # All the blank blks
-        blks = [f for f in self.all_blks \
-        if (int(f.split('vsd_C')[1][0:2])==self.blank_id)]
-        # Blank signal extraction
-        self.log.info('Blank trials loading starts:')
-        strategy_blank = 'mae'
-        blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
-        size_df_f0 = np.shape(blank_df_f0)
-        # Minimum chunks == 2: otherwise an outlier could mess the results up
-        blank_sel, blank_mask, b, c, d  = overlap_strategy(blank_sig, self.blank_id, self.set_md_folder(), self.header,  switch_vis = self.visualization_switch, n_chunks=1, loss = strategy_blank)
-        # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
-        # But the one for normalization is kept without demean
-        self.df_fzs = blank_df_f0 - 1
-        self.time_course_signals = blank_sig - 1
-        self.chunk_distribution_visualization(b, d, c, self.blank_id, strategy_blank, self.time_course_signals, blank_sel, blank_mask)
-        self.conditions = blank_conditions
-        self.counter_blank = size_df_f0[0]
-        self.auto_selected = blank_mask
-        self.session_blks = blks
-        indeces_select = np.where(self.auto_selected==1)
-        indeces_select = indeces_select[0].tolist()        
-        blank_sig_ = np.mean(self.time_course_signals[indeces_select, :], axis=0)
-        # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
-        # employed for normalize the signal 
-        blank_df = np.mean(blank_df_f0[indeces_select, :, :, :], axis=0)
-        return blank_sig_  , blank_df
-
 
     def get_signal(self, condition):
         # All the blank blks
@@ -210,7 +170,6 @@ class Session:
         # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
         # employed for normalize the signal 
         return sig, df_f0, mask
-
 
     def get_blks(self):
         '''
@@ -280,17 +239,16 @@ class Session:
                 for cd, c_name in zip(cds, self.cond_names):
                     self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
                     self.log.info('Condition name: ' + c_name)                        
-                    sig, _, tmp = self.get_signal(cd)
-
-#                    if self.visualization_switch:
-                        #self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], cd, tmp, self.avrgd_df_fz[-1, :, :, :])                        
-                    
+                    _, _, tmp = self.get_signal(cd)             
                     self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
                         
                 self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
                 session_blks = np.array(self.session_blks)
                 self.trials_name = session_blks[self.auto_selected]
-                    
+            if self.visualization_switch:
+                # titles gets the name of blank condition as first, since it was stored first
+                time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_names[-1], self.cond_names[:-1]], 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
+
             else:
                 self.log.info('Warning: Something weird in get_session')
         return
@@ -325,141 +283,6 @@ class Session:
         #self.log.info(self.trials_name)
         self.log.info('Autoselection loop time for condition ' +str(condition)+ ': ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return tmp
-
-    def autoselection(self, save_switch = False):
-        strategy = self.header['strategy']
-        n_frames = self.header['n_frames']
-        self.get_session()
-
-        start_time = datetime.datetime.now().replace(microsecond=0)
-        if strategy in ['mse', 'mae']:
-            self.log.info('Chunks division strategy choosen')
-            if  n_frames%self.header['chunks']==0:
-                nch = self.header['chunks']
-            else:
-                self.log.info('Warning: Number of chunks incompatible with number of frames, 1 trial = 1 chunk then is considered') 
-                nch = 1
-            # Condition per condition
-            uniq_conds = np.unique(self.conditions)
-            mod_conds = np.delete(uniq_conds, np.where(uniq_conds == self.blank_id))
-            tmp = np.zeros(len(self.conditions[self.counter_blank:]), dtype=int)
-            for c_ in mod_conds:
-                #indeces = [i for i, blk in enumerate(self.session_blks) if int(blk.split('_C')[1][:2]) == c]
-                indeces = np.where(np.array(self.conditions) == c_)[0]
-                tc_cond = self.time_course_signals[indeces.tolist(), :]
-                self.log.info(f'Autoselection for Condition: {c_}')
-                #self.log.info(np.array(self.session_blks)[indeces.tolist()])
-                #self.log.info(indeces)
-                t, m, b, c, d  = overlap_strategy(tc_cond, c_, self.set_md_folder(), self.header, n_chunks=nch, loss = strategy)
-                # Coming back to the previous indexing system: not indexing intracondition, but indexing in tc matrix with all the conditions
-                # This imply deleting the first blanks time courses -counter_blank variable-
-                # Considering to use two variables for time course: one blanks, one no blank
-                ids = indeces[t] - self.counter_blank
-                tmp[ids.tolist()] = 1
-
-        elif strategy in ['roi', 'roi_signals', 'ROI']:
-            tmp = roi_strategy(self.time_course_signals[self.counter_blank:, :], self.header['tolerance'], self.header['zero_frames'])
-
-        elif strategy in ['statistic', 'statistical', 'quartiles']:
-            tmp = statistical_strategy(self.time_course_signals[self.counter_blank:, :])
-
-        # If autoselected list is empty store the autoselection
-        if (self.auto_selected is None) or (len(self.header['conditions_id'])==1):
-            self.auto_selected = tmp
-        # Otherwise append            
-        else :
-            self.auto_selected = np.array(self.auto_selected.tolist() + tmp.tolist(), dtype=int)
-        
-        # Storing for local analysis
-        if save_switch:
-            np.save('time_courses.npy', self.time_course_signals)
-        
-        self.log.info(str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
-        session_blks = np.array(self.session_blks)
-        self.trials_name = session_blks[self.auto_selected]
-        #self.log.info(np.array(self.conditions)[self.auto_selected])
-        #self.log.info(self.trials_name)
-        self.log.info('Autoselection loop time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-        return
-
-    def deltaf_visualization(self, start_frame, n_frames_showed, end_frame):
-        start_time = datetime.datetime.now().replace(microsecond=0)
-        indeces_select = np.where(self.auto_selected==1)
-        indeces_select = indeces_select[0].tolist()
-        session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
-        # Array with indeces of considered frames: it starts from the last considerd zero_frames
-        considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
-        self.log.info(considered_frames)
-        conditions = np.unique(self.conditions)
-        for cd_i in conditions:
-            indeces_cdi = np.where(self.conditions == cd_i)
-            indeces_cdi = indeces_cdi[0].tolist()
-            cdi_select = list(set(indeces_select).intersection(set(indeces_cdi)))
-            fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(cdi_select)), dpi = 80)
-            fig.suptitle(f'Session {session_name}')# Session name
-            subfigs = fig.subfigures(nrows=len(cdi_select), ncols=1)
-            for row, subfig in enumerate(subfigs):
-                subfig.suptitle(f'Trial # {cdi_select[row]}')
-                axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
-                # Borders for caxis
-                t_l = np.mean(np.mean(self.df_fzs[cdi_select[row], :, :, :], axis=1), axis=1)
-                max_b = np.max(t_l)
-                min_b = np.min(t_l)
-                max_bord = max_b+(max_b - min_b)
-                min_bord = min_b-(max_b - min_b)
-                print(max_bord)
-                print(min_bord)                
-                # Showing each frame
-                for df_id, ax in zip(considered_frames, axs):
-                    Y = self.df_fzs[cdi_select[row], int(df_id), :, :]
-                    ax.axis('off')
-                    pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
-                subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
-            
-            tmp = self.set_md_folder()
-            if not os.path.exists(os.path.join(tmp,'activity_maps')):
-                os.makedirs(os.path.join(tmp,'activity_maps'))
-            plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_0'+str(cd_i)+'.png'))
-        self.log.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-        return 
-    
-
-    def time_seq_averaged(self, start_frame, n_frames_showed, end_frame, cd_i, mask, averaged_sign):
-        start_time = datetime.datetime.now().replace(microsecond=0)
-        indeces_select = np.where(mask==1)
-        indeces_select = indeces_select[0].tolist()
-        session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
-        # Array with indeces of considered frames: it starts from the last considerd zero_frames
-        considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
-        fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, 1), dpi = 80)
-        fig.suptitle(f'Session {session_name}')# Session name
-        subfig = fig.subfigures(nrows=1, ncols=1)
-        indeces_cdi = np.where(self.conditions == cd_i)
-        indeces_cdi = indeces_cdi[0].tolist()
-        cdi_select = indeces_select
-        subfig.suptitle(f'Condition # {cd_i}')
-        axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
-        # Boundaries for caxis
-        t_l = np.mean(np.mean(averaged_sign, axis=1), axis=1)
-        max_b = np.max(t_l)
-        min_b = np.min(t_l)
-        max_bord = max_b+(max_b - min_b)
-        min_bord = min_b-(max_b - min_b)
-                    
-        # Showing each frame
-        for df_id, ax in zip(considered_frames, axs):
-            Y = averaged_sign[int(df_id), :, :]
-            ax.axis('off')
-            pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
-        subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
-
-        tmp = self.set_md_folder()
-        if not os.path.exists(os.path.join(tmp,'activity_maps')):
-            os.makedirs(os.path.join(tmp,'activity_maps'))
-        plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_averaged_cds.png'))
-        self.log.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-        return 
-
 
     def roi_plots(self, cd_i, sig, mask, blks):
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
@@ -550,7 +373,6 @@ class Session:
             os.makedirs(folder_path)
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
-
 
 def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
     #motion_indeces, conditions = [], []
@@ -651,7 +473,6 @@ def raw_signal_extraction(header, blks, log = None):
         else:
             log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     return raws, conditions#, motion_indeces
-
 
 def roi_strategy(matrix, tolerance, zero_frames):
     '''
@@ -774,7 +595,6 @@ def get_all_blks(path_session, sort = True):
     else:
         return tmp
 
-
 def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, log_ = None, max_trials = 20):
     start_time = datetime.datetime.now().replace(microsecond=0)
     session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
@@ -822,7 +642,6 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     else:
         print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     return  
-
 
 def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indeces_select, mask_array, path):
     strategy = header['strategy']
@@ -1001,10 +820,8 @@ if __name__=="__main__":
     assert args.strategy in ['mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'], "Insert a valid name strategy: 'mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'"    
     start_time = datetime.datetime.now().replace(microsecond=0)
     session = Session(logger = logger, **vars(args))
-    #session.autoselection()
     session.get_session()
     logger.info('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-    #session.deltaf_visualization(session.header['zero_frames'], 20, 60)
     #utils.inputs_save(session, 'session_prova')
     #utils.inputs_save(session.session_blks, 'blk_names')
 
