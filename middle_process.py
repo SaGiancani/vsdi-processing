@@ -130,7 +130,7 @@ class Session:
         blank_sig, blank_df_f0, blank_conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
         size_df_f0 = np.shape(blank_df_f0)
         # Minimum chunks == 2: otherwise an outlier could mess the results up
-        blank_sel, blank_mask, b, c, d  = overlap_strategy(blank_sig, self.blank_id, self.set_md_folder(), self.header,  n_chunks=1, loss = strategy_blank)
+        blank_sel, blank_mask, b, c, d  = overlap_strategy(blank_sig, self.blank_id, self.set_md_folder(), self.header,  switch_vis = self.visualization_switch, n_chunks=1, loss = strategy_blank)
         # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
         # But the one for normalization is kept without demean
         self.df_fzs = blank_df_f0 - 1
@@ -193,11 +193,11 @@ class Session:
             indeces_select = np.where(np.array(mask)==1)
             indeces_select = indeces_select[0].tolist()
             #df_f0 = df_f0.reshape(1, df_f0.shape[1], df_f0.shape[2], df_f0.shape[3] ) 
-            print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
             t =  np.mean(df_f0[indeces_select, :, :, :], axis=0)
             self.avrgd_df_fz = np.concatenate((self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2])), axis=0) 
-            print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
+            print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
             self.avrgd_time_courses = np.append(self.avrgd_time_courses,  np.mean(sig[indeces_select, :], axis=0), axis=0) 
+            print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
 
         if self.visualization_switch:
             self.roi_plots(condition, sig, mask, blks)
@@ -306,7 +306,7 @@ class Session:
             #tmp = np.zeros(np.shape(time_course)[0], dtype=int)
             #self.log.info(np.array(self.session_blks)[indeces.tolist()])
             #self.log.info(indeces)
-            t, tmp, b, c, d  = overlap_strategy(time_course, condition, self.set_md_folder(), self.header, n_chunks=nch, loss = strategy)
+            _, tmp, _, _, _  = overlap_strategy(time_course, condition, self.set_md_folder(), self.header,  switch_vis = self.visualization_switch, n_chunks=nch, loss = strategy)
             #indeces = np.arange(0, np.shape(time_course)[0], dtype=int)
 
         elif strategy in ['roi', 'roi_signals', 'ROI']:
@@ -666,7 +666,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     mask_array[autoselect] = 1
     return mask_array
 
-def overlap_strategy(matrix, cd_i, path, header, separators = None, n_chunks = 1, loss = 'mae', threshold = 'median'):
+def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators = None, n_chunks = 1, loss = 'mae', threshold = 'median'):
     if separators is None:
         if  matrix.shape[1] % n_chunks == 0:
             matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
@@ -739,8 +739,9 @@ def overlap_strategy(matrix, cd_i, path, header, separators = None, n_chunks = 1
     autoselect = list(set.intersection(*map(set,t_whol)))
     mask_array = np.zeros(m.shape[1], dtype=int)
     mask_array[autoselect] = 1
-
-    chunk_distribution_visualization(coords, ms_norm, distr_info, cd_i, header, matrix, autoselect, mask_array, path)
+    
+    if switch_vis:
+        chunk_distribution_visualization(coords, ms_norm, distr_info, cd_i, header, matrix, autoselect, mask_array, path)
 
     # Mask of selected ones
     return autoselect, mask_array, coords, distr_info, ms_norm
