@@ -205,6 +205,8 @@ class Session:
 
         if self.visualization_switch:
             self.roi_plots(condition, sig, mask, blks)
+            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
+
         # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
         # employed for normalize the signal 
         return sig, df_f0, mask
@@ -280,8 +282,8 @@ class Session:
                     self.log.info('Condition name: ' + c_name)                        
                     sig, _, tmp = self.get_signal(cd)
 
-                    if self.visualization_switch:
-                        self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], cd, tmp, self.avrgd_df_fz[-1, :, :, :])                        
+#                    if self.visualization_switch:
+                        #self.time_seq_averaged(self.header['zero_frames'], 20, self.header['ending_frame'], cd, tmp, self.avrgd_df_fz[-1, :, :, :])                        
                     
                     self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
                         
@@ -457,6 +459,7 @@ class Session:
         plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_averaged_cds.png'))
         self.log.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return 
+
 
     def roi_plots(self, cd_i, sig, mask, blks):
         session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
@@ -770,6 +773,61 @@ def get_all_blks(path_session, sort = True):
         return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     else:
         return tmp
+
+
+def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, log_ = None, max_trials = 20):
+    start_time = datetime.datetime.now().replace(microsecond=0)
+    session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
+    # Array with indeces of considered frames: it starts from the last considerd zero_frames
+    considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
+    pieces = np.ceil(len(data)/max_trials)
+    tmp_list = list()
+    separators = np.linspace(0, len(data), pieces, endpoint=True)
+    # Implementation for splitting big matrices for storing
+    for i, n in enumerate(separators):
+        if i == 0:
+            tmp_list.append(data[0:n, :, :, :])
+            tmp_list.append(data[n:separators[i+1], :, :, :])
+        elif len(separators)-1 == i:
+            tmp_list.append(data[n:,:, :, :])
+        else:
+            tmp_list.append(data[n:separators[i+1], :, :, :])
+    for i in tmp_list:
+        print(i.shape)
+    count = 0
+    for i, matrix in enumerate(tmp_list):
+        fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(matrix)), dpi = 80)
+        fig.suptitle(f'Session {session_name}')# Session name
+        for sequence in matrix:
+            subfigs = fig.subfigures(nrows=len(matrix), ncols=1)
+            for subfig in subfigs:
+                subfig.suptitle(f'Trial # {titles[count]}')
+                axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
+                # Borders for caxis
+                t_l = np.mean(np.mean(sequence, axis=1), axis=1)
+                max_b = np.max(t_l)
+                min_b = np.min(t_l)
+                max_bord = max_b+(max_b - min_b)
+                min_bord = min_b-(max_b - min_b)                
+                # Showing each frame
+                for df_id, ax in zip(considered_frames, axs):
+                    Y = sequence[int(df_id), :, :]
+                    ax.axis('off')
+                    pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
+                subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
+                count +=1
+            
+        tmp = path_
+        if not os.path.exists(os.path.join(tmp,'activity_maps')):
+            os.makedirs(os.path.join(tmp,'activity_maps'))
+        plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_piece0'+str(i)+'_'+str(title_to_print)+'.png'))
+
+    if log_ is not None:
+        log_.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+    else:
+        print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+    return  
+
 
 def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indeces_select, mask_array, path):
     strategy = header['strategy']
