@@ -480,10 +480,9 @@ class Session:
             axs = subfig.subplots(nrows=1, ncols=columns, sharex=True, sharey=True)
             x = np.arange(0, self.header['n_frames'])
             for i, ax in enumerate(axs):
-                print(len(subfigs)*columns + len(axs))
                 count = row*columns + i
-                ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
                 if i < len(mask):
+                    ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
                     if mask[count]==1:
                         color = 'b'
                     else:
