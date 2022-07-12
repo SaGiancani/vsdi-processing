@@ -87,6 +87,7 @@ class Session:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
         self.time_course_blank = None
         self.f_f0_blank = None
+        # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
         _, _, _ = self.get_signal(self.blank_id)
 
 
@@ -117,7 +118,6 @@ class Session:
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
-            #strategy_blank = 'mae'
             sig, df_f0, conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
@@ -607,6 +607,9 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     tmp_list = list()
     separators = np.linspace(0, len(data), pieces+1, endpoint=True, dtype=int)
     print(separators)
+    # Borders for caxis
+    max_bord = np.percentile(data, 75)
+    min_bord = np.percentile(data, 25)
     # Implementation for splitting big matrices for storing
     for i, n in enumerate(separators):
         if i != 0:
@@ -621,12 +624,14 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
         for sequence, subfig in zip(matrix, subfigs):
             subfig.suptitle(f'{titles[count]}')
             axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
+            
             # Borders for caxis
-            t_l = np.mean(np.mean(sequence, axis=1), axis=1)
-            max_b = np.max(t_l)
-            min_b = np.min(t_l)
-            max_bord = max_b+(max_b - min_b)
-            min_bord = min_b-(max_b - min_b)                
+            #t_l = np.mean(np.mean(sequence, axis=1), axis=1)
+            #max_b = np.max(t_l)
+            #min_b = np.min(t_l)
+            #max_bord = max_b+(max_b - min_b)
+            #min_bord = min_b-(max_b - min_b)
+
             # Showing each frame
             for df_id, ax in zip(considered_frames, axs):
                 Y = sequence[int(df_id), :, :]
