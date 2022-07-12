@@ -24,7 +24,7 @@ class Condition:
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
 class Session:
-    def __init__(self, logger = None, condid = None, full_storage = False, data_vis_switch = True, end_frame = 60, **kwargs):
+    def __init__(self, logger = None, condid = None, store_switch = False, data_vis_switch = True, end_frame = 60, **kwargs):
         """
         Initializes attributes
         Default values for:
@@ -86,7 +86,7 @@ class Session:
         self.counter_blank = 0  
         
         self.visualization_switch = data_vis_switch
-        self.storage_switch = full_storage
+        self.storage_switch = store_switch
 
         self.avrgd_time_courses = None
         self.avrgd_df_fz = None
@@ -784,7 +784,15 @@ if __name__=="__main__":
                         type=str,
                         default = 'mae',
                         required=False,
-                        help='Strategy for the autoselection: choose between mse/mae, statistical, roi -kevin equation-')     
+                        help='Strategy for the autoselection: choose between mse/mae, statistical, roi -kevin equation-')  
+
+    parser.add_argument('--store', 
+                        dest='store_switch',
+                        action='store_true')
+    parser.add_argument('--no-store', 
+                        dest='store_switch', 
+                        action='store_false')
+    parser.set_defaults(raw_switch=False)   
 
     logger = utils.setup_custom_logger('myapp')
     logger.info('Start\n')
