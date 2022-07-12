@@ -133,7 +133,7 @@ class Session:
             self.session_blks = blks
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()      
-            tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            tmp = np.mean((df_f0[indeces_select, :, :, :] - 1), axis=0)
             self.avrgd_df_fz = np.reshape(tmp, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             tmp_ = np.mean(temporary[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
@@ -603,14 +603,14 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
-    pieces = int(np.ceil(len(data)/max_trials))
-    tmp_list = list()
-    separators = np.linspace(0, len(data), pieces+1, endpoint=True, dtype=int)
-    print(separators)
     # Borders for caxis
     max_bord = np.percentile(data, 75)
     min_bord = np.percentile(data, 25)
     # Implementation for splitting big matrices for storing
+    pieces = int(np.ceil(len(data)/max_trials))
+    tmp_list = list()
+    separators = np.linspace(0, len(data), pieces+1, endpoint=True, dtype=int)
+    print(separators)
     for i, n in enumerate(separators):
         if i != 0:
             tmp_list.append(data[separators[i-1]:n, :, :, :])
