@@ -573,8 +573,8 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 90)
-    min_bord = np.percentile(data, 10)
+    max_bord = np.percentile(data, 80)
+    min_bord = np.percentile(data, 20)
     # Implementation for splitting big matrices for storing
     pieces = int(np.ceil(len(data)/max_trials))
     tmp_list = list()
