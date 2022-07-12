@@ -1,4 +1,5 @@
 import argparse, blk_file, datetime, process
+from curses import raw
 from importlib.resources import path
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,9 +10,18 @@ import utils
 LABEL_CONDS_PATH = 'metadata/labelConds.txt' 
 
 class Condition:
-    def __init__(self, condition_name, condition_numb):
+    def __init__(self, condition_name, condition_numb, path):
+        self.session_name = path
         self.cond_name = condition_name
         self.cond_id = condition_numb
+        self.binned_data = None 
+        self.df_fz = None
+        self.time_course = None
+        self.averaged_df = None
+        self.averaged_timecourse = None
+        self.autoselection = None
+        self.autosel_strategy = None
+        self.blk_names = None
 
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
@@ -88,7 +98,7 @@ class Session:
         self.time_course_blank = None
         self.f_f0_blank = None
         # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
-        _, _, _ = self.get_signal(self.blank_id)
+        _, _, _, _ = self.get_signal(self.blank_id)
 
 
     def get_blank_id(self, cond_id = None):
@@ -118,14 +128,11 @@ class Session:
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
-            sig, df_f0, conditions = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
+            sig, df_f0, conditions, raws = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
-            temporary = sig - 1
-            if self.storage_switch:
-                self.df_fzs = df_f0 - 1
-                self.time_course_signals = temporary
+            sig = sig - 1
             self.counter_blank = size_df_f0[0]
             mask = self.get_selection_trials(condition, sig)
             self.conditions = conditions
@@ -133,15 +140,16 @@ class Session:
             self.session_blks = blks
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()      
-            tmp = np.mean((df_f0[indeces_select, :, :, :] - 1), axis=0)
+            # In this order for deblank signal
+            tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            df_f0 = df_f0 - 1
             self.avrgd_df_fz = np.reshape(tmp, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
-            tmp_ = np.mean(temporary[indeces_select, :], axis=0)
+            tmp_ = np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
             # employed for normalize the signal             
             self.time_course_blank = tmp_
             self.f_f0_blank = tmp
-            df_f0 = df_f0 - 1
 
             if self.log is not None:
                 self.log.info('Blank signal computed')
@@ -149,10 +157,7 @@ class Session:
                 print('Blank signal computed!')
             
         else:
-            sig, df_f0, conditions = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
-            if self.storage_switch:
-                self.df_fzs = np.append(self.df_fzs, df_f0, axis=0)
-                self.time_course_signals = np.append(self.time_course_signals, sig, axis=0)
+            sig, df_f0, conditions, raws = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
             mask = self.get_selection_trials(condition, sig)
             self.conditions = self.conditions + conditions
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
@@ -171,7 +176,7 @@ class Session:
             self.roi_plots(condition, sig, mask, blks)
             time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
-        return sig, df_f0, mask
+        return sig, df_f0, mask, blks, raws
 
     def get_blks(self):
         '''
@@ -227,33 +232,44 @@ class Session:
         return header
     
     def get_session(self):
-        # Splitted paths for raw and delta_f computation: it is for avoiding overstoring   
-        # HAS TO BE MODIFIED FOR CONDITION PER CONDITION COMPUTATION    
-        if self.header['raw_switch']:
-            raws, conditions = raw_signal_extraction(self.header, self.session_blks)            
-            self.conditions = conditions
-            self.raw_data = raws
-        else:
-            # If the condition is not only the blank one, than I compute the same iteration as up
-            if len(self.header['conditions_id']) > 1:
-                for cd in self.header['conditions_id']:
-                    c_name = self.cond_dict[cd]
-                    if cd != self.blank_id:
-                        cond = Condition(c_name, cd)
-                        self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
-                        self.log.info('Condition name: ' + c_name)                        
-                        _, _, tmp = self.get_signal(cd)             
-                        self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
-                        
-                self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
-                session_blks = np.array(self.session_blks)
-                self.trials_name = session_blks[self.auto_selected]
-            if self.visualization_switch:
-                # titles gets the name of blank condition as first, since it was stored first
-               time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
 
-            else:
-                self.log.info('Warning: Something weird in get_session')
+        if len(self.header['conditions_id']) > 1:
+            for cd in self.header['conditions_id']:
+                c_name = self.cond_dict[cd]
+                if cd != self.blank_id:
+                    self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
+                    self.log.info('Condition name: ' + c_name)                        
+                    sig, df_f0, tmp, blks, raws = self.get_signal(cd)
+                    # If storage switch True, than a Condition object is instantiate and stored
+                    if self.storage_switch:
+                        cond = Condition(c_name, cd, self.header['path_session'])
+                        if self.header['raw_switch']:
+                            cond.binned_data = raws
+                        cond.df_fz = df_f0
+                        cond.time_course = sig
+                        cond.autoselection = tmp
+                        cond.autosel_strategy = self.header['strategy']
+                        cond.blk_names = blks
+                        cond.averaged_df = self.avrgd_df_fz[-1, :, :, :]
+                        cond.averaged_timecourse = self.avrgd_time_courses[-1, :]
+                        #Storing folder
+                        t = self.set_md_folder()
+                        if not os.path.exists(os.path.join(t,'md_data')):
+                            os.makedirs(os.path.join(t,'md_data'))
+                        utils.inputs_save(cond, os.path.join(t,'md_data_', cond.cond_name))
+
+                    self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
+                    
+            self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
+            session_blks = np.array(self.session_blks)
+            self.trials_name = session_blks[self.auto_selected]
+
+        if self.visualization_switch:
+            # titles gets the name of blank condition as first, since it was stored first
+            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
+
+        else:
+            self.log.info('Warning: Something weird in get_session')
         return
 
     def get_selection_trials(self, condition, time_course):
@@ -401,6 +417,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
                 header = None)
 
             header_blk = BLK.header
+            if header['raw_switch']:
+                raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
             delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
             sig = np.zeros((len(blks), header['n_frames']))
             roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
@@ -418,64 +436,23 @@ def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
         else:
             log.info(f'The blk file {blk_name} is loaded')
             
-        #     motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
         conditions.append(BLK.condition)
-        #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
+        if header['raw_switch']:
+            raws[i, :, :, :] =  BLK.binned_signal 
         delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
         sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
         #at the end something like (nblks, 70, 1)
-        # The deltaF computing could be avoidable, since ROI signal at the end is plotted
 
         # Log prints
         if log is None:
             print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
         else:
             log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-    return sig, delta_f, conditions#, motion_indeces
-
-def raw_signal_extraction(header, blks, log = None):
-    '''
-        The method is the same as the signal_extraction, but in place of delta_f,
-        it stores raw binned signal. 
-        A duplication of methods was requested for avoiding inner loops conditional 
-        checks and overstoring -deltaf, binned signal and time course at the same
-        time-.
-    '''
-    #motion_indeces, conditions = [], []
-    conditions = []
-    path_rawdata = os.path.join(header['path_session'],'rawdata/')
-    for i, blk_name in enumerate(blks):
-        start_time = datetime.datetime.now().replace(microsecond=0)
-        # If first BLK file, than the header is stored
-        if i == 0:
-            BLK = blk_file.BlkFile(
-                os.path.join(path_rawdata, blk_name),
-                header['spatial_bin'],
-                header['temporal_bin'],
-                header['zero_frames'],
-                header = None)
-
-            header_blk = BLK.header
-            raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-        else:
-            BLK = blk_file.BlkFile(
-                os.path.join(path_rawdata, blk_name), 
-                header['spatial_bin'], 
-                header['temporal_bin'], 
-                header['zero_frames'],
-                header = header_blk)
-        # if header['mov_switch']:
-        #     motion_indeces.append(BLK.motion_ind)#at the end something like (nblks, 1) 
-        conditions.append(BLK.condition)
-        #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
-        raws[i, :, :, :] =  BLK.binned_signal 
-        #at the end something like (nblks, 70, 1)
-        # The deltaF computing could be avoidable, since ROI signal at the end is plotted
-        if log is None:
-            print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-        else:
-            log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-    return raws, conditions#, motion_indeces
+    
+    if header['raw_switch']:
+        return sig, delta_f, conditions, raws
+    else:
+        return sig, delta_f, conditions
 
 def roi_strategy(matrix, tolerance, zero_frames):
     '''
