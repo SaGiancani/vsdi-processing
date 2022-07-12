@@ -236,7 +236,8 @@ class Session:
         else:
             # If the condition is not only the blank one, than I compute the same iteration as up
             if len(self.header['conditions_id']) > 1:
-                for cd, c_name in self.cond_dict.items():
+                for cd in self.header['conditions_id']:
+                    c_name = self.cond_dict[cd]
                     if cd != self.blank_id:
                         cond = Condition(c_name, cd)
                         self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
@@ -250,7 +251,7 @@ class Session:
             if self.visualization_switch:
                 # titles gets the name of blank condition as first, since it was stored first
                 print([self.cond_names[-1], self.cond_names[:-1]])
-                time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_names[-1], self.cond_names[:-1]], 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
+                time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_names[-1]]+self.cond_names[:-1] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
 
             else:
                 self.log.info('Warning: Something weird in get_session')
