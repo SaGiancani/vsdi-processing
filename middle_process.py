@@ -141,7 +141,7 @@ class Session:
             # In this order for deblank signal
             tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
             df_f0 = df_f0 - 1
-            self.avrgd_df_fz = np.reshape(tmp-1, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             tmp_ = np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
