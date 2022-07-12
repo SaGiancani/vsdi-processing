@@ -1,6 +1,4 @@
 import argparse, blk_file, datetime, process
-from curses import raw
-from importlib.resources import path
 import matplotlib.pyplot as plt
 import numpy as np
 import os
