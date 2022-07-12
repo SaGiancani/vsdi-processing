@@ -8,8 +8,9 @@ import utils
 LABEL_CONDS_PATH = 'metadata/labelConds.txt' 
 
 class Condition:
-    def __init__(self, condition_name, condition_numb, path):
-        self.session_name = path
+    def __init__(self, condition_name, condition_numb, session_header):
+        self.session_header = session_header
+        self.session_name =  self.session_header['path_session'].split('/')[-2]+'-'+self.session_header['path_session'].split('/')[-3].split('-')[1] 
         self.cond_name = condition_name
         self.cond_id = condition_numb
         self.binned_data = None 
@@ -18,7 +19,6 @@ class Condition:
         self.averaged_df = None
         self.averaged_timecourse = None
         self.autoselection = None
-        self.autosel_strategy = None
         self.blk_names = None
 
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
@@ -240,13 +240,12 @@ class Session:
                     sig, df_f0, tmp, blks, raws = self.get_signal(cd)
                     # If storage switch True, than a Condition object is instantiate and stored
                     if self.storage_switch:
-                        cond = Condition(c_name, cd, self.header['path_session'])
+                        cond = Condition(c_name, cd, self.header)
                         if self.header['raw_switch']:
                             cond.binned_data = raws
                         cond.df_fz = df_f0
                         cond.time_course = sig
                         cond.autoselection = tmp
-                        cond.autosel_strategy = self.header['strategy']
                         cond.blk_names = blks
                         cond.averaged_df = self.avrgd_df_fz[-1, :, :, :]
                         cond.averaged_timecourse = self.avrgd_time_courses[-1, :]
@@ -574,8 +573,8 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 85)
-    min_bord = np.percentile(data, 15)
+    max_bord = np.percentile(data, 90)
+    min_bord = np.percentile(data, 10)
     # Implementation for splitting big matrices for storing
     pieces = int(np.ceil(len(data)/max_trials))
     tmp_list = list()
