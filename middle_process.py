@@ -96,7 +96,7 @@ class Session:
         self.time_course_blank = None
         self.f_f0_blank = None
         # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
-        _, _, _, _ = self.get_signal(self.blank_id)
+        _ = self.get_signal(self.blank_id)
 
 
     def get_blank_id(self, cond_id = None):
