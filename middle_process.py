@@ -415,8 +415,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
                 header = None)
 
             header_blk = BLK.header
-            if header['raw_switch']:
-                raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+            raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
             delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
             sig = np.zeros((len(blks), header['n_frames']))
             roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
@@ -435,8 +434,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
             log.info(f'The blk file {blk_name} is loaded')
             
         conditions.append(BLK.condition)
-        if header['raw_switch']:
-            raws[i, :, :, :] =  BLK.binned_signal 
+        raws[i, :, :, :] =  BLK.binned_signal 
         delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
         sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
         #at the end something like (nblks, 70, 1)
@@ -447,11 +445,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
         else:
             log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     
-    if header['raw_switch']:
-        return sig, delta_f, conditions, raws
-    else:
-        return sig, delta_f, conditions
-
+    return sig, delta_f, conditions, raws
+    
 def roi_strategy(matrix, tolerance, zero_frames):
     '''
     The method works.
