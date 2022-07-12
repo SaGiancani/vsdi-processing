@@ -250,8 +250,7 @@ class Session:
                 self.trials_name = session_blks[self.auto_selected]
             if self.visualization_switch:
                 # titles gets the name of blank condition as first, since it was stored first
-                print([self.cond_names[-1], self.cond_names[:-1]])
-                time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_names[-1]]+self.cond_names[:-1] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
+               time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
 
             else:
                 self.log.info('Warning: Something weird in get_session')
@@ -620,7 +619,6 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
         fig.suptitle(f'Session {session_name}')# Session name
         subfigs = fig.subfigures(nrows=len(matrix), ncols=1)
         for sequence, subfig in zip(matrix, subfigs):
-            print(titles[count])
             subfig.suptitle(f'{titles[count]}')
             axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
             # Borders for caxis
