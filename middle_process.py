@@ -141,7 +141,7 @@ class Session:
             # In this order for deblank signal
             tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
             df_f0 = df_f0 - 1
-            self.avrgd_df_fz = np.reshape(tmp, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            self.avrgd_df_fz = np.reshape(tmp-1, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             tmp_ = np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
@@ -255,7 +255,7 @@ class Session:
                         if not os.path.exists(os.path.join(t,'md_data')):
                             os.makedirs(os.path.join(t,'md_data'))
                         utils.inputs_save(cond, os.path.join(t,'md_data_', cond.cond_name))
-
+                        del cond
                     self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
                     
             self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
@@ -574,8 +574,8 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 75)
-    min_bord = np.percentile(data, 25)
+    max_bord = np.percentile(data, 85)
+    min_bord = np.percentile(data, 15)
     # Implementation for splitting big matrices for storing
     pieces = int(np.ceil(len(data)/max_trials))
     tmp_list = list()
