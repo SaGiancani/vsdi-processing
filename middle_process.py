@@ -98,7 +98,6 @@ class Session:
         # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
         _ = self.get_signal(self.blank_id)
 
-
     def get_blank_id(self, cond_id = None):
         '''
         The method returns the index of blank condition.
@@ -174,6 +173,24 @@ class Session:
             self.roi_plots(condition, sig, mask, blks)
             time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
+        # If storage switch True, than a Condition object is instantiate and stored
+        if self.storage_switch:
+            cond = Condition(self.cond_dict[condition], condition, self.header)
+            if self.header['raw_switch']:
+                cond.binned_data = raws
+            cond.df_fz = df_f0
+            cond.time_course = sig
+            cond.autoselection = mask
+            cond.blk_names = blks
+            cond.averaged_df = self.avrgd_df_fz[-1, :, :, :]
+            cond.averaged_timecourse = self.avrgd_time_courses[-1, :]
+            #Storing folder
+            t = self.set_md_folder()
+            if not os.path.exists(os.path.join(t,'md_data')):
+                os.makedirs(os.path.join(t,'md_data'))
+            utils.inputs_save(cond, os.path.join(t,'md_data','md_data_'+cond.cond_name))
+            del cond
+
         return sig, df_f0, mask, blks, raws
 
     def get_blks(self):
@@ -237,24 +254,7 @@ class Session:
                 if cd != self.blank_id:
                     self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
                     self.log.info('Condition name: ' + c_name)                        
-                    sig, df_f0, tmp, blks, raws = self.get_signal(cd)
-                    # If storage switch True, than a Condition object is instantiate and stored
-                    if self.storage_switch:
-                        cond = Condition(c_name, cd, self.header)
-                        if self.header['raw_switch']:
-                            cond.binned_data = raws
-                        cond.df_fz = df_f0
-                        cond.time_course = sig
-                        cond.autoselection = tmp
-                        cond.blk_names = blks
-                        cond.averaged_df = self.avrgd_df_fz[-1, :, :, :]
-                        cond.averaged_timecourse = self.avrgd_time_courses[-1, :]
-                        #Storing folder
-                        t = self.set_md_folder()
-                        if not os.path.exists(os.path.join(t,'md_data')):
-                            os.makedirs(os.path.join(t,'md_data'))
-                        utils.inputs_save(cond, os.path.join(t,'md_data','md_data_'+cond.cond_name))
-                        del cond
+                    _, _, tmp, _, _ = self.get_signal(cd)
                     self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
                     
             self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
