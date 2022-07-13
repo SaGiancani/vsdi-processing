@@ -175,6 +175,7 @@ class Session:
 
         # If storage switch True, than a Condition object is instantiate and stored
         if self.storage_switch:
+            start_time = datetime.datetime.now().replace(microsecond=0)
             cond = Condition(self.cond_dict[condition], condition, self.header)
             if self.header['raw_switch']:
                 cond.binned_data = raws
@@ -190,7 +191,10 @@ class Session:
                 os.makedirs(os.path.join(t,'md_data'))
             utils.inputs_save(cond, os.path.join(t,'md_data','md_data_'+cond.cond_name))
             del cond
-
+            if self.log is not None:
+                self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+            else:
+                print('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
         return sig, df_f0, mask, blks, raws
 
     def get_blks(self):
