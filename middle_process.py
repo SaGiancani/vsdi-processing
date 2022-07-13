@@ -253,7 +253,7 @@ class Session:
                         t = self.set_md_folder()
                         if not os.path.exists(os.path.join(t,'md_data')):
                             os.makedirs(os.path.join(t,'md_data'))
-                        utils.inputs_save(cond, os.path.join(t,'md_data_', cond.cond_name))
+                        utils.inputs_save(cond, os.path.join(t,'md_data','md_data_'+cond.cond_name))
                         del cond
                     self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
                     
