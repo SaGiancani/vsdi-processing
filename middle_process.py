@@ -148,11 +148,8 @@ class Session:
             self.time_course_blank = tmp_
             self.f_f0_blank = tmp
 
-            if self.log is not None:
-                self.log.info('Blank signal computed')
-            else:
-                print('Blank signal computed!')
-            
+            self.log.info('Blank signal computed')
+                        
         else:
             sig, df_f0, conditions, raws = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
             mask = self.get_selection_trials(condition, sig)
@@ -191,10 +188,8 @@ class Session:
                 os.makedirs(os.path.join(t,'md_data'))
             utils.inputs_save(cond, os.path.join(t,'md_data','md_data_'+cond.cond_name))
             del cond
-            if self.log is not None:
-                self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-            else:
-                print('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+            self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+
         return sig, df_f0, mask, blks, raws
 
     def get_blks(self):
@@ -577,8 +572,8 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 80)
-    min_bord = np.percentile(data, 20)
+    max_bord = np.percentile(data, 78)
+    min_bord = np.percentile(data, 22)
     # Implementation for splitting big matrices for storing
     pieces = int(np.ceil(len(data)/max_trials))
     tmp_list = list()
