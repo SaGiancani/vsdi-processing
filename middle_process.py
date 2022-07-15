@@ -573,7 +573,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
     max_bord = np.percentile(data, 77)
-    min_bord = np.percentile(data, 0)
+    min_bord = np.percentile(data, 10)
     if log_ is not None:
         print(f'Max value heatmap: {max_bord}')
         print(f'Min value heatmap: {min_bord}')
