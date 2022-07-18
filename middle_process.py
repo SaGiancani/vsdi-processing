@@ -20,6 +20,26 @@ class Condition:
         self.averaged_timecourse = None
         self.autoselection = None
         self.blk_names = None
+    
+    def store_cond(self, t):
+        tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names]
+        utils.inputs_save(tp, os.path.join(t,'md_data','md_data_'+self.cond_name))
+        return
+    
+    def load_cond(self, path):
+        tp = utils.inputs_load(path)
+        self.session_header = tp[0]
+        self.session_name = tp[1]
+        self.cond_name = tp[2]
+        self.cond_id = tp[3]
+        self.binned_data = tp[4]
+        self.df_fz = tp[5]
+        self.time_course = tp[6]
+        self.averaged_df = tp[7]
+        self.averaged_timecourse = tp[8]
+        self.autoselection = tp[9]
+        self.blk_names = tp[10]
+        return
 
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
@@ -186,7 +206,7 @@ class Session:
             t = self.set_md_folder()
             if not os.path.exists(os.path.join(t,'md_data')):
                 os.makedirs(os.path.join(t,'md_data'))
-            utils.inputs_save(cond, os.path.join(t,'md_data','md_data_'+cond.cond_name))
+            cond.store_cond(t)
             del cond
             self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
 
