@@ -1,9 +1,9 @@
-import argparse, blk_file, datetime, process
+import argparse, blk_file, datetime, process, utils
+import ana_logs as al
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from scipy import signal
-import utils
 
 LABEL_CONDS_PATH = 'metadata/labelConds.txt' 
 
@@ -69,7 +69,7 @@ class Session:
             self.log = logger              
         self.cond_names = None
         self.header = self.get_session_header(**kwargs)
-        self.all_blks = get_all_blks(self.header['path_session']) # all the blks.
+        self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
         self.blank_id = self.get_blank_id(cond_id=condid)
@@ -111,12 +111,38 @@ class Session:
         self.avrgd_time_courses = None
         self.avrgd_df_fz = None
 
+        # Loading the BaseReport and SignalData in case of logs_switch
+        if self.header['logs_switch']:
+            try:
+                self.base_report, tris = al.get_basereport(self.header['path_session'], self.all_blks, name_report = 'BaseReport.csv', header_dimension = 19)
+                self.log(f'Length of all_blks list: {len(self.all_blks)}')
+                if tris[3]:
+                    #self.session_blks.pop(tris[2])
+                    self.log(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
+                self.log('BaseReport properly loaded!')
+            except:
+                self.log('Something went wrong loading the BaseReport')
+
+            #try:
+            #    path_trackreport = utils.find_thing('TrackerLog.csv', self.header['path_session'])
+            #except:
+            #    self.log('Something went wrong loading the TrackerLog')
+            
+            try:
+                self.piezo, self.heart_beat = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
+                self.log('Piezo and Heart Beat signals properly loaded!')
+            except:
+                self.log('Something went wrong loading the SignalData')
+        else:
+            self.base_report, self.piezo, self.heart_beat  = None, None, None
+
         #if self.header['deblank_switch']:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
         self.time_course_blank = None
         self.f_f0_blank = None
         # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
         _ = self.get_signal(self.blank_id)
+
 
     def get_blank_id(self, cond_id = None):
         '''
@@ -250,7 +276,7 @@ class Session:
             cds = self.get_condition_ids()
             return {j+1:'Condition ' + str(c) for j, c in enumerate(cds)}
 
-    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch):
+    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch, logs_switch):
         header = {}
         header['path_session'] = path_session
         header['spatial_bin'] = spatial_bin
@@ -263,6 +289,7 @@ class Session:
         header['chunks'] = chunks
         header['strategy'] = strategy
         header['raw_switch'] = raw_switch
+        header['logs_switch'] = logs_switch
         return header
     
     def get_session(self):
@@ -630,7 +657,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
             for df_id, ax in zip(considered_frames, axs):
                 Y = sequence[int(df_id), :, :]
                 ax.axis('off')
-                pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord)
+                pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord, cmap=utils.PARULA_MAP)
             subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
             count +=1
             
@@ -817,7 +844,15 @@ if __name__=="__main__":
     parser.add_argument('--no-store', 
                         dest='store_switch', 
                         action='store_false')
-    parser.set_defaults(raw_switch=False)   
+    parser.set_defaults(store_switch=False)   
+
+    parser.add_argument('--logs_data', 
+                        dest='logs_switch',
+                        action='store_true')
+    parser.add_argument('--no-logs_data', 
+                        dest='logs_switch', 
+                        action='store_false')
+    parser.set_defaults(logs_switch=False)   
 
     logger = utils.setup_custom_logger('myapp')
     logger.info('Start\n')

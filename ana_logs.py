@@ -79,25 +79,29 @@ def add_blknames2basereport(BaseReport, all_blks):
                 # If there is mismatch between the condition id in BaseReport and condition id in the BLK filename
                 # It stores index, condition number, and BLK filename of the mismatch.
                 all_blks.insert(tris[0], 'Missing')
-                print('A Missing row is added')            
+                print('A Missing row is added')    
+                tris = tris + (False,)        
             elif (len(all_blks)>len(cds)):
                 all_blks.pop(tris[0])
                 print(f'File {tris[2]} is deleted')
+                tris = tris + (True,)        
                 print('Take care to time course and dF/F0 matrix indeces and indexing system.')            
+            elif abs(len(all_blks)-len(cds)) > 1:
+                print('More than one blk missing/in surplus')
             print(tris)
         # Consider the BLK names, in case of FixCorrect preceding event IT
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = all_blks
     return BaseReport, tris
 
 
-def get_basereport(session_path, name_report = 'BaseReport.csv', header_dimension = 19):
+def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', header_dimension = 19):
     '''
     Load the BaseReport
     '''
     BaseReport_path = utils.find_thing(name_report, session_path, what = 'file')
     BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
     #Adding BLK Names columns to the dataframe
-    BaseReport, tris = add_blknames2basereport(BaseReport, mp.get_all_blks(session_path, sort = True))
+    BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
     return BaseReport, tris
 
 def get_basereport_header(BaseReport_path, header_dimension = 19):    
@@ -124,8 +128,9 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
     return dict_
 
 
-def get_analog_signal(analog_sign_path, BaseReport, name_report = 'SignalData.csv'):
-    SignalData = pd.read_csv(os.path.join(analog_sign_path, name_report), sep=';', header=2)
+def get_analog_signal(session_path, BaseReport, name_report = 'SignalData.csv'):
+    analog_sign_path = utils.find_thing(name_report, session_path, what = 'file')
+    SignalData = pd.read_csv(analog_sign_path[0], sep=';', header=2)
     # Timestamp importing
     temp = SignalData[['Timestamp','Dev1/ai5', 'Dev1/ai6' ]].applymap(separator_converter)
     analog_timestamp_array = np.array(temp['Timestamp'])
@@ -133,23 +138,19 @@ def get_analog_signal(analog_sign_path, BaseReport, name_report = 'SignalData.cs
     analog_ai5_array = np.array(temp['Dev1/ai5'])
     # Piezo
     analog_ai6_array = np.array(temp['Dev1/ai6'])
-
+    # Three csvs are synchronized
     t = BaseReport[['Onset Time_ Pre Trial', 'Onset Time_ End Trial']].applymap(separator_converter)
     onset_pre = t['Onset Time_ Pre Trial'].tolist()
     onset_end = t['Onset Time_ End Trial'].tolist()
-    pres, ends = [], []
+    tracks_6, tracks_5 = [], []
     
     for pre, end in zip(onset_pre, onset_end):
-        # This is only for finding the start and end indeces, corresponding to the value obtained
-        pres.append(np.argmin(np.abs(analog_timestamp_array - pre)))
-        ends.append(np.argmin(np.abs(analog_timestamp_array - (end + 1000))))#   +1sec for safety
-    tracks_6, tracks_5 = [], []
-    for p, e in zip(pres, ends):
         # Piezo
-        tracks_6.append(np.array(analog_ai6_array[p:e]))
+        tracks_6.append(signal_cutter(analog_timestamp_array, analog_ai6_array, pre, end))
         # HeartBeat
-        tracks_5.append(np.array(analog_ai5_array[p:e]))    
-    return (pres, ends), tracks_6, tracks_5
+        tracks_5.append(signal_cutter(analog_timestamp_array, analog_ai5_array, pre, end))
+  
+    return tracks_6, tracks_5
 
 
 def get_grey_frames(png_files_path, cond_id):
