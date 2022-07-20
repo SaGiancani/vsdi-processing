@@ -649,40 +649,31 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     print(separators)
     for i, n in enumerate(separators):
         if i != 0:
-            tmp_list.append(data[separators[i-1]:n, :, :, :])
-    for i in tmp_list:
-        print(i.shape)
-    count = 0
-    for i, matrix in enumerate(tmp_list):
-        fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(matrix)), dpi = 80)
-        fig.suptitle(f'Session {session_name}')# Session name
-        subfigs = fig.subfigures(nrows=len(matrix), ncols=1)
-        for sequence, subfig in zip(matrix, subfigs):
-            subfig.suptitle(f'{titles[count]}')
-            axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
-            
-            # Borders for caxis
-            #t_l = np.mean(np.mean(sequence, axis=1), axis=1)
-            #max_b = np.max(t_l)
-            #min_b = np.min(t_l)
-            #max_bord = max_b+(max_b - min_b)
-            #min_bord = min_b-(max_b - min_b)
+            matrix = data[separators[i-1]:n, :, :, :]
 
-            # Showing each frame
-            for df_id, ax in zip(considered_frames, axs):
-                Y = sequence[int(df_id), :, :]
-                if circular_mask:
-                    mask = utils.sector_mask(Y.shape, (Y.shape[0]//2, Y.shape[1]//2), (np.min(np.shape(Y)))*0.40, (0,360) )
-                    Y[~mask] = np.NAN
-                ax.axis('off')
-                pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord, cmap=utils.PARULA_MAP)
-            subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
-            count +=1
-            
-        tmp = path_
-        if not os.path.exists(os.path.join(tmp,'activity_maps')):
-            os.makedirs(os.path.join(tmp,'activity_maps'))
-        plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_piece0'+str(i)+'_'+str(title_to_print)+'.png'))
+            count = 0
+            fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(matrix)), dpi = 80)
+            fig.suptitle(f'Session {session_name}')# Session name
+            subfigs = fig.subfigures(nrows=len(matrix), ncols=1)
+            for sequence, subfig in zip(matrix, subfigs):
+                subfig.suptitle(f'{titles[count]}')
+                axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
+
+                # Showing each frame
+                for df_id, ax in zip(considered_frames, axs):
+                    Y = sequence[int(df_id), :, :]
+                    if circular_mask:
+                        mask = utils.sector_mask(Y.shape, (Y.shape[0]//2, Y.shape[1]//2), (np.min(np.shape(Y)))*0.40, (0,360) )
+                        Y[~mask] = np.NAN
+                    ax.axis('off')
+                    pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord, cmap=utils.PARULA_MAP)
+                subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
+                count +=1
+                
+            tmp = path_
+            if not os.path.exists(os.path.join(tmp,'activity_maps')):
+                os.makedirs(os.path.join(tmp,'activity_maps'))
+            plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_piece0'+str(i)+'_'+str(title_to_print)+'.png'))
 
     if log_ is not None:
         log_.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
