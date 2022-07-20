@@ -114,12 +114,14 @@ class Session:
         # Loading the BaseReport and SignalData in case of logs_switch
         if self.header['logs_switch']:
             try:
+                start_time = datetime.datetime.now().replace(microsecond=0)
                 self.log.info(f'Length of all_blks list: {len(self.all_blks)}')
                 self.base_report, tris = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
                 if tris[3]:
                     #self.all_blks.pop(tris[2])
                     self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
                 self.log.info('BaseReport properly loaded!')
+                self.log.info('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
             except:
                 self.log.info('Something went wrong loading the BaseReport')
 
@@ -129,8 +131,10 @@ class Session:
             #    self.log('Something went wrong loading the TrackerLog')
             
             try:
+                start_time = datetime.datetime.now().replace(microsecond=0)
                 self.piezo, self.heart_beat = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
                 self.log.info('Piezo and Heart Beat signals properly loaded!')
+                self.log.info('Analogic signals loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
             except:
                 self.log.info('Something went wrong loading the SignalData')
         else:
@@ -193,7 +197,9 @@ class Session:
             # employed for normalize the signal             
             self.time_course_blank = tmp_
             self.f_f0_blank = tmp
-
+            if self.base_report is not None:
+                pass
+            
             self.log.info('Blank signal computed')
                         
         else:
@@ -211,6 +217,8 @@ class Session:
             t_ =  np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.concatenate((self.avrgd_time_courses,  t_.reshape(1,  t_.shape[0])), axis=0) 
             print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
+            if self.base_report is not None:
+                pass
 
         if self.visualization_switch:
             self.roi_plots(condition, sig, mask, blks)
@@ -613,7 +621,7 @@ def get_all_blks(path_session, sort = True):
     else:
         return tmp
 
-def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, log_ = None, max_trials = 20):
+def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
     start_time = datetime.datetime.now().replace(microsecond=0)
     session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
@@ -656,6 +664,9 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
             # Showing each frame
             for df_id, ax in zip(considered_frames, axs):
                 Y = sequence[int(df_id), :, :]
+                if circular_mask:
+                    mask = utils.sector_mask(Y.shape, (Y.shape[0]//2, Y.shape[1]//2), (np.min(np.shape(Y)))*0.33, (0,360) )
+                    Y[~mask] = np.min(Y)
                 ax.axis('off')
                 pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord, cmap=utils.PARULA_MAP)
             subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
