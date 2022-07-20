@@ -20,6 +20,7 @@ class Condition:
         self.averaged_timecourse = None
         self.autoselection = None
         self.blk_names = None
+        self.trials = None
     
     def store_cond(self, t):
         tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names]
@@ -182,7 +183,7 @@ class Session:
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
-            sig, df_f0, conditions, raws = signal_extraction(self.header, blks, None, self.header['deblank_switch'])
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.piezo, self.heart_beat)
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
@@ -204,13 +205,11 @@ class Session:
             # employed for normalize the signal             
             self.time_course_blank = tmp_
             self.f_f0_blank = tmp
-            if self.base_report is not None:
-                pass
             
             self.log.info('Blank signal computed')
                         
         else:
-            sig, df_f0, conditions, raws = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'])
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.piezo, self.heart_beat)
             mask = self.get_selection_trials(condition, sig)
             self.conditions = self.conditions + conditions
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
@@ -224,8 +223,6 @@ class Session:
             t_ =  np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.concatenate((self.avrgd_time_courses,  t_.reshape(1,  t_.shape[0])), axis=0) 
             print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
-            if self.base_report is not None:
-                pass
 
         if self.visualization_switch:
             self.roi_plots(condition, sig, mask, blks)
@@ -243,13 +240,15 @@ class Session:
             cond.blk_names = blks
             cond.averaged_df = self.avrgd_df_fz[-1, :, :, :]
             cond.averaged_timecourse = self.avrgd_time_courses[-1, :]
+            if self.base_report is not None:
+                cond.trials = trials
             #Storing folder
             t = self.set_md_folder()
             if not os.path.exists(os.path.join(t,'md_data')):
                 os.makedirs(os.path.join(t,'md_data'))
             cond.store_cond(t)
             del cond
-            self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+            self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))                
 
         return sig, df_f0, mask, blks, raws
 
@@ -451,11 +450,14 @@ class Session:
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
 
-def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
+def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, piezo, heart, log = None):
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
-    
+    if base_report is not None:
+        trials_dict = dict()
+    else:
+        trials_dict = None
     if log is None:
         print(f'The blank_signal exist: {blank_s is not None}')
         print(f'The blank switch is: {blnk_switch}')
@@ -498,14 +500,23 @@ def signal_extraction(header, blks, blank_s, blnk_switch, log = None):
         delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
         sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
         #at the end something like (nblks, 70, 1)
-
+        if base_report is not None:
+            trial_df = base_report.loc[base_report['BLK Names'] == BLK.filename]
+            trial_series = trial_df.iloc[0]
+            trial = trial_series.to_dict()
+            #    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
+            if (heart is not None) and (piezo is not None):
+                trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], header['path_session'], blank_id, trial_df.index[0])
+            else:
+                trial = al.Trial(trial, None, None, header['path_session'], blank_id, trial_df.index[0])
+            trials_dict[BLK.filename] = trial             
         # Log prints
         if log is None:
             print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
         else:
             log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     
-    return sig, delta_f, conditions, raws
+    return sig, delta_f, conditions, raws, trials_dict
     
 def roi_strategy(matrix, tolerance, zero_frames):
     '''
@@ -634,7 +645,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 85)
+    max_bord = np.percentile(data, 75)
     min_bord = np.percentile(data, 10)
     if log_ is not None:
         print(f'Max value heatmap: {max_bord}')

@@ -1,12 +1,14 @@
 import datetime, imageio, os, utils
+from operator import index
 import middle_process as mp
 import numpy as np
 import pandas as pd
 
 
 class Trial:
-    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
+    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
         self.blk = blk_file
+        self.index = index
         self.name = report_series_trial['BLK Names']
         self.condition = int(report_series_trial['IDcondition'])
         self.fix_correct = report_series_trial['Preceding Event IT'] == 'FixCorrect'
