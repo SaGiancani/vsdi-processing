@@ -32,7 +32,7 @@ class Trial:
 
             if stimulus_fr is None:
                 # Total registration time (End registration (PNG flow + Post Stimulus time) - Start registration) - Starting Grey frames*temporal resolution - Ending Grey frames*temporal resolution + 25 ms latency 
-                stimulus_fr = round((separator_converter(report_series_trial['Onset Time_ End Stim']) - separator_converter(report_series_trial['Onset Time_ Stim']) - grey_frames_end*time_res - grey_frames_start*time_res + 25)/time_res)         
+                stimulus_fr = round((report_series_trial['Onset Time_ End Stim'] - report_series_trial['Onset Time_ Stim'] - grey_frames_end*time_res - grey_frames_start*time_res + 25)/time_res)         
             
             self.FOI = stimulus_fr
 
@@ -139,7 +139,7 @@ def get_analog_signal(session_path, BaseReport, name_report = 'SignalData.csv'):
     # Piezo
     analog_ai6_array = np.array(temp['Dev1/ai6'])
     # Three csvs are synchronized
-    t = BaseReport[['Onset Time_ Pre Trial', 'Onset Time_ End Trial']].applymap(separator_converter)
+    t = BaseReport[['Onset Time_ Pre Trial', 'Onset Time_ End Trial']]#.applymap(separator_converter)
     onset_pre = t['Onset Time_ Pre Trial'].tolist()
     onset_end = t['Onset Time_ End Trial'].tolist()
     tracks_6, tracks_5 = [], []

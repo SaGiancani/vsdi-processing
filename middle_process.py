@@ -116,7 +116,14 @@ class Session:
             try:
                 start_time = datetime.datetime.now().replace(microsecond=0)
                 self.log.info(f'Length of all_blks list: {len(self.all_blks)}')
-                self.base_report, tris = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
+                base_report, tris = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
+                # Separator converter processing: , -string- to . -float-.
+                for i in list(base_report.columns):
+                    try:
+                        base_report[[i]] = base_report[[i]].applymap(al.separator_converter)
+                    except:
+                        print(f'Column {i} is not a float')                
+                self.base_report = base_report
                 if tris[3]:
                     #self.all_blks.pop(tris[2])
                     self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
@@ -627,7 +634,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 90)
+    max_bord = np.percentile(data, 85)
     min_bord = np.percentile(data, 10)
     if log_ is not None:
         print(f'Max value heatmap: {max_bord}')
@@ -665,8 +672,8 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
             for df_id, ax in zip(considered_frames, axs):
                 Y = sequence[int(df_id), :, :]
                 if circular_mask:
-                    mask = utils.sector_mask(Y.shape, (Y.shape[0]//2, Y.shape[1]//2), (np.min(np.shape(Y)))*0.33, (0,360) )
-                    Y[~mask] = np.min(Y)
+                    mask = utils.sector_mask(Y.shape, (Y.shape[0]//2, Y.shape[1]//2), (np.min(np.shape(Y)))*0.40, (0,360) )
+                    Y[~mask] = np.NAN
                 ax.axis('off')
                 pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord, cmap=utils.PARULA_MAP)
             subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
