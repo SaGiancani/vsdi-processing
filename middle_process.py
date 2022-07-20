@@ -117,7 +117,7 @@ class Session:
                 self.base_report, tris = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
                 self.log.info(f'Length of all_blks list: {len(self.all_blks)}')
                 if tris[3]:
-                    #self.session_blks.pop(tris[2])
+                    self.all_blks.pop(tris[2])
                     self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
                 self.log.info('BaseReport properly loaded!')
             except:

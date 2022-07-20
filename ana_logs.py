@@ -194,8 +194,6 @@ def signal_cutter(analog_timestamp_array, signal_array, pre, end):
     '''
     start_trial = np.argmin(np.abs(analog_timestamp_array - pre))
     end_trial = np.argmin(np.abs(analog_timestamp_array - (end + 1000)))#   +1sec for safety
-    print(start_trial)
-    print(end_trial)
     cut_signal = signal_array[start_trial:end_trial]
     return cut_signal
     
