@@ -44,7 +44,7 @@ class Condition:
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
 class Session:
-    def __init__(self, logger = None, condid = None, store_switch = False, data_vis_switch = True, end_frame = 60, **kwargs):
+    def __init__(self, base_report_name = 'BaseReport.csv', base_head_dim = 19, logger = None, condid = None, store_switch = False, data_vis_switch = True, end_frame = 60, **kwargs):
         """
         Initializes attributes
         Default values for:
@@ -114,14 +114,14 @@ class Session:
         # Loading the BaseReport and SignalData in case of logs_switch
         if self.header['logs_switch']:
             try:
-                self.base_report, tris = al.get_basereport(self.header['path_session'], self.all_blks, name_report = 'BaseReport.csv', header_dimension = 19)
-                self.log(f'Length of all_blks list: {len(self.all_blks)}')
+                self.base_report, tris = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
+                self.log.info(f'Length of all_blks list: {len(self.all_blks)}')
                 if tris[3]:
                     #self.session_blks.pop(tris[2])
-                    self.log(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
-                self.log('BaseReport properly loaded!')
+                    self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
+                self.log.info('BaseReport properly loaded!')
             except:
-                self.log('Something went wrong loading the BaseReport')
+                self.log.info('Something went wrong loading the BaseReport')
 
             #try:
             #    path_trackreport = utils.find_thing('TrackerLog.csv', self.header['path_session'])
@@ -130,9 +130,9 @@ class Session:
             
             try:
                 self.piezo, self.heart_beat = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
-                self.log('Piezo and Heart Beat signals properly loaded!')
+                self.log.info('Piezo and Heart Beat signals properly loaded!')
             except:
-                self.log('Something went wrong loading the SignalData')
+                self.log.info('Something went wrong loading the SignalData')
         else:
             self.base_report, self.piezo, self.heart_beat  = None, None, None
 
@@ -853,6 +853,19 @@ if __name__=="__main__":
                         dest='logs_switch', 
                         action='store_false')
     parser.set_defaults(logs_switch=False)   
+
+    parser.add_argument('--br_name', 
+                        dest='base_report_name',
+                        type=str,
+                        default = 'BaseReport.csv',
+                        required=False)  
+    
+    parser.add_argument('--br_head_dim', 
+                        dest='base_head_dim',
+                        type=int,
+                        default = 19,
+                        required=False)  
+    
 
     logger = utils.setup_custom_logger('myapp')
     logger.info('Start\n')
