@@ -6,7 +6,7 @@ import pandas as pd
 
 
 class Trial:
-    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
+    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, n_frames, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
         self.blk = blk_file
         self.index = index
         self.name = report_series_trial['BLK Names']
@@ -45,7 +45,7 @@ class Trial:
             self.zero_frames = zero_fr
 
         else:
-            self.zero_frames = self.blk.header['nframesperstim']
+            self.zero_frames = n_frames
             self.FOI = self.zero_frames
 
         self.heart_signal = heart
