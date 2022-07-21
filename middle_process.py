@@ -244,7 +244,12 @@ class Session:
 
         if self.visualization_switch:
             self.roi_plots(condition, sig, mask, blks)
-            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
+            if self.base_report is not None:
+                zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
+                foi_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
+                time_sequence_visualization(zero_of_cond, foi_of_cond,  int(np.mean(zero_of_cond + foi_of_cond)), df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
+            else:
+                time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
         # If storage switch True, than a Condition object is instantiate and stored
         if self.storage_switch:
@@ -528,7 +533,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                 trial = al.Trial(trial, None, None, header['path_session'], blank_id, trial_df.index[0], BLK.header['nframesperstim'])
             trials_dict[blk_name] = trial             
             delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, trial.zero_frames, deblank=blnk_switch, blank_sign = blank_s)
-            
+
         else:
             delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
 
