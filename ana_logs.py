@@ -44,9 +44,9 @@ class Trial:
             self.zero_frames = zero_fr
 
         else:
-            self.zero_frames = n_frames
-            self.FOI = self.zero_frames
-
+            self.zero_frames = 20
+            self.FOI = n_frames
+        print(self.zero_frames)
         self.heart_signal = heart
         self.piezo_signal = piezo
 

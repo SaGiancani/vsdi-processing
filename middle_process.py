@@ -8,6 +8,24 @@ from scipy import signal
 LABEL_CONDS_PATH = 'metadata/labelConds.txt' 
 
 class Condition:
+    """
+    Initializes attributes
+    Default values for:
+    *session_header = all the .BLK files contained inside path_session/rawdata/. It is a list of strings
+    *cond_names = list of conditions' names.  
+    *header = a dictionary with the kwargs value. See get_session_header method for details
+    *session_blks = all the .BLK, per condition, considered for the processing. It is a subset of all_blks. It is a list of strings
+    *motion_indeces = unused
+    *time_course_signals = all the time courses of the considered BLKs. It is a numpy array of shape n_session_blk, n_frames, 1
+    *trials_name = the .BLKs' filename of each selected trial. It is a list of strings
+    *df_fz = deltaF/F0 for each selected trial. It is a numpy array of shape selected_trials, width, height
+    *auto_selected = list of integers: 0 for not selected trial, 1 for selected. 
+    *conditions = list of integers: the integer corresponds to the number of condition.
+    Parameters
+    ----------
+    filename : str
+        The path of the external file, containing the raw image
+    """
     def __init__(self, condition_name, condition_numb, session_header):
         self.session_header = session_header
         self.session_name =  self.session_header['path_session'].split('/')[-2]+'-'+self.session_header['path_session'].split('/')[-3].split('-')[1] 
@@ -23,7 +41,7 @@ class Condition:
         self.trials = None
     
     def store_cond(self, t):
-        tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names]
+        tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names, self.trials]
         utils.inputs_save(tp, os.path.join(t,'md_data','md_data_'+self.cond_name))
         return
     
@@ -130,7 +148,6 @@ class Session:
                     self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
                 self.log.info('BaseReport properly loaded!')
                 self.log.info('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-                print(base_report[['BLK Names']])
             except:
                 self.log.info('Something went wrong loading the BaseReport')
 
