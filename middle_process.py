@@ -130,6 +130,7 @@ class Session:
                     self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
                 self.log.info('BaseReport properly loaded!')
                 self.log.info('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+                print(base_report[['BLK Names']])
             except:
                 self.log.info('Something went wrong loading the BaseReport')
 
