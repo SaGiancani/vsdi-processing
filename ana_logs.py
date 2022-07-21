@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 class Trial:
-    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, n_frames, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
+    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
         self.blk = blk_file
         self.index = index
         self.name = report_series_trial['BLK Names']
@@ -33,7 +33,7 @@ class Trial:
 
         else:
             self.zero_frames = 20
-            self.FOI = n_frames
+            self.FOI = 35
 
         self.heart_signal = heart
         self.piezo_signal = piezo
