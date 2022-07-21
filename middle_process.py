@@ -503,7 +503,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
         #at the end something like (nblks, 70, 1)
         if base_report is not None:
             trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
-            print(trial_df)
+            print(BLK.filename)
             trial_series = trial_df.iloc[0]
             trial = trial_series.to_dict()
             #    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
@@ -511,7 +511,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                 trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], header['path_session'], blank_id, trial_df.index[0])
             else:
                 trial = al.Trial(trial, None, None, header['path_session'], blank_id, trial_df.index[0])
-            trials_dict[BLK.filename] = trial             
+            trials_dict[blk_name] = trial             
         # Log prints
         if log is None:
             print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
