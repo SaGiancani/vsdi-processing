@@ -246,7 +246,7 @@ class Session:
             self.roi_plots(condition, sig, mask, blks)
             if self.base_report is not None:
                 zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
-                foi_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
+                foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
                 time_sequence_visualization(zero_of_cond, foi_of_cond,  int(np.mean(zero_of_cond + foi_of_cond)), df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
             else:
                 time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
@@ -479,8 +479,10 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
     if base_report is not None:
         trials_dict = dict()
+        greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split('vsd_C')[1][0:2]))
     else:
         trials_dict = None
+
     if log is None:
         print(f'The blank_signal exist: {blank_s is not None}')
         print(f'The blank switch is: {blnk_switch}')
@@ -491,12 +493,27 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
     for i, blk_name in enumerate(blks):
         start_time = datetime.datetime.now().replace(microsecond=0)
         # If first BLK file, than the header is stored
+        if base_report is not None:
+            trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
+            trial_series = trial_df.iloc[0]
+            trial = trial_series.to_dict()
+            #    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
+            if (heart is not None) and (piezo is not None):
+                trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], header['path_session'], blank_id, trial_df.index[0], BLK.header['nframesperstim'], greys[1], greys[0])
+            else:
+                trial = al.Trial(trial, None, None, header['path_session'], blank_id, trial_df.index[0], BLK.header['nframesperstim'], greys[1], greys[0])
+            trials_dict[blk_name] = trial   
+            zero = trial.zero_frames
+        else:
+            zero = header['zero_frames']
+ 
+
         if i == 0:
             BLK = blk_file.BlkFile(
                 os.path.join(path_rawdata, blk_name),
                 header['spatial_bin'],
                 header['temporal_bin'],
-                header['zero_frames'],
+                zero,
                 header = None)
 
             header_blk = BLK.header
@@ -509,7 +526,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                 os.path.join(path_rawdata, blk_name), 
                 header['spatial_bin'], 
                 header['temporal_bin'], 
-                header['zero_frames'],
+                zero,
                 header = header_blk)
         
         # Log prints
@@ -518,25 +535,10 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
         else:
             log.info(f'The blk file {blk_name} is loaded')
             
+        #at the end something like (nblks, 70, 1)         
         conditions.append(BLK.condition)
         raws[i, :, :, :] =  BLK.binned_signal 
-
-        #at the end something like (nblks, 70, 1)
-        if base_report is not None:
-            trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
-            trial_series = trial_df.iloc[0]
-            trial = trial_series.to_dict()
-            #    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
-            if (heart is not None) and (piezo is not None):
-                trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], header['path_session'], blank_id, trial_df.index[0], BLK.header['nframesperstim'])
-            else:
-                trial = al.Trial(trial, None, None, header['path_session'], blank_id, trial_df.index[0], BLK.header['nframesperstim'])
-            trials_dict[blk_name] = trial             
-            delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, trial.zero_frames, deblank=blnk_switch, blank_sign = blank_s)
-
-        else:
-            delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
-
+        delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
         sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
 
         if log is None:

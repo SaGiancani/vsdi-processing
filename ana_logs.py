@@ -3,9 +3,8 @@ import middle_process as mp
 import numpy as np
 import pandas as pd
 
-
 class Trial:
-    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, n_frames, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
+    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, n_frames, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
         self.blk = blk_file
         self.index = index
         self.name = report_series_trial['BLK Names']
@@ -17,39 +16,38 @@ class Trial:
         else:
             self.behav_latency = None
         self.id_trial = int(report_series_trial['Total Trial Number']) - 1
-        pngfile_path = utils.find_thing('PNGfiles', os.path.join(session_path, 'sources'))
+        print(f'index == id_trial: {self.index == self.id_trial}')
 
         if self.condition != blank_cond:
-            try:
-                grey_frames_start, grey_frames_end, _ = get_grey_frames(pngfile_path, self.condition)
-                #n_pngs = pngs_shape[0]
-            except:
-                if log is None:
-                    print('Issue with PNGfiles: standard values 5 grey frames pre stimulus and 5 post will be used')
-                else:
-                    log.info('Issue with PNGfiles: standard values 5 grey frames pre stimulus and 5 post will be used')
-                grey_frames_start = 5
-                grey_frames_end = 5
-
             if stimulus_fr is None:
                 # Total registration time (End registration (PNG flow + Post Stimulus time) - Start registration) - Starting Grey frames*temporal resolution - Ending Grey frames*temporal resolution + 25 ms latency 
-                stimulus_fr = round((report_series_trial['Onset Time_ End Stim'] - report_series_trial['Onset Time_ Stim'] - grey_frames_end*time_res - grey_frames_start*time_res + 25)/time_res)         
+                stimulus_fr = round((report_series_trial['Onset Time_ End Stim'] - report_series_trial['Onset Time_ Stim'] - grey_end*time_res - grey_start*time_res + 25)/time_res)         
             
             self.FOI = stimulus_fr
 
             if zero_fr is None:
                 #PreStimulus Time + nGreyFrames*10ms + 25ms Response Latency
-                zero_fr = round(((report_series_trial['Onset Time_ Stim'] - report_series_trial['Onset Time_ Pre Stim']) + 25 + grey_frames_start*time_res)/time_res) 
+                zero_fr = round(((report_series_trial['Onset Time_ Stim'] - report_series_trial['Onset Time_ Pre Stim']) + 25 + grey_start*time_res)/time_res) 
             
             self.zero_frames = zero_fr
 
         else:
             self.zero_frames = 20
             self.FOI = n_frames
-            
-        print(self.zero_frames)
+
         self.heart_signal = heart
         self.piezo_signal = piezo
+
+def get_greys(session_path, condition):
+    pngfile_path = utils.find_thing('PNGfiles', os.path.join(session_path, 'sources'))
+    try:
+        grey_frames_start, grey_frames_end, _ = get_grey_frames(pngfile_path, condition)
+        #n_pngs = pngs_shape[0]
+    except:
+        print('Issue with PNGfiles: standard values 5 grey frames pre stimulus and 5 post will be used')
+        grey_frames_start = 5
+        grey_frames_end = 5
+    return grey_frames_start, grey_frames_end
 
 def add_blknames2basereport(BaseReport, all_blks):
     '''
