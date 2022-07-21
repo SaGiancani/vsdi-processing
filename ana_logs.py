@@ -1,5 +1,4 @@
 import datetime, imageio, os, utils
-from operator import index
 import middle_process as mp
 import numpy as np
 import pandas as pd
