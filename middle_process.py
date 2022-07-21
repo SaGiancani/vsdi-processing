@@ -502,7 +502,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
         sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
         #at the end something like (nblks, 70, 1)
         if base_report is not None:
-            trial_df = base_report.loc[base_report['BLK Names'] == BLK.filename]
+            trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
             print(trial_df)
             trial_series = trial_df.iloc[0]
             trial = trial_series.to_dict()
