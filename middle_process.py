@@ -515,8 +515,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             
         conditions.append(BLK.condition)
         raws[i, :, :, :] =  BLK.binned_signal 
-        delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
-        sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)
+
         #at the end something like (nblks, 70, 1)
         if base_report is not None:
             trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
@@ -528,7 +527,13 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             else:
                 trial = al.Trial(trial, None, None, header['path_session'], blank_id, trial_df.index[0], BLK.header['nframesperstim'])
             trials_dict[blk_name] = trial             
-        # Log prints
+            delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, trial.zero_frames, deblank=blnk_switch, blank_sign = blank_s)
+            
+        else:
+            delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, header['zero_frames'], deblank=blnk_switch, blank_sign = blank_s) 
+
+        sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
+
         if log is None:
             print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
         else:
