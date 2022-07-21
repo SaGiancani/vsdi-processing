@@ -503,7 +503,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
         #at the end something like (nblks, 70, 1)
         if base_report is not None:
             trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
-            print(BLK.filename)
             trial_series = trial_df.iloc[0]
             trial = trial_series.to_dict()
             #    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
