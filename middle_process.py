@@ -59,6 +59,14 @@ class Condition:
         self.autoselection = tp[9]
         self.blk_names = tp[10]
         return
+    
+    def get_behav_latency(self):
+        tmp = [trial.behav_latency for trial in self.trials.values() if (trial.correct_behav and trial.fix_correct)]
+        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
+
+    def get_success_rate(self):
+        tmp = [1 if trial.correct_behav else 0 for trial in self.trials.values()]
+        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
 
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
@@ -116,10 +124,7 @@ class Session:
             self.motion_indeces = None
         
         self.session_blks = None
-        self.time_course_signals = None
         self.trials_name = None 
-        self.df_fzs = None
-        self.raw_data = None
         self.auto_selected = None
         self.conditions = None
         self.counter_blank = 0  
@@ -129,6 +134,7 @@ class Session:
 
         self.avrgd_time_courses = None
         self.avrgd_df_fz = None
+        self.avrgd_df_fz_notdeblnk = None
 
         # Loading the BaseReport and SignalData in case of logs_switch
         if self.header['logs_switch']:
@@ -215,6 +221,8 @@ class Session:
             tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
             df_f0 = df_f0 - 1
             self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            #if self.
+            #self.avrgd_df_fz_notdeblnk = self.avrgd_df_fz
             tmp_ = np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
@@ -343,8 +351,13 @@ class Session:
             self.trials_name = session_blks[self.auto_selected]
 
         if self.visualization_switch:
+            # zero_frames and ending_frames have to be recovered by trials
             # titles gets the name of blank condition as first, since it was stored first
             time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
+            #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
+            # Double deblanking: further blank subtraction here
+            zs = np.array([process.zeta_score(i, self.f_f0_blank) for i in self.avrgd_df_fz])
+            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], zs, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), log_ = self.log)
 
         else:
             self.log.info('Warning: Something weird in get_session')
@@ -686,18 +699,15 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
         log_.info(f'Min value heatmap: {min_bord}')
     # Implementation for splitting big matrices for storing
     pieces = int(np.ceil(len(data)/max_trials))
-    tmp_list = list()
     separators = np.linspace(0, len(data), pieces+1, endpoint=True, dtype=int)
     print(separators)
     for i, n in enumerate(separators):
         if i != 0:
-            matrix = data[separators[i-1]:n, :, :, :]
-
             count = 0
-            fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(matrix)), dpi = 80)
+            fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(data[separators[i-1]:n, :, :, :])), dpi = 80)
             fig.suptitle(f'Session {session_name}')# Session name
-            subfigs = fig.subfigures(nrows=len(matrix), ncols=1)
-            for sequence, subfig in zip(matrix, subfigs):
+            subfigs = fig.subfigures(nrows=len(data[separators[i-1]:n, :, :, :]), ncols=1)
+            for sequence, subfig in zip(data[separators[i-1]:n, :, :, :], subfigs):
                 subfig.suptitle(f'{titles[count]}')
                 axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
 
@@ -709,6 +719,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
                         Y[~mask] = np.NAN
                     ax.axis('off')
                     pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord, cmap=utils.PARULA_MAP)
+                    del Y
                 subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
                 count +=1
                 
