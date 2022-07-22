@@ -91,6 +91,7 @@ def add_blknames2basereport(BaseReport, all_blks):
             print(tris)
         # Consider the BLK names, in case of FixCorrect preceding event IT
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = all_blks
+        BaseReport = BaseReport.loc[(BaseReport['Preceding Event IT'] == 'FixCorrect')] 
     return BaseReport, tris
 
 
