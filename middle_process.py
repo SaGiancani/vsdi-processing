@@ -677,9 +677,11 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     max_bord = np.percentile(data, 75)
     min_bord = np.percentile(data, 10)
     if log_ is not None:
+        print(f'Start frame {start_frame}, {n_frames_showed} frames showed and end frame {end_frame}')
         print(f'Max value heatmap: {max_bord}')
         print(f'Min value heatmap: {min_bord}')
     else:
+        log_.info(f'Start frame {start_frame}, {n_frames_showed} frames showed and end frame {end_frame}')
         log_.info(f'Max value heatmap: {max_bord}')
         log_.info(f'Min value heatmap: {min_bord}')
     # Implementation for splitting big matrices for storing
