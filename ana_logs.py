@@ -6,7 +6,6 @@ import pandas as pd
 class Trial:
     def __init__(self, report_series_trial, heart, piezo, blank_cond, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
         self.blk = blk_file
-        self.index = index
         self.name = report_series_trial['BLK Names']
         self.condition = int(report_series_trial['IDcondition'])
         self.fix_correct = report_series_trial['Preceding Event IT'] == 'FixCorrect'
@@ -16,7 +15,6 @@ class Trial:
         else:
             self.behav_latency = None
         self.id_trial = int(report_series_trial['Total Trial Number']) - 1
-        print(f'index {self.index} == id_trial {self.id_trial}:  {self.index == self.id_trial}')
 
         if self.condition != blank_cond:
             if stimulus_fr is None:
