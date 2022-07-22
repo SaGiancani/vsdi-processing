@@ -245,7 +245,7 @@ class Session:
             if self.base_report is not None:
                 zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
                 foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
-                time_sequence_visualization(zero_of_cond, 20, int((zero_of_cond + foi_of_cond)//2), df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
+                time_sequence_visualization(zero_of_cond, 20, int((zero_of_cond + foi_of_cond)), df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
             else:
                 time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
@@ -506,7 +506,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
         else:
             zero = header['zero_frames']
  
-        print(f'Employes zero for normalization is {zero}')
+        print(f'Employeed zero for normalization is {zero}')
         if i == 0:
             BLK = blk_file.BlkFile(
                 os.path.join(path_rawdata, blk_name),
