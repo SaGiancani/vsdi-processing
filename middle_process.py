@@ -245,7 +245,7 @@ class Session:
             if self.base_report is not None:
                 zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
                 foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
-                time_sequence_visualization(zero_of_cond, foi_of_cond,  int(np.mean(zero_of_cond + foi_of_cond)), df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
+                time_sequence_visualization(zero_of_cond, 20, int((zero_of_cond + foi_of_cond)//2), df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
             else:
                 time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
@@ -498,15 +498,15 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             if (heart is not None) and (piezo is not None):
 #    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
 
-                trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, trial_df.index[0], greys[1], greys[0])
+                trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, greys[1], greys[0])
             else:
-                trial = al.Trial(trial, None, None, blank_id, trial_df.index[0], greys[1], greys[0])
+                trial = al.Trial(trial, None, None, blank_id, greys[1], greys[0])
             trials_dict[blk_name] = trial   
             zero = trial.zero_frames
         else:
             zero = header['zero_frames']
  
-
+        print(f'Employes zero for normalization is {zero}')
         if i == 0:
             BLK = blk_file.BlkFile(
                 os.path.join(path_rawdata, blk_name),
