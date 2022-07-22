@@ -16,7 +16,7 @@ class Trial:
         else:
             self.behav_latency = None
         self.id_trial = int(report_series_trial['Total Trial Number']) - 1
-        print(f'index == id_trial: {self.index == self.id_trial}')
+        print(f'index {self.index} == id_trial {self.id_trial}:  {self.index == self.id_trial}')
 
         if self.condition != blank_cond:
             if stimulus_fr is None:
@@ -91,7 +91,6 @@ def add_blknames2basereport(BaseReport, all_blks):
             print(tris)
         # Consider the BLK names, in case of FixCorrect preceding event IT
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = all_blks
-        BaseReport = BaseReport.loc[(BaseReport['Preceding Event IT'] == 'FixCorrect')] 
     return BaseReport, tris
 
 
