@@ -495,11 +495,12 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
             trial_series = trial_df.iloc[0]
             trial = trial_series.to_dict()
-            #    def __init__(self, report_series_trial, heart, piezo, session_path, blank_cond, index, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
             if (heart is not None) and (piezo is not None):
-                trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], header['path_session'], blank_id, trial_df.index[0], greys[1], greys[0])
+#    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
+
+                trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, trial_df.index[0], greys[1], greys[0])
             else:
-                trial = al.Trial(trial, None, None, header['path_session'], blank_id, trial_df.index[0], greys[1], greys[0])
+                trial = al.Trial(trial, None, None, blank_id, trial_df.index[0], greys[1], greys[0])
             trials_dict[blk_name] = trial   
             zero = trial.zero_frames
         else:
