@@ -39,6 +39,7 @@ class Condition:
         self.autoselection = None
         self.blk_names = None
         self.trials = None
+        self.z_score = None
     
     def store_cond(self, t):
         tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names, self.trials]
@@ -134,7 +135,7 @@ class Session:
 
         self.avrgd_time_courses = None
         self.avrgd_df_fz = None
-        self.avrgd_df_fz_notdeblnk = None
+        self.z_score = None
 
         # Loading the BaseReport and SignalData in case of logs_switch
         if self.header['logs_switch']:
@@ -221,8 +222,11 @@ class Session:
             tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
             df_f0 = df_f0 - 1
             self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
-            #if self.
-            #self.avrgd_df_fz_notdeblnk = self.avrgd_df_fz
+            # Signal for zscore: it is the raw signal binned, only normalized for the average frame among the zero frames.
+            t_ = np.mean(df_f0, axis=0)
+            self.z_score = np.reshape(process.zeta_score(t_, self.f_f0_blank), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            # = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
+
             tmp_ = np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
@@ -243,19 +247,26 @@ class Session:
             #df_f0 = df_f0.reshape(1, df_f0.shape[1], df_f0.shape[2], df_f0.shape[3] ) 
             t =  np.mean(df_f0[indeces_select, :, :, :], axis=0)
             self.avrgd_df_fz = np.concatenate((self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2])), axis=0) 
-            print(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
+            self.log.info(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
             t_ =  np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.concatenate((self.avrgd_time_courses,  t_.reshape(1,  t_.shape[0])), axis=0) 
-            print(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
-
-        if self.visualization_switch:
-            self.roi_plots(condition, sig, mask, blks)
+            self.log.info(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
             if self.base_report is not None:
                 zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
                 foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
-                time_sequence_visualization(zero_of_cond, 20, int((zero_of_cond + foi_of_cond)), df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
+                end_of_cond = zero_of_cond + foi_of_cond
             else:
-                time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
+                zero_of_cond = self.header['zero_frames']
+                end_of_cond = self.header['ending_frame']
+            t_ = np.mean(np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = False) for i in raws]), axis=0)
+            z = process.zeta_score(t_, self.f_f0_blank)
+            self.z_score = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
+
+        #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
+        if self.visualization_switch:
+            self.roi_plots(condition, sig, mask, blks)
+            self.log.info(f'Zero frames {zero_of_cond}, n° of considered frames {20} and end of frames {int((zero_of_cond + foi_of_cond))}')
+            time_sequence_visualization(zero_of_cond, 20, end_of_cond, df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
         # If storage switch True, than a Condition object is instantiate and stored
         if self.storage_switch:
@@ -268,6 +279,7 @@ class Session:
             cond.autoselection = mask
             cond.blk_names = blks
             cond.averaged_df = self.avrgd_df_fz[-1, :, :, :]
+            cond.z_score = self.z_score[-1, :, :, :]
             cond.averaged_timecourse = self.avrgd_time_courses[-1, :]
             if self.base_report is not None:
                 cond.trials = trials
@@ -727,7 +739,8 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
             if not os.path.exists(os.path.join(tmp,'activity_maps')):
                 os.makedirs(os.path.join(tmp,'activity_maps'))
             plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_piece0'+str(i)+'_'+str(title_to_print)+'.png'))
-
+            del subfigs
+            del fig
     if log_ is not None:
         log_.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     else:
