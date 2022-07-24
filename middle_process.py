@@ -265,7 +265,7 @@ class Session:
         #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
         if self.visualization_switch:
             self.roi_plots(condition, sig, mask, blks)
-            self.log.info(f'Zero frames {zero_of_cond}, n° of considered frames {20} and end of frames {int((zero_of_cond + foi_of_cond))}')
+            self.log.info(f'Zero frames {zero_of_cond}, n° of considered frames {20} and end of frames {int((end_of_cond))}')
             time_sequence_visualization(zero_of_cond, 20, end_of_cond, df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
         # If storage switch True, than a Condition object is instantiate and stored
