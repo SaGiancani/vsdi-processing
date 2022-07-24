@@ -203,6 +203,8 @@ class Session:
     def get_signal(self, condition):
         # All the blank blks
         blks = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])==condition)]
+        zero_of_cond = self.header['zero_frames']
+        end_of_cond = self.header['ending_frame']
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
@@ -255,9 +257,7 @@ class Session:
                 zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
                 foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
                 end_of_cond = zero_of_cond + foi_of_cond
-            else:
-                zero_of_cond = self.header['zero_frames']
-                end_of_cond = self.header['ending_frame']
+
             t_ = np.mean(np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = False) for i in raws]), axis=0)
             z = process.zeta_score(t_, self.f_f0_blank)
             self.z_score = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
