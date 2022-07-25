@@ -225,8 +225,8 @@ class Session:
             df_f0 = df_f0 - 1
             self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # Signal for zscore: it is the raw signal binned, only normalized for the average frame among the zero frames.
-            t_ = np.mean(df_f0, axis=0)
-            self.z_score = np.reshape(process.zeta_score(t_, self.f_f0_blank), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            #t_ = np.mean(df_f0, axis=0)
+            self.z_score = np.reshape(process.zeta_score(tmp, self.f_f0_blank), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
 
             tmp_ = np.mean(sig[indeces_select, :], axis=0)
