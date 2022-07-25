@@ -368,8 +368,7 @@ class Session:
             time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
             #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
             # Double deblanking: further blank subtraction here
-            zs = np.array([process.zeta_score(i, self.f_f0_blank) for i in self.avrgd_df_fz])
-            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], zs, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), log_ = self.log)
+            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), log_ = self.log)
 
         else:
             self.log.info('Warning: Something weird in get_session')
@@ -522,9 +521,16 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             trial = trial_series.to_dict()
             if (heart is not None) and (piezo is not None):
 #    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
-
+                if log is None:
+                    print('Piezo and heartbeat signal stored!')
+                else:
+                    log.info('Piezo and heartbeat signal stored!')
                 trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, greys[1], greys[0])
             else:
+                if log is None:
+                    print('No piezo and heartbeat signal!')
+                else:
+                    log.info('No piezo and heartbeat signal!')
                 trial = al.Trial(trial, None, None, blank_id, greys[1], greys[0])
             trials_dict[blk_name] = trial   
             zero = trial.zero_frames
@@ -699,7 +705,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 75)
+    max_bord = np.percentile(data, 85)
     min_bord = np.percentile(data, 10)
     if log_ is not None:
         print(f'Start frame {start_frame}, {n_frames_showed} frames showed and end frame {end_frame}')
