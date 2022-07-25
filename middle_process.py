@@ -227,13 +227,16 @@ class Session:
             # In this order for deblank signal
             tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
             tmp_std = np.std(df_f0[indeces_select, :, :, :], axis=0)
-            df_f0 = df_f0 - 1
-            self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
-            # Signal for zscore: it is the raw signal binned, only normalized for the average frame among the zero frames.
             self.f_f0_blank = tmp
             self.stde_f_f0_blank = tmp_std/np.sqrt(len(indeces_select))
-            self.z_score = np.reshape(process.zeta_score(df_f0[indeces_select, :, :, :], self.f_f0_blank, self.stde_f_f0_blank), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
-
+            z = process.zeta_score(df_f0[indeces_select, :, :, :], self.f_f0_blank, self.stde_f_f0_blank)
+            # Signal for zscore: it is the raw signal binned, only normalized for the average frame among the zero frames.
+            print(f'Shape z_score {z.shape}')
+            self.z_score = np.reshape(z, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            # Subtraction for 1 equivalent to deblanking (F0) -dF/F0-
+            df_f0 = df_f0 - 1
+            self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            # Average time course over the condition
             tmp_ = np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
