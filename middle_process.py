@@ -376,7 +376,7 @@ class Session:
             time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
             #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
             # Double deblanking: further blank subtraction here
-            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), log_ = self.log)
+            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.percentile(self.z_score, 10), np.percentile(self.z_score, 90)), log_ = self.log)
 
         else:
             self.log.info('Warning: Something weird in get_session')
@@ -707,14 +707,19 @@ def get_all_blks(path_session, sort = True):
     else:
         return tmp
 
-def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
+def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, c_ax_= None, circular_mask = True, log_ = None, max_trials = 20):
     start_time = datetime.datetime.now().replace(microsecond=0)
     session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 85)
-    min_bord = np.percentile(data, 10)
+    if c_ax_ is None:
+        max_bord = np.percentile(data, 85)
+        min_bord = np.percentile(data, 10)
+    else:
+        max_bord = c_ax_[1]
+        min_bord = c_ax_[0]
+        
     if log_ is not None:
         print(f'Start frame {start_frame}, {n_frames_showed} frames showed and end frame {end_frame}')
         print(f'Max value heatmap: {max_bord}')
