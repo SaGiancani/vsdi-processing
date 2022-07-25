@@ -130,17 +130,16 @@ def sobel_filter(im, k, N):
     return sobel
 
 
-def zeta_score(sig_cond, sig_blank, zero_frames = 20):
-    eps = 0.00000001
+def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
     # Blank mean and stder computation
-    if sig_blank is None:
-        mean_signblnk_overcond = np.mean(sig_cond[:zero_frames, :, :], axis = 0)
-        stder_signblnk_overcond = np.std(sig_cond[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
+    if (sig_blank is None) or (std_blank is None):
+        mean_signblnk_overcond = np.mean(sig_cond[:, :zero_frames, :, :], axis = 0)
+        stder_signblnk_overcond = np.std(sig_cond[:, :zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
     else:
-        mean_signblnk_overcond = np.mean(sig_blank[:, :, :], axis = 0)
-        stder_signblnk_overcond = np.std(sig_blank[:, :, :], axis = 0)/np.sqrt(np.shape(sig_blank)[0])
+        mean_signblnk_overcond = sig_blank
+        stder_signblnk_overcond = std_blank#np.std(sig_blank[:, :, :], axis = 0)/np.sqrt(np.shape(sig_blank)[0])
     # Condition mean and stder computation
-    #mean_sign_overcond = np.mean(sig_cond[bottomFOI:upperFOI, :, :], axis = 0)
-    #stder_sign_overcond = np.std(sig_cond[bottomFOI:upperFOI, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
-    zscore = (sig_cond-mean_signblnk_overcond)/(stder_signblnk_overcond + eps)
+    mean_sign_overcond = np.mean(sig_cond[:, :, :, :], axis = 0)
+    stder_sign_overcond = np.std(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+    zscore = (mean_sign_overcond-mean_signblnk_overcond)/np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
     return zscore

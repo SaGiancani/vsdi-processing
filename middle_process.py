@@ -26,9 +26,12 @@ class Condition:
     filename : str
         The path of the external file, containing the raw image
     """
-    def __init__(self, condition_name, condition_numb, session_header):
+    def __init__(self, condition_name = None, condition_numb = None, session_header = None):
         self.session_header = session_header
-        self.session_name =  self.session_header['path_session'].split('/')[-2]+'-'+self.session_header['path_session'].split('/')[-3].split('-')[1] 
+        if self.session_header is None:
+            self.session_name = None
+        else:
+            self.session_name =  self.session_header['path_session'].split('/')[-2]+'-'+self.session_header['path_session'].split('/')[-3].split('-')[1] 
         self.cond_name = condition_name
         self.cond_id = condition_numb
         self.binned_data = None 
@@ -175,6 +178,7 @@ class Session:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
         self.time_course_blank = None
         self.f_f0_blank = None
+        self.stde_f_f0_blank = None
         # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
         _ = self.get_signal(self.blank_id)
 
@@ -222,20 +226,19 @@ class Session:
             indeces_select = indeces_select[0].tolist()      
             # In this order for deblank signal
             tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            tmp_std = np.std(df_f0[indeces_select, :, :, :], axis=0)
             df_f0 = df_f0 - 1
             self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # Signal for zscore: it is the raw signal binned, only normalized for the average frame among the zero frames.
-            #t_ = np.mean(df_f0, axis=0)
-            self.z_score = np.reshape(process.zeta_score(tmp, self.f_f0_blank), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
-            # = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
+            self.f_f0_blank = tmp
+            self.stde_f_f0_blank = tmp_std/np.sqrt(len(indeces_select))
+            self.z_score = np.reshape(process.zeta_score(df_f0[indeces_select, :, :, :], self.f_f0_blank, self.std_f_f0_blank), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
 
             tmp_ = np.mean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
             # employed for normalize the signal             
             self.time_course_blank = tmp_
-            self.f_f0_blank = tmp
-            
             self.log.info('Blank signal computed')
                         
         else:
@@ -257,9 +260,11 @@ class Session:
                 zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
                 foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
                 end_of_cond = zero_of_cond + foi_of_cond
+            temp_raw = raws[indeces_select, :, :, :]
+            t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = False) for i in temp_raw])
+            z = process.zeta_score(t_, self.f_f0_blank, self.stde_f_f0_blank)
+             #def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
 
-            t_ = np.mean(np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = False) for i in raws]), axis=0)
-            z = process.zeta_score(t_, self.f_f0_blank)
             self.z_score = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
 
         #def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
@@ -705,7 +710,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 90)
+    max_bord = np.percentile(data, 85)
     min_bord = np.percentile(data, 10)
     if log_ is not None:
         print(f'Start frame {start_frame}, {n_frames_showed} frames showed and end frame {end_frame}')
