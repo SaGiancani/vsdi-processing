@@ -264,7 +264,7 @@ class Session:
                 foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
                 end_of_cond = zero_of_cond + foi_of_cond
             temp_raw = raws[indeces_select, :, :, :]
-            t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = False) for i in temp_raw])
+            t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = True, blank_sign=None) for i in temp_raw])
             z = process.zeta_score(t_, self.f_f0_blank, self.stde_f_f0_blank)
              #def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
 
