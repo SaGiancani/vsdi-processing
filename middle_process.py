@@ -363,7 +363,11 @@ class Session:
                 if cd != self.blank_id:
                     self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
                     self.log.info('Condition name: ' + c_name)                        
-                    _, _, tmp, _, _ = self.get_signal(cd)
+                    a, b, tmp, c, d = self.get_signal(cd)
+                    del a
+                    del b
+                    del c
+                    del d
                     self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
                     
             self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
@@ -707,7 +711,7 @@ def get_all_blks(path_session, sort = True):
     else:
         return tmp
 
-def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, c_ax_= None, circular_mask = True, log_ = None, max_trials = 20):
+def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, c_ax_= None, circular_mask = True, log_ = None, max_trials = 15):
     start_time = datetime.datetime.now().replace(microsecond=0)
     session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
