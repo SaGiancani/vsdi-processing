@@ -705,7 +705,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
-    max_bord = np.percentile(data, 85)
+    max_bord = np.percentile(data, 90)
     min_bord = np.percentile(data, 10)
     if log_ is not None:
         print(f'Start frame {start_frame}, {n_frames_showed} frames showed and end frame {end_frame}')
