@@ -1,5 +1,4 @@
 import argparse, blk_file, datetime, process, utils
-from curses import raw
 import ana_logs as al
 import matplotlib.pyplot as plt
 import numpy as np

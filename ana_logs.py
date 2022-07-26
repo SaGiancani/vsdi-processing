@@ -97,6 +97,11 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     Load the BaseReport
     '''
     BaseReport_path = utils.find_thing(name_report, session_path, what = 'file')
+    
+    # Discarding duplicate for bugged sessions
+    if len(BaseReport_path)>1:
+        BaseReport_path = [i for i in BaseReport_path if 'bug' not in i.lower()]
+    
     BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
     #Adding BLK Names columns to the dataframe
     BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
