@@ -1,4 +1,5 @@
 import argparse, blk_file, datetime, process, utils
+from curses import raw
 import ana_logs as al
 import matplotlib.pyplot as plt
 import numpy as np
@@ -298,8 +299,11 @@ class Session:
             cond.store_cond(t)
             del cond
             self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))                
-
-        return sig, df_f0, mask, blks, raws
+        del df_f0
+        del raws
+        del sig
+        del trials
+        return mask
 
     def get_blks(self):
         '''
@@ -363,11 +367,7 @@ class Session:
                 if cd != self.blank_id:
                     self.log.info('Procedure for loading BLKs of condition ' +str(cd)+' starts')
                     self.log.info('Condition name: ' + c_name)                        
-                    a, b, tmp, c, d = self.get_signal(cd)
-                    del a
-                    del b
-                    del c
-                    del d
+                    tmp = self.get_signal(cd)
                     self.log.info(str(int(sum(tmp))) + '/' + str(len(tmp)) +' trials have been selected for condition '+str(c_name))
                     
             self.log.info('Globally ' + str(int(sum(self.auto_selected))) + '/' + str(len(self.session_blks)) +' trials have been selected!')
