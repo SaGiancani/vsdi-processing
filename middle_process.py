@@ -718,9 +718,9 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
     if c_ax_ is None:
-        max_bord = np.percentile(data, 85)
-        min_bord = np.percentile(data, 10)
-    else:
+        max_bord = np.nanpercentile(data, 85)
+        min_bord = np.nanpercentile(data, 10)
+    elif c_ax_ is not None:
         max_bord = c_ax_[1]
         min_bord = c_ax_[0]
         
