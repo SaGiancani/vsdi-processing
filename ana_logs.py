@@ -86,9 +86,9 @@ def add_blknames2basereport(BaseReport, all_blks):
                 print('Take care to time course and dF/F0 matrix indeces and indexing system.')            
             elif abs(len(all_blks)-len(cds)) > 1:
                 print('More than one blk missing/in surplus')
-            print(tris)
         # Consider the BLK names, in case of FixCorrect preceding event IT
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = all_blks
+    print(f'Tris value: {tris}')
     return BaseReport, tris
 
 
