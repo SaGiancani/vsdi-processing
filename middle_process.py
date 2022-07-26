@@ -153,9 +153,10 @@ class Session:
                     except:
                         print(f'Column {i} is not a float')                
                 self.base_report = base_report
-                if tris[3]:
-                    #self.all_blks.pop(tris[2])
-                    self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
+                if tris is not None:
+                    if tris[3]:
+                        #self.all_blks.pop(tris[2])
+                        self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
                 self.log.info('BaseReport properly loaded!')
                 self.log.info('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
                 start_time = datetime.datetime.now().replace(microsecond=0)
