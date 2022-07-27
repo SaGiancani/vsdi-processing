@@ -102,7 +102,67 @@ def find_thing(pattern, path, what ='file'):
                     result.append(os.path.join(root, name))           
     return result
 
+def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None, experiments = None):
+    
+    if sessions is not None:
+        sessions = [s.lower() for s in sessions]
+    elif subs is not None:
+        subs = [s.lower() for s in subs]
+    elif experiments is not None:
+        experiments = [s.lower() for s in experiments]
 
+    if (experiments is None) and (exp_type is not None):
+        if 'VSDI' in exp_type and 'BEHAV' in exp_type:
+            ending_string = "BEHAV+VSDI"
+        elif 'VSDI' in exp_type and 'BEHAV' not in exp_type:
+            ending_string = "_VSDI"
+        elif 'BEHAV' in exp_type and 'VSDI' not in exp_type:
+            ending_string = "_BEHAV"
+        elif 'IOI' in exp_type:
+            ending_string = "_IOI"
+        elif 'ALL' in exp_type:
+            ending_string = ""
+        exps_list = [f.name for f in os.scandir(path_storage) if (f.name.endswith(ending_string))]
+    
+    elif (experiments is not None):
+        exps_list = list()
+        for exp in experiments:
+            for f in os.scandir(path_storage):
+                if exp.lower() in f.name.lower():
+                    exps_list.append(f.name)
+
+    exps = dict()
+    for exp in exps_list:
+        exps[exp.split('exp-')[1]] = dict()
+        path_exp = os.path.join(path_storage, exp)
+        #subjs_list = [f.name for f in os.scandir(path_exp) if (subs is not None) and (f.name.split('sub-')[1].lower() in subs)]
+        subjs_list = list()
+        for f in  os.scandir(path_exp):
+            try:
+                if (subs is not None) and (f.name.split('sub-')[1].lower() in subs):
+                    subjs_list.append(f.name)
+                elif (subs is None):
+                    subjs_list.append(f.name)        #print(subjs_list)
+            except:
+                pass
+        for sub in subjs_list:
+            #exps[exp.split('exp-')[1]][sub.split('sub-')[1]] = dict() 
+            path_sub = os.path.join(path_exp, sub)
+            sess_list = list()
+            for f in  os.scandir(path_sub):
+                if (sessions is not None) and (f.name.split('sess-')[1].lower() in sessions):
+                    sess_list.append(f.name)
+                elif (sessions is None):
+                    sess_list.append(f.name)
+            #print(sess_list)
+            paths = list()
+            for sess in sess_list:  
+                path_sess = os.path.join(path_sub, sess)
+                paths.append(path_sess)
+            exps[exp.split('exp-')[1]][sub.split('sub-')[1]] = paths
+
+    return exps
+    
 def inputs_load(filename):
     '''
     ---------------------------------------------------------------------------------------------------------
