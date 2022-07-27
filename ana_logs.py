@@ -135,12 +135,13 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
             print(tmp)
             try:
                 if ',' in tmp[1]:
-                    tmp = ','
+                    a = tmp[1].split(',')
                 else:
-                    tmp = '\n'
-                dict_[tmp[0]] = separator_converter(tmp[1].split(tmp)[0])
+                    a = tmp[1].split('\n')
+
+                dict_[tmp[0]] = separator_converter(a[0])
             except:
-                dict_[tmp[0]] = tmp[1].split(tmp)[0]
+                dict_[tmp[0]] = a[0]
             if tmp[0] == 'Date':
                 # Datetime day, month, year, hour, minute, seconds
                 format_str = '%d/%m/%Y'
