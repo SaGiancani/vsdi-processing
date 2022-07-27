@@ -21,8 +21,8 @@ def latency_error_bars(a, title, name_anls, store_path = STORAGE_PATH):
     fig = plt.figure
     fig, ax1 = plt.subplots()
     color = 'tab:orange'
-    ax1.tick_params(axis='x', labelcolor='white')
-    ax1.set_xlabel('Conditions', color='white')
+    ax1.tick_params(axis='x', labelcolor='black')
+    ax1.set_xlabel('Conditions', color='black')
     ax1.set_ylabel('Latency (ms)', color=color)
     ax1.errorbar(x, mean, yerr=err, label='both limits (default)', fmt="o", color=color)
     ax1.tick_params(axis='y', labelcolor=color)
@@ -34,7 +34,7 @@ def latency_error_bars(a, title, name_anls, store_path = STORAGE_PATH):
     ax2.plot(x, success,'o', color=color)
     ax2.tick_params(axis='y', labelcolor=color)
     ax2.set_ylim((0, 1))
-    fig.suptitle(title, color='white')
+    fig.suptitle(title, color='black')
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     tmp = set_storage_folder(storage_path = store_path, name_analysis = name_anls)
