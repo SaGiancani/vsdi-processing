@@ -1,4 +1,5 @@
 import argparse, blk_file, datetime, process, utils
+import data_visualization as dv
 import ana_logs as al
 import matplotlib.pyplot as plt
 import numpy as np
@@ -275,7 +276,7 @@ class Session:
         if self.visualization_switch:
             self.roi_plots(condition, sig, mask, blks)
             self.log.info(f'Zero frames {zero_of_cond}, n° of considered frames {20} and end of frames {int((end_of_cond))}')
-            time_sequence_visualization(zero_of_cond, 20, end_of_cond, df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
+            dv.time_sequence_visualization(zero_of_cond, 20, end_of_cond, df_f0[indeces_select, :, :, :], np.array(blks)[indeces_select], 'cond'+str(condition), self.header, self.set_md_folder(), log_ = self.log, max_trials = 20)
 
         # If storage switch True, than a Condition object is instantiate and stored
         if self.storage_switch:
@@ -377,10 +378,10 @@ class Session:
         if self.visualization_switch:
             # zero_frames and ending_frames have to be recovered by trials
             # titles gets the name of blank condition as first, since it was stored first
-            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
+            dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
             #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
             # Double deblanking: further blank subtraction here
-            time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.percentile(self.z_score, 15), np.percentile(self.z_score, 95)), log_ = self.log)
+            dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.percentile(self.z_score, 15), np.percentile(self.z_score, 95)), log_ = self.log)
 
         else:
             self.log.info('Warning: Something weird in get_session')
@@ -482,6 +483,7 @@ class Session:
             os.makedirs(os.path.join(tmp,'time_course'))
         plt.savefig(os.path.join(tmp,'time_course', session_name+'_tc_0'+str(cd_i)+'.png'))
         #plt.savefig((path_session+'/'session_name +'/'+ session_name+'_roi_0'+str(cd_i)+'.png')
+        plt.close('all')
         return
 
     def set_md_folder(self):
@@ -526,30 +528,16 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
 
     for i, blk_name in enumerate(blks):
         start_time = datetime.datetime.now().replace(microsecond=0)
-        # If first BLK file, than the header is stored
         if base_report is not None:
-            trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
-            trial_series = trial_df.iloc[0]
-            trial = trial_series.to_dict()
-            if (heart is not None) and (piezo is not None):
-#    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
-                if log is None:
-                    print('Piezo and heartbeat signal stored!')
-                else:
-                    log.info('Piezo and heartbeat signal stored!')
-                trial = al.Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, greys[1], greys[0])
-            else:
-                if log is None:
-                    print('No piezo and heartbeat signal!')
-                else:
-                    log.info('No piezo and heartbeat signal!')
-                trial = al.Trial(trial, None, None, blank_id, greys[1], greys[0])
+            trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
             trials_dict[blk_name] = trial   
             zero = trial.zero_frames
         else:
             zero = header['zero_frames']
- 
         print(f'Employeed zero for normalization is {zero}')
+        
+        # Get BLK file
+        # If first BLK file, than the header is stored
         if i == 0:
             BLK = blk_file.BlkFile(
                 os.path.join(path_rawdata, blk_name),
@@ -685,7 +673,7 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
     mask_array[autoselect] = 1
     
     if switch_vis:
-        chunk_distribution_visualization(coords, ms_norm, distr_info, cd_i, header, matrix, autoselect, mask_array, path)
+        dv.chunk_distribution_visualization(coords, ms_norm, distr_info, cd_i, header, matrix, autoselect, mask_array, path)
 
     # Mask of selected ones
     return autoselect, mask_array, coords, distr_info, ms_norm
@@ -711,149 +699,6 @@ def get_all_blks(path_session, sort = True):
     else:
         return tmp
 
-def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, c_ax_= None, circular_mask = True, log_ = None, max_trials = 15):
-    start_time = datetime.datetime.now().replace(microsecond=0)
-    session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
-    # Array with indeces of considered frames: it starts from the last considerd zero_frames
-    considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
-    # Borders for caxis
-    if c_ax_ is None:
-        max_bord = np.nanpercentile(data, 85)
-        min_bord = np.nanpercentile(data, 10)
-    elif c_ax_ is not None:
-        max_bord = c_ax_[1]
-        min_bord = c_ax_[0]
-        
-    if log_ is not None:
-        print(f'Start frame {start_frame}, {n_frames_showed} frames showed and end frame {end_frame}')
-        print(f'Max value heatmap: {max_bord}')
-        print(f'Min value heatmap: {min_bord}')
-    else:
-        log_.info(f'Start frame {start_frame}, {n_frames_showed} frames showed and end frame {end_frame}')
-        log_.info(f'Max value heatmap: {max_bord}')
-        log_.info(f'Min value heatmap: {min_bord}')
-    # Implementation for splitting big matrices for storing
-    pieces = int(np.ceil(len(data)/max_trials))
-    separators = np.linspace(0, len(data), pieces+1, endpoint=True, dtype=int)
-    print(separators)
-    for i, n in enumerate(separators):
-        if i != 0:
-            count = 0
-            fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(data[separators[i-1]:n, :, :, :])), dpi = 80)
-            fig.suptitle(f'Session {session_name}')# Session name
-            subfigs = fig.subfigures(nrows=len(data[separators[i-1]:n, :, :, :]), ncols=1)
-            for sequence, subfig in zip(data[separators[i-1]:n, :, :, :], subfigs):
-                subfig.suptitle(f'{titles[count]}')
-                axs = subfig.subplots(nrows=1, ncols=n_frames_showed)
-
-                # Showing each frame
-                for df_id, ax in zip(considered_frames, axs):
-                    Y = sequence[int(df_id), :, :]
-                    if circular_mask:
-                        mask = utils.sector_mask(Y.shape, (Y.shape[0]//2, Y.shape[1]//2), (np.min(np.shape(Y)))*0.40, (0,360) )
-                        Y[~mask] = np.NAN
-                    ax.axis('off')
-                    pc = ax.pcolormesh(Y, vmin=min_bord, vmax=max_bord, cmap=utils.PARULA_MAP)
-                    del Y
-                subfig.colorbar(pc, shrink=1, ax=axs)#, location='bottom')
-                count +=1
-                
-            tmp = path_
-            if not os.path.exists(os.path.join(tmp,'activity_maps')):
-                os.makedirs(os.path.join(tmp,'activity_maps'))
-            plt.savefig(os.path.join(tmp,'activity_maps', session_name+'_piece0'+str(i)+'_'+str(title_to_print)+'.png'))
-            del subfigs
-            del fig
-    if log_ is not None:
-        log_.info('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-    else:
-        print('Plotting heatmaps time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
-    return  
-
-def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indeces_select, mask_array, path):
-    strategy = header['strategy']
-    session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
-    colors_a = utils.COLORS
-    xxx=np.linspace(0.001,np.max(list(zip(*coords))[1]),1000)
-    #print(len(l))
-    title = f'Condition #{cd_i}' 
-    fig = plt.figure(constrained_layout = True, figsize=(25, 10))
-    fig.suptitle(title)# Session name
-    #plt.title(f'Condition {cond_num}')
-    subfigs = fig.subfigures(nrows=2, ncols=1, height_ratios=[2,1.25])
-    axs = subfigs[0].subplots(nrows=1, ncols=3)#, sharey=True)
-
-    for i,j in enumerate(l):
-        axs[2].plot(xxx, process.log_norm(xxx, j[1], j[2]), color = colors_a[i], alpha = 0.5)
-        axs[2].plot(list(zip(*coords))[1], list(zip(*coords))[0], "k", marker=".", markeredgecolor="red", ls = "")
-
-        # Median + StdDev
-        # Median + StdDev
-        mean_o = np.exp(j[1] + j[2]*j[2]/2.0)
-        median_o = np.exp(j[1])
-        median_o_std = (median_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2])))
-        mean_o_std = mean_o + 2*np.sqrt((np.exp(j[2]*j[2])-1)*np.exp(j[1]+j[1]+j[2]*j[2]))
-        #plt.axvline(x=median_o, color = colors_a[-i], linestyle='--')
-        axs[2].axvline(x=median_o_std, color = colors_a[i], linestyle='-')
-        # Mean + StdDev
-        #plt.axvline(x=mean_o, color = colors_a[i+1], linestyle='--')
-        axs[2].axvline(x=mean_o_std, color = colors_a[i], linestyle='-')
-
-
-            # We can set the number of bins with the *bins* keyword argument.
-        #axs[0].hist(dist1, bins=n_bins)
-        #axs[1].hist(dist2, bins=n_bins)
-        #plt.gca().set_title()
-        axs[0].set_ylabel(strategy)
-        axs[0].set_xlabel('Trials')
-        #plt.plot(range(len(mae[i, :])), mae[i, :], marker="o", markeredgecolor="red", markerfacecolor="green", ls="-")    
-        axs[0].plot(range(len(m_norm[i])), m_norm[i], marker="o", markeredgecolor="red", markerfacecolor=colors_a[i], ls="")#, marker="o", markeredgecolor="red", markerfacecolor="green")
-        #plt.plot(range(len(mse[i, :])), [np.mean(mse[i, :])-0.5*np.std(mse[i, :])]*len(mse[i, :]),  ls="--", color = colors_a[i])
-        axs[0].plot(range(len(m_norm[i])), [mean_o_std]*len(m_norm[i]),  ls="-", color = colors_a[i])
-        #plt.plot(range(len(mae[i, :])), [median_o_std]*len(mae[i, :]),  ls="-", color = colors_a[-i])
-        
-        #mse[i, :] 
-        #plt.plot(range(0, np.max(mse[0])), )
-        axs[1].set_ylabel('Count')
-        axs[1].set_xlabel(strategy)
-        #plt.gca().set_title(f'Histogram for Condition {cond_num}')
-        axs[1].hist(m_norm[i], bins = 50, color=colors_a[i], alpha=0.8)
-
-    axs = subfigs[1].subplots(nrows=1, ncols=2)#, sharey=True)
-
-    unselected = []
-    for l, (i, sel) in enumerate(zip(tc, mask_array)):
-        if sel == 0:
-            col = 'crimson'
-            alp = 1
-            tmp_u = i
-            unselected.append(l)
-        #else:
-            #col = 'grey'
-            #alp = 1
-            #tmp_s = i
-            axs[0].plot(i, color = col, linewidth = 0.5, alpha = alp)
-    #axs[0].plot(np.arange(60),tmp_s, color = 'grey', label = 'Selected trials' )
-    shapes = np.shape(tc)
-    axs[0].plot(np.arange(shapes[1]), tmp_u, color = 'crimson', linewidth = 0.5, label = 'Unselected trials')
-    axs[0].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
-    axs[0].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
-    axs[0].legend(loc = 'upper left')
-    axs[0].set_ylim(np.min(tc[indeces_select]) - (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05, np.max(tc[indeces_select]) + (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05)
-    #plt.subplot(2,3,5)
-    for k, i in enumerate(tc[indeces_select[:-1]]):
-        axs[1].plot(i, 'gray', linewidth = 0.5)
-    axs[1].plot(tc[indeces_select[-1]], 'gray', linewidth = 0.5, label = 'Trials')
-    axs[1].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
-    axs[1].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
-    axs[1].set_ylim(np.min(tc[indeces_select]) - 0.0005, np.max(tc[indeces_select]) + 0.0005)    
-    axs[1].legend(loc = 'upper left')
-        
-    tmp = path
-    if not os.path.exists(os.path.join(tmp,'chunks_analysis')):
-        os.makedirs(os.path.join(tmp,'chunks_analysis'))
-    plt.savefig(os.path.join(tmp,'chunks_analysis', session_name+'_chunks_0'+str(cd_i)+'.png'))
-    return
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching autoselection pipeline')
