@@ -134,14 +134,23 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
         if '*' not in tmp[0]:
             print(tmp)
             try:
-                dict_[tmp[0]] = separator_converter(tmp[1].split('\n')[0])
+                if ',' in tmp[1]:
+                    tmp = ','
+                else:
+                    tmp = '\n'
+                dict_[tmp[0]] = separator_converter(tmp[1].split(tmp)[0])
             except:
-                dict_[tmp[0]] = tmp[1].split('\n')[0]
+                dict_[tmp[0]] = tmp[1].split(tmp)[0]
             if tmp[0] == 'Date':
                 # Datetime day, month, year, hour, minute, seconds
                 format_str = '%d/%m/%Y'
                 dict_['Date'] =  (datetime.datetime.strptime(dict_['Date'], format_str).date())
-                dict_['Date'] = datetime.datetime.strptime(str(tmp[3]) + ':00', '%H:%M:%S').replace(year=dict_['Date'].year,month=dict_['Date'].month,day=dict_['Date'].day)
+                if ',' in str(tmp[3]):
+                    asda = str(tmp[3]).split(',')[0]
+                else:
+                    asda = str(tmp[3])
+
+                dict_['Date'] = datetime.datetime.strptime( asda + ':00', '%H:%M:%S').replace(year=dict_['Date'].year,month=dict_['Date'].month,day=dict_['Date'].day)
     dict_['Export Log Files'] = bool(dict_['Export Log Files'])
     return dict_
 
