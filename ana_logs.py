@@ -35,6 +35,19 @@ class Trial:
 
         self.heart_signal = heart
         self.piezo_signal = piezo
+    
+def get_trial(base_report, blk_name, heart, piezo, grey_end, grey_start, blank_id):
+    trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
+    trial_series = trial_df.iloc[0]
+    trial = trial_series.to_dict()
+    if (heart is not None) and (piezo is not None):
+#    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
+        print('Piezo and heartbeat signal stored!')
+        trial = Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, grey_end, grey_start)
+    else:
+        print('No piezo and heartbeat signal!')
+        trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
+    return trial
 
 def get_greys(session_path, condition):
     pngfile_path = utils.find_thing('PNGfiles', os.path.join(session_path, 'sources'))
@@ -100,6 +113,7 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     
     # Discarding duplicate for bugged sessions
     if len(BaseReport_path)>1:
+        print(f'{len(BaseReport_path)} BaseReport are found')
         BaseReport_path = [i for i in BaseReport_path if 'bug' not in i.lower()]
     
     BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
@@ -199,4 +213,19 @@ def signal_cutter(analog_timestamp_array, signal_array, pre, end):
     end_trial = np.argmin(np.abs(analog_timestamp_array - (end + 1000)))#   +1sec for safety
     cut_signal = signal_array[start_trial:end_trial]
     return cut_signal
-    
+
+def sorting_from_first(first, BaseReport, all_datetimes, blks):
+    #tmp =  - head['Date']
+    zero_moment = first - datetime.timedelta(seconds=60) # + (separator_converter(BaseReport.iloc[1]['Onset Time_ End Trial'])/1000)*datetime.timedelta(seconds=1)
+    estimated_dates = zero_moment + ((BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', ['Onset Time_ End Stim']].applymap(separator_converter))/1000)*datetime.timedelta(seconds=1)
+    #estimated_dates = (zero_moment + ((BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', ['Onset Time_ End Stim']].applymap(separator_converter))/1000)*datetime.timedelta(seconds=1)) - 1*datetime(min=1)
+    pr_time = pd.to_datetime(estimated_dates['Onset Time_ End Stim']).tolist()
+    pr_time = [str(i) for i in pr_time]
+    dt_object = np.array([datetime.datetime.strptime(i.split('.')[0],  "%Y-%m-%d %H:%M:%S") for i in pr_time])
+    tmp = np.array([np.argmin(np.abs(dt_object - i)) for i in all_datetimes])
+    a = ['Missing'] * len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect'])
+    for n, i in enumerate(tmp):
+        a[i] = blks[n]
+    BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = a
+    return 
+
