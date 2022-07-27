@@ -42,10 +42,8 @@ def get_trial(base_report, blk_name, heart, piezo, grey_end, grey_start, blank_i
     trial = trial_series.to_dict()
     if (heart is not None) and (piezo is not None):
 #    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
-        print('Piezo and heartbeat signal stored!')
         trial = Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, grey_end, grey_start)
     else:
-        print('No piezo and heartbeat signal!')
         trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
     return trial
 
