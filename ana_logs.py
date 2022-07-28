@@ -130,7 +130,7 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
         tmp = tmp.split('\n')[0].split(';')
 
         if '*' not in tmp[0]:
-            print(tmp)
+            #print(tmp)
             try:
                 if ',' in tmp[1]:
                     a = tmp[1].split(',')
