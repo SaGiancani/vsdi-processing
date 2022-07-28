@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import datetime, utils
+import datetime, process, utils
 
 STORAGE_PATH = '/envau/work/neopto/USERS/GIANCANI/Analysis/'
 
