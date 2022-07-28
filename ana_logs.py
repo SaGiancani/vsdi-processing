@@ -53,7 +53,7 @@ def get_greys(session_path, condition):
         grey_frames_start, grey_frames_end, _ = get_grey_frames(pngfile_path, condition)
         #n_pngs = pngs_shape[0]
     except:
-        print('Issue with PNGfiles: standard values 5 grey frames pre stimulus and 5 post will be used')
+        #print('Issue with PNGfiles: standard values 5 grey frames pre stimulus and 5 post will be used')
         grey_frames_start = 5
         grey_frames_end = 5
     return grey_frames_start, grey_frames_end
