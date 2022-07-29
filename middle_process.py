@@ -95,8 +95,7 @@ class Session:
                  condid = None, 
                  store_switch = False, 
                  data_vis_switch = True, 
-                 end_frame = 60, 
-                 **kwargs):
+                 end_frame = 60):
         """
         Initializes attributes
         Default values for:
@@ -545,7 +544,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
     else:
         log.info(f'The blank_signal exist: {blank_s is not None}')
         log.info(f'The blank switch is: {blnk_switch}')
-        
+
     if blks_load:
         for i, blk_name in enumerate(blks):
             start_time = datetime.datetime.now().replace(microsecond=0)
