@@ -529,7 +529,7 @@ class Session:
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
 
-def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, piezo, heart, log = None):
+def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, piezo, heart, log = None, blks_load = True):
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
@@ -545,57 +545,72 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
     else:
         log.info(f'The blank_signal exist: {blank_s is not None}')
         log.info(f'The blank switch is: {blnk_switch}')
-
-    for i, blk_name in enumerate(blks):
-        start_time = datetime.datetime.now().replace(microsecond=0)
-        if base_report is not None:
-            trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
-            trials_dict[blk_name] = trial   
-            zero = trial.zero_frames
-        else:
-            zero = header['zero_frames']
-        print(f'Employeed zero for normalization is {zero}')
         
-        # Get BLK file
-        # If first BLK file, than the header is stored
-        if i == 0:
-            BLK = blk_file.BlkFile(
-                os.path.join(path_rawdata, blk_name),
-                header['spatial_bin'],
-                header['temporal_bin'],
-                zero,
-                header = None)
-
-            header_blk = BLK.header
-            raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-            delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-            sig = np.zeros((len(blks), header['n_frames']))
-            roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
-        else:
-            BLK = blk_file.BlkFile(
-                os.path.join(path_rawdata, blk_name), 
-                header['spatial_bin'], 
-                header['temporal_bin'], 
-                zero,
-                header = header_blk)
-        
-        # Log prints
-        if log is None:
-            print(f'The blk file {blk_name} is loaded')
-        else:
-            log.info(f'The blk file {blk_name} is loaded')
+    if blks_load:
+        for i, blk_name in enumerate(blks):
+            start_time = datetime.datetime.now().replace(microsecond=0)
+            if base_report is not None:
+                trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
+                trials_dict[blk_name] = trial   
+                zero = trial.zero_frames
+            else:
+                zero = header['zero_frames']
+            print(f'Employeed zero for normalization is {zero}')
             
-        #at the end something like (nblks, 70, 1)         
-        conditions.append(BLK.condition)
-        raws[i, :, :, :] =  BLK.binned_signal 
-        delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
-        sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
+            # Get BLK file
+            # If first BLK file, than the header is stored
+            if i == 0:
+                BLK = blk_file.BlkFile(
+                    os.path.join(path_rawdata, blk_name),
+                    header['spatial_bin'],
+                    header['temporal_bin'],
+                    zero,
+                    header = None)
 
-        if log is None:
-            print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-        else:
-            log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-    
+                header_blk = BLK.header
+                raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                sig = np.zeros((len(blks), header['n_frames']))
+                roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
+            else:
+                BLK = blk_file.BlkFile(
+                    os.path.join(path_rawdata, blk_name), 
+                    header['spatial_bin'], 
+                    header['temporal_bin'], 
+                    zero,
+                    header = header_blk)
+            
+            # Log prints
+            if log is None:
+                print(f'The blk file {blk_name} is loaded')
+            else:
+                log.info(f'The blk file {blk_name} is loaded')
+                
+            #at the end something like (nblks, 70, 1)         
+            conditions.append(BLK.condition)
+            raws[i, :, :, :] =  BLK.binned_signal 
+            delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
+            sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
+
+            if log is None:
+                print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+            else:
+                log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+    else:
+        for i, blk_name in enumerate(blks):
+            start_time = datetime.datetime.now().replace(microsecond=0)
+            if base_report is not None:
+                trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
+                trials_dict[blk_name] = trial   
+                zero = trial.zero_frames
+            else:
+                zero = header['zero_frames']
+            print(f'Employeed zero for normalization is {zero}')
+            if log is None:
+                print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+            else:
+                log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+        sig, delta_f, conditions, raws = None
     return sig, delta_f, conditions, raws, trials_dict
     
 def roi_strategy(matrix, tolerance, zero_frames):
