@@ -13,12 +13,16 @@ def set_storage_folder(storage_path = STORAGE_PATH, name_analysis = 'prova'):
         #os.mkdirs(path_session+'/'+session_name)
     return folder_path
 
-def latency_error_bars(a, title, name_anls, store_path = STORAGE_PATH):
+def latency_error_bars(a, title, name_anls, labels = None, store_path = STORAGE_PATH):
     err = list(zip(*a))[1]
     mean = list(zip(*a))[0]
     success = list(zip(*a))[2]
     x = np.arange(len(mean))+1
+    if labels is None:
+        labels = x
     fig = plt.figure
+    plt.rcParams["figure.autolayout"] = True
+    plt.xticks(x)
     fig, ax1 = plt.subplots()
     color = 'tab:orange'
     ax1.tick_params(axis='x', labelcolor='black')
@@ -27,6 +31,7 @@ def latency_error_bars(a, title, name_anls, store_path = STORAGE_PATH):
     ax1.errorbar(x, mean, yerr=err, label='both limits (default)', fmt="o", color=color)
     ax1.tick_params(axis='y', labelcolor=color)
     ax1.set_ylim((min(mean) - 30, max(mean)+30))
+    ax1.set_xticklabels(labels=labels,rotation=45)
 
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
     color = 'tab:green'
@@ -35,6 +40,7 @@ def latency_error_bars(a, title, name_anls, store_path = STORAGE_PATH):
     ax2.tick_params(axis='y', labelcolor=color)
     ax2.set_ylim((0, 1))
     fig.suptitle(title, color='black')
+    ax2.set_xticklabels(labels=labels,rotation=45)
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     tmp = set_storage_folder(storage_path = store_path, name_analysis = name_anls)
