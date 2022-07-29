@@ -533,20 +533,21 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
-    if base_report is not None:
-        trials_dict = dict()
-        greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split('vsd_C')[1][0:2]))
-    else:
-        trials_dict = None
-
-    if log is None:
-        print(f'The blank_signal exist: {blank_s is not None}')
-        print(f'The blank switch is: {blnk_switch}')
-    else:
-        log.info(f'The blank_signal exist: {blank_s is not None}')
-        log.info(f'The blank switch is: {blnk_switch}')
         
     if blks_load:
+        if base_report is not None:
+            trials_dict = dict()
+            greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split('vsd_C')[1][0:2]))
+        else:
+            trials_dict = None
+
+        if log is None:
+            print(f'The blank_signal exist: {blank_s is not None}')
+            print(f'The blank switch is: {blnk_switch}')
+        else:
+            log.info(f'The blank_signal exist: {blank_s is not None}')
+            log.info(f'The blank switch is: {blnk_switch}')
+            
         for i, blk_name in enumerate(blks):
             start_time = datetime.datetime.now().replace(microsecond=0)
             if base_report is not None:
