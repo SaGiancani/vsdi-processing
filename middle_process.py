@@ -95,7 +95,8 @@ class Session:
                  condid = None, 
                  store_switch = False, 
                  data_vis_switch = True, 
-                 end_frame = 60):
+                 end_frame = 60, 
+                 **kwargs):
         """
         Initializes attributes
         Default values for:
@@ -195,13 +196,13 @@ class Session:
         else:
             self.base_report, self.piezo, self.heart_beat  = None, None, None
 
-        #if self.header['deblank_switch']:
+        if self.header['deblank_switch']:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
-        self.time_course_blank = None
-        self.f_f0_blank = None
-        self.stde_f_f0_blank = None
-        # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
-        _ = self.get_signal(self.blank_id)
+            self.time_course_blank = None
+            self.f_f0_blank = None
+            self.stde_f_f0_blank = None
+            # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
+            _ = self.get_signal(self.blank_id)
 
 
     def get_blank_id(self, cond_id = None):
@@ -544,7 +545,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
     else:
         log.info(f'The blank_signal exist: {blank_s is not None}')
         log.info(f'The blank switch is: {blnk_switch}')
-
+        
     if blks_load:
         for i, blk_name in enumerate(blks):
             start_time = datetime.datetime.now().replace(microsecond=0)
