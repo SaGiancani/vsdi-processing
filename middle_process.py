@@ -76,7 +76,27 @@ class Condition:
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
 class Session:
-    def __init__(self, base_report_name = 'BaseReport.csv', base_head_dim = 19, logger = None, condid = None, store_switch = False, data_vis_switch = True, end_frame = 60, **kwargs):
+    def __init__(self,
+                 path_session, 
+                 spatial_bin = 3,
+                 temporal_bin = 1,
+                 zero_frames = 20,
+                 tolerance = 20,
+                 mov_switch=False,
+                 deblank_switch=False,
+                 raw_switch=False,
+                 conditions_id =None,
+                 chunks = 1,
+                 strategy = 'mae',
+                 logs_switch =False,  
+                 base_report_name= 'BaseReport.csv',
+                 base_head_dim = 19, 
+                 logger = None, 
+                 condid = None, 
+                 store_switch = False, 
+                 data_vis_switch = True, 
+                 end_frame = 60, 
+                 **kwargs):
         """
         Initializes attributes
         Default values for:
@@ -100,7 +120,7 @@ class Session:
         else:
             self.log = logger              
         self.cond_names = None
-        self.header = self.get_session_header(**kwargs)
+        self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch, logs_switch)
         self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
