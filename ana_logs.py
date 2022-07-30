@@ -116,8 +116,8 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     # Some csv presents "" signs
     for i in list(BaseReport.columns):
         try:
-            BaseReport[[i]] = BaseReport[[i]].applymap(separator_converter, to_substitute = '"', substitute = '')
-            BaseReport[[i]] = BaseReport[[i]].applymap(separator_converter, to_substitute = '"', substitute = '')
+            BaseReport[[i]] = BaseReport[[i]].applymap(delete_chars)
+            BaseReport[[i]] = BaseReport[[i]].applymap(delete_chars)
         except:
             pass      
     BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
@@ -206,16 +206,25 @@ def get_grey_frames(png_files_path, cond_id):
     return out[0], final_out[0], a.shape[0]
 
 
-def separator_converter(s, to_substitute = ',', substitute = '.'):
+def separator_converter(s):
     '''
     Utility method: separator corrector for BaseReport.csv files
     '''
     try:
-        tmp = float(s.replace(to_substitute,substitute))
+        tmp = float(s.replace(',', '.'))
     except:
         tmp = float(s)
-    return tmp    
+    return tmp
 
+def delete_chars(s, to_substitute = '"', substitute = ''):
+    '''
+    Utility method: separator corrector for BaseReport.csv files
+    '''
+    try:
+        tmp = s.replace(to_substitute,substitute)
+    except:
+        tmp = s
+    return tmp
 
 def signal_cutter(analog_timestamp_array, signal_array, pre, end):
     '''
