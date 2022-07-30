@@ -116,8 +116,8 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     # Some csv presents "" signs
     for i in list(BaseReport.columns):
         try:
-            BaseReport[[i]] = BaseReport[[i]].applymap(separator_converter(to_substitute = '"', substitute = ''))
-            BaseReport[[i]] = BaseReport[[i]].applymap(separator_converter(to_substitute = '"', substitute = ''))
+            BaseReport[[i]] = BaseReport[[i]].applymap(separator_converter, to_substitute = '"', substitute = '')
+            BaseReport[[i]] = BaseReport[[i]].applymap(separator_converter, to_substitute = '"', substitute = '')
         except:
             pass      
     BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
