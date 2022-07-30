@@ -351,18 +351,24 @@ class Session:
         The method returns a list of condition's names: if a labelConds.txt exist inside metadata's folder, 
         than names are simply loaded. Otherwise a list of names with "Condition #" style is built.
         '''
+        # Try the fastest method, in other words looking from the file in metadata folder
         try:
             with open(os.path.join(self.header['path_session'], LABEL_CONDS_PATH)) as f:
                 contents = f.readlines()
-            return {j+1:i.split('\n')[0] for j, i in enumerate(contents)}
-        except FileNotFoundError:
-            self.log.info('Check the labelConds.txt presence inside the metadata subfolder')
-            cds = self.get_condition_ids()
-            return {j+1:'Condition ' + str(c) for j, c in enumerate(cds)}
-        except NotADirectoryError:
-            self.log.info(os.path.join(self.header['path_session'], LABEL_CONDS_PATH) +' path does not exist')
-            cds = self.get_condition_ids()
-            return {j+1:'Condition ' + str(c) for j, c in enumerate(cds)}
+            return  {j+1:i.split('\n')[0] for j, i in enumerate(contents)}
+        # If does not find it, then look in general in session folder if there is the labelConds.txt file
+        except:
+            tmp = utils.find_thing('labelConds.txt', self.header['path_session'])
+            # If also with find_thing there is no labelConds.txt file, than loaded as name Condition n#
+            if len(tmp) == 0:
+                self.log.info('Check the labelConds.txt presence inside the session folder and subfolders')
+                cds = self.get_condition_ids()
+                return {j+1:'Condition ' + str(c) for j, c in enumerate(cds)}
+            # else, load the labelConds from the alternative path
+            else :
+                with open(tmp[0]) as f:
+                    contents = f.readlines()
+                return  {j+1:i.split('\n')[0] for j, i in enumerate(contents)}
 
     def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch, logs_switch):
         header = {}
