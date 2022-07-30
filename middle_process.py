@@ -355,7 +355,7 @@ class Session:
         try:
             with open(os.path.join(self.header['path_session'], LABEL_CONDS_PATH)) as f:
                 contents = f.readlines()
-            return  {j+1:i.split('\n')[0] for j, i in enumerate(contents)}
+            return  {j+1:i.split('\n')[0] for j, i in enumerate(contents) if len(i)>0}
         # If does not find it, then look in general in session folder if there is the labelConds.txt file
         except:
             tmp = utils.find_thing('labelConds.txt', self.header['path_session'])
@@ -368,7 +368,7 @@ class Session:
             else :
                 with open(tmp[0]) as f:
                     contents = f.readlines()
-                return  {j+1:i.split('\n')[0] for j, i in enumerate(contents)}
+                return  {j+1:i.split('\n')[0] for j, i in enumerate(contents) if len(i)>0}
 
     def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch, logs_switch):
         header = {}
