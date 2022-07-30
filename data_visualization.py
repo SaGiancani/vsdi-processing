@@ -32,7 +32,7 @@ def latency_error_bars(a, title, name_anls, labels = None, store_path = STORAGE_
     ax1.tick_params(axis='y', labelcolor=color)
     ax1.set_ylim((min(mean) - 30, max(mean)+30))
     ax1.set_xticks(x)
-    ax1.set_xticklabels(labels=labels,rotation=45)
+    ax1.set_xticklabels(labels=labels,rotation=90)
 
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
     color = 'tab:green'
