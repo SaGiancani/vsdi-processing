@@ -5,11 +5,9 @@
 # Modified by Isabelle Racicot <racicot.isabelle@gmail.com> on 12/2019 
 # Python3 portability by Salvatore Giancani <sa.giancani@gmail.com>
 import cv2 as cv
-import datetime
 import itertools as it
 import io
 import numpy as np
-import process
 import struct
 
 # Commit Try

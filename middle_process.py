@@ -356,7 +356,7 @@ class Session:
             with open(os.path.join(self.header['path_session'], LABEL_CONDS_PATH)) as f:
                 contents = f.readlines()
             return  {j+1:i.split('\n')[0] for j, i in enumerate(contents) if len(i.split('\n')[0])>0}
-        # If does not find it, then look in general in session folder if there is the labelConds.txt file
+        # If does not find it, then look in general in session folder if there is the labelConds.txt file -slower-
         except:
             tmp = utils.find_thing('labelConds.txt', self.header['path_session'])
             # If also with find_thing there is no labelConds.txt file, than loaded as name Condition n#
