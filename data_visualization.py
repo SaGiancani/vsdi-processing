@@ -76,9 +76,9 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     pieces = int(np.ceil(len(data)/max_trials))
     separators = np.linspace(0, len(data), pieces+1, endpoint=True, dtype=int)
     print(separators)
+    count = 0
     for i, n in enumerate(separators):
         if i != 0:
-            count = 0
             fig = plt.figure(constrained_layout=True, figsize = (n_frames_showed-2, len(data[separators[i-1]:n, :, :, :])), dpi = 80)
             fig.suptitle(f'Session {session_name}')# Session name
             subfigs = fig.subfigures(nrows=len(data[separators[i-1]:n, :, :, :]), ncols=1)
