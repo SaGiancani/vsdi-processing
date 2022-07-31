@@ -349,7 +349,10 @@ class Session:
     def get_condition_name(self):
         '''
         The method returns a list of condition's names: if a labelConds.txt exist inside metadata's folder, 
-        than names are simply loaded. Otherwise a list of names with "Condition #" style is built.
+        than names are simply loaded: this method is the fastest. Otherwise it looks for labelConds.txt in 
+        the whole session path: this is slower. In case of no existence of labelConds file a dictionary of 
+        names with "Condition #" style is built.
+        The output of the method is a dictionary with key the id condition and value the condition name.
         '''
         # Try the fastest method, in other words looking from the file in metadata folder
         try:
