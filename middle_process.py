@@ -166,7 +166,7 @@ class Session:
             try:
                 start_time = datetime.datetime.now().replace(microsecond=0)
                 self.log.info(f'Length of all_blks list: {len(self.all_blks)}')
-                base_report, tris = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
+                base_report = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
                 # Separator converter processing: , -string- to . -float-.
                 for i in list(base_report.columns):
                     try:
@@ -174,10 +174,16 @@ class Session:
                     except:
                         print(f'Column {i} is not a float')                
                 self.base_report = base_report
-                if tris is not None:
-                    if tris[3]:
-                        #self.all_blks.pop(tris[2])
-                        self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
+                # Check in case of presence of BLK file with no correspondance in BaseReport
+                # In case of presence, they are removed from all_blks
+                security_check_blks = set(self.all_blks).difference(set(list(base_report[['BLK Name']])))
+                if len(security_check_blks) != 0:
+                    self.log.info(f'Length of all_blks before popping off the elements: {len(self.all_blks)}')
+                    for i in list(security_check_blks):
+                        self.all_blks.pop(i)
+                        self.log.info(f'{i} popped out from all_blks')
+                    self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
+
                 self.log.info('BaseReport properly loaded!')
                 self.log.info('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
                 start_time = datetime.datetime.now().replace(microsecond=0)
