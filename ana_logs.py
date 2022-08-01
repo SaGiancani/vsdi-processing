@@ -121,8 +121,9 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
         except:
             pass      
     #Adding BLK Names columns to the dataframe
-    BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
-    return BaseReport, tris
+    #BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
+    BaseReport = sorting_from_first(BaseReport, all_blks)
+    return BaseReport#, tris
 
 def get_basereport_header(BaseReport_path, header_dimension = 19):    
     '''
@@ -237,18 +238,25 @@ def signal_cutter(analog_timestamp_array, signal_array, pre, end):
     cut_signal = signal_array[start_trial:end_trial]
     return cut_signal
 
-def sorting_from_first(first, BaseReport, all_datetimes, blks):
+def sorting_from_first(first, BaseReport, all_datetimes, blks): #, start_session):
+    all_datetimes = [datetime.datetime.strptime(i.split('_')[2] + i.split('_')[3], '%d%m%y%H%M%S') for i in blks]
+    first = datetime.datetime.strptime(blks[0].split('_')[2] + blks[0].split('_')[3], '%d%m%y%H%M%S')
     #tmp =  - head['Date']
-    zero_moment = first - datetime.timedelta(seconds=60) # + (separator_converter(BaseReport.iloc[1]['Onset Time_ End Trial'])/1000)*datetime.timedelta(seconds=1)
-    estimated_dates = zero_moment + ((BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', ['Onset Time_ End Stim']].applymap(separator_converter))/1000)*datetime.timedelta(seconds=1)
-    #estimated_dates = (zero_moment + ((BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', ['Onset Time_ End Stim']].applymap(separator_converter))/1000)*datetime.timedelta(seconds=1)) - 1*datetime(min=1)
+    temporary = (((BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', ['Onset Time_ End Stim']].iloc[:].applymap(separator_converter)))/1000)*datetime.timedelta(seconds=1)
+    temporary = temporary - temporary.iloc[0]
+    estimated_dates = temporary + first  # adding a row
     pr_time = pd.to_datetime(estimated_dates['Onset Time_ End Stim']).tolist()
     pr_time = [str(i) for i in pr_time]
     dt_object = np.array([datetime.datetime.strptime(i.split('.')[0],  "%Y-%m-%d %H:%M:%S") for i in pr_time])
-    tmp = np.array([np.argmin(np.abs(dt_object - i)) for i in all_datetimes])
+    tmp = list()
+    tmp_ = list()
+    for i in all_datetimes:
+        tmp_.append(np.abs(dt_object - i))
+        tmp.append(np.argmin(np.abs(dt_object - i)))
+    tmp = np.array(tmp)
+    #print(tmp_)
     a = ['Missing'] * len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect'])
     for n, i in enumerate(tmp):
         a[i] = blks[n]
     BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = a
-    return 
-
+    return BaseReport
