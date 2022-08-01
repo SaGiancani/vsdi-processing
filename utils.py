@@ -232,10 +232,16 @@ def setup_custom_logger(name):
     It is used for log files for background processes.
     -------------------------------------------------------------------------------------------------------------
     '''
-    PATH_LOGS = './logs'
+    PATH_LOGS = r'./logs'
     formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
                                   datefmt='%Y-%m-%d %H:%M:%S')
-    handler = logging.FileHandler(os.path.join(PATH_LOGS, 'log_'+str(datetime.datetime.now().replace(microsecond=0))+'.txt'), mode='w')
+    tmp = str(datetime.datetime.now().replace(microsecond=0))
+    lista = tmp.split(':')
+    second = lista[1]+lista[2]
+    lista = lista[0].split('-')
+    first = lista[0]+lista[1]
+    data = first + lista[2].split(' ')[0] + lista[2].split(' ')[1] + second
+    handler = logging.FileHandler(os.path.join(PATH_LOGS, 'log_'+ data +'.txt'), mode='w')
     handler.setFormatter(formatter)
     screen_handler = logging.StreamHandler(stream=sys.stdout)
     screen_handler.setFormatter(formatter)
