@@ -122,6 +122,7 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
             pass      
     #Adding BLK Names columns to the dataframe
     #BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
+    print('csv cleaned by unproper chars')
     BaseReport = sorting_from_first(BaseReport, all_blks)
     return BaseReport#, tris
 
