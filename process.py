@@ -141,5 +141,6 @@ def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
     # Condition mean and stder computation
     mean_sign_overcond = np.mean(sig_cond[:, :, :, :], axis = 0)
     stder_sign_overcond = np.std(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
-    zscore = (mean_sign_overcond-mean_signblnk_overcond)/np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
+    # Try to fix the zscore defected for Hip AM3Strokes second session.
+    zscore = (mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2))
     return zscore
