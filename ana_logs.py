@@ -242,6 +242,7 @@ def sorting_from_first(first, BaseReport, all_datetimes, blks): #, start_session
     all_datetimes = [datetime.datetime.strptime(i.split('_')[2] + i.split('_')[3], '%d%m%y%H%M%S') for i in blks]
     first = datetime.datetime.strptime(blks[0].split('_')[2] + blks[0].split('_')[3], '%d%m%y%H%M%S')
     #tmp =  - head['Date']
+    print(first)
     temporary = (((BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', ['Onset Time_ End Stim']].iloc[:].applymap(separator_converter)))/1000)*datetime.timedelta(seconds=1)
     temporary = temporary - temporary.iloc[0]
     estimated_dates = temporary + first  # adding a row
