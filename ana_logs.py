@@ -41,7 +41,6 @@ def get_trial(base_report, blk_name, heart, piezo, grey_end, grey_start, blank_i
     trial_series = trial_df.iloc[0]
     trial = trial_series.to_dict()
     if (heart is not None) and (piezo is not None):
-#    def __init__(self, report_series_trial, heart, piezo, blank_cond, index, grey_end, grey_start, log = None, stimulus_fr = None, zero_fr = None, time_res = 10, blk_file = None):
         trial = Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, grey_end, grey_start)
     else:
         trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
@@ -113,6 +112,7 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     if len(BaseReport_path)>1:
         print(f'{len(BaseReport_path)} BaseReport are found')
         BaseReport_path = [i for i in BaseReport_path if 'bug' not in i.lower()]
+    BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
     # Some csv presents "" signs
     for i in list(BaseReport.columns):
         try:
@@ -120,7 +120,6 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
             BaseReport[[i]] = BaseReport[[i]].applymap(delete_chars)
         except:
             pass      
-    BaseReport = pd.read_csv(BaseReport_path[0], sep=';', header=header_dimension)
     #Adding BLK Names columns to the dataframe
     BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
     return BaseReport, tris
