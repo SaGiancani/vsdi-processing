@@ -107,7 +107,7 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     Load the BaseReport
     '''
     BaseReport_path = utils.find_thing(name_report, session_path, what = 'file')
-    
+    print(BaseReport_path)
     # Discarding duplicate for bugged sessions
     if len(BaseReport_path)>1:
         print(f'{len(BaseReport_path)} BaseReport are found')
