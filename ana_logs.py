@@ -37,14 +37,28 @@ class Trial:
         self.piezo_signal = piezo
     
 def get_trial(base_report, blk_name, heart, piezo, grey_end, grey_start, blank_id):
-    trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
-    trial_series = trial_df.iloc[0]
-    trial = trial_series.to_dict()
-    if (heart is not None) and (piezo is not None):
-        trial = Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, grey_end, grey_start)
-    else:
-        trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
-    return trial
+    try:
+        # To investigate the reason of the try/except construct
+        trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
+        trial_series = trial_df.iloc[0]
+        trial = trial_series.to_dict()
+        if (heart is not None) and (piezo is not None):
+            trial = Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, grey_end, grey_start)
+        else:
+            trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
+        return trial
+    except:
+        print('Exception')
+        return None
+
+    # trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
+    # trial_series = trial_df.iloc[0]
+    # trial = trial_series.to_dict()
+    # if (heart is not None) and (piezo is not None):
+    #     trial = Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, grey_end, grey_start)
+    # else:
+    #     trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
+    # return trial
 
 def get_greys(session_path, condition):
     pngfile_path = utils.find_thing('PNGfiles', os.path.join(session_path, 'sources'))
@@ -101,6 +115,23 @@ def add_blknames2basereport(BaseReport, all_blks):
     print(f'Tris value: {tris}')
     return BaseReport, tris
 
+def discrepancy_blk_attribution(BaseReport):
+    count = 0
+    a = list()
+    for i in list(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect','BLK Names']):
+        try:
+            a.append(float(i.split('vsd_C')[1][:2]))
+        except:
+            a.append(1000)
+    n = list(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'IDcondition'])
+    for l, (i,j) in enumerate(zip(n, a)):
+        if i!=j:
+            tmp = BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'].iloc[l]
+            tmp_c = BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'IDcondition'].iloc[l]
+            print(f'BLK filename {tmp} and correspondent condition mismatched {tmp_c}')
+            BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'].iloc[l] = np.nan
+            count+=1
+    return count
 
 def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', header_dimension = 19):
     '''
@@ -121,14 +152,20 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
         except:
             pass      
     #Adding BLK Names columns to the dataframe
-    #BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
     print('csv cleaned by unproper chars')
     print(f'Number of raw files: {len(all_blks)}')
     #     print(BaseReport['Preceding Event IT'])
     len_ = len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect'])
     print(f'Number of trials registered in log file: { len_ }')
-    BaseReport = sorting_from_first(BaseReport, all_blks)
-    return BaseReport#, tris
+    if abs(len_ - len(all_blks)) > 1:
+        BaseReport = sorting_from_first(BaseReport, all_blks)
+        tris = None
+    else:
+        BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
+    # Check the discrepancy between IDcondition and BLK Names columns
+    count = discrepancy_blk_attribution(BaseReport)
+    print(f'Mismatch for {count} blk files')
+    return BaseReport, tris
 
 def get_basereport_header(BaseReport_path, header_dimension = 19):    
     '''
