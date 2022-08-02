@@ -173,7 +173,7 @@ class Session:
                         base_report[[i]] = base_report[[i]].applymap(al.separator_converter)
                     except:
                         print(f'Column {i} is not a float')
-                count = al.discrepancy_blk_attribution(base_report)
+                base_report, count = al.discrepancy_blk_attribution(base_report)
                 print(f'Mismatch for {count} blk files')                
                 self.base_report = base_report
                 # Check in case of presence of BLK file with no correspondance in BaseReport
@@ -183,7 +183,7 @@ class Session:
                     self.log.info(f'Length of all_blks before popping off the elements: {len(self.all_blks)}')
                     for i, j in enumerate(list(security_check_blks)):
                         self.all_blks.pop(i)
-                        self.log.info(f'{j} popped out from all_blks')
+                        self.log.info(f'{j} popped out')
                     self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
 
                 self.log.info('BaseReport properly loaded!')
