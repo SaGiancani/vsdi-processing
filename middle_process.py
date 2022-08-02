@@ -181,8 +181,8 @@ class Session:
                 security_check_blks = set(self.all_blks).difference(set(list(self.base_report.loc[self.base_report['Preceding Event IT'] == 'FixCorrect','BLK Names'])))
                 if len(security_check_blks) != 0:
                     self.log.info(f'Length of all_blks before popping off the elements: {len(self.all_blks)}')
-                    for i, j in enumerate(list(security_check_blks)):
-                        self.all_blks.pop(i)
+                    for j in list(security_check_blks):
+                        self.all_blks.remove(j)
                         self.log.info(f'{j} popped out')
                     self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
 
@@ -622,7 +622,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                 trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
                 # If the trial is empty, likely for absence of BLK name correspondance in BaseReport, it pops out the blkname from the list
                 if trial is None:
-                    blks.pop(blk_name)
+                    print('Empty Trial')
+                    blks.remove(blk_name)
                     if log is None:
                         print(f'{blk_name} was popped off')
                     else:
