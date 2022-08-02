@@ -126,9 +126,7 @@ def discrepancy_blk_attribution(BaseReport):
     n = list(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'IDcondition'])
     for l, (i,j) in enumerate(zip(n, a)):
         if i!=j:
-            tmp = BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'].iloc[l]
-            tmp_c = BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'IDcondition'].iloc[l]
-            print(f'BLK filename {tmp} and correspondent condition mismatched {tmp_c}')
+            print(f'BLK filename condition {j} and correspondent condition mismatched {i}')
             BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'].iloc[l] = np.nan
             count+=1
     return count
@@ -163,8 +161,6 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     else:
         BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
     # Check the discrepancy between IDcondition and BLK Names columns
-    count = discrepancy_blk_attribution(BaseReport)
-    print(f'Mismatch for {count} blk files')
     return BaseReport, tris
 
 def get_basereport_header(BaseReport_path, header_dimension = 19):    
