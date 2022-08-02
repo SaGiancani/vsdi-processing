@@ -166,7 +166,7 @@ class Session:
             try:
                 start_time = datetime.datetime.now().replace(microsecond=0)
                 self.log.info(f'Length of all_blks list: {len(self.all_blks)}')
-                base_report = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
+                base_report, _ = al.get_basereport(self.header['path_session'], self.all_blks, name_report = base_report_name, header_dimension = base_head_dim)
                 # Separator converter processing: , -string- to . -float-.
                 for i in list(base_report.columns):
                     try:
