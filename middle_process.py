@@ -621,9 +621,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             if base_report is not None:
                 trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
                 trials_dict[blk_name] = trial   
+                print(blk_name)
                 zero = trial.zero_frames
             else:
-                print(blk_name)
                 zero = header['zero_frames']
         sig, delta_f, conditions, raws = None, None, None, None
     return sig, delta_f, conditions, raws, trials_dict
