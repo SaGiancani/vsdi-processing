@@ -48,8 +48,8 @@ def get_trial(base_report, blk_name, heart, piezo, grey_end, grey_start, blank_i
             trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
         return trial
     except:
-        print(len(trial_df))
-        print('Exception')
+        if len(trial_df) == 0:
+            print(f'{blk_name} has not correspondance in BaseReport')
         return None
 
     # trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
