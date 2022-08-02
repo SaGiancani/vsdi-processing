@@ -48,6 +48,7 @@ def get_trial(base_report, blk_name, heart, piezo, grey_end, grey_start, blank_i
             trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
         return trial
     except:
+        print(list(trial_df))
         print('Exception')
         return None
 
@@ -129,7 +130,7 @@ def discrepancy_blk_attribution(BaseReport):
             print(f'BLK filename condition {j} and correspondent condition mismatched {i}')
             BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'].iloc[l] = np.nan
             count+=1
-    return count
+    return BaseReport, count
 
 def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', header_dimension = 19):
     '''
