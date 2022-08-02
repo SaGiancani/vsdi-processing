@@ -119,7 +119,8 @@ def add_blknames2basereport(BaseReport, all_blks):
 def discrepancy_blk_attribution(BaseReport):
     count = 0
     a = list()
-    for i in list(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect','BLK Names']):
+    t = list(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect','BLK Names'])
+    for i in t:
         try:
             a.append(float(i.split('vsd_C')[1][:2]))
         except:
@@ -127,8 +128,8 @@ def discrepancy_blk_attribution(BaseReport):
     n = list(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'IDcondition'])
     for l, (i,j) in enumerate(zip(n, a)):
         if i!=j:
-            print(f'BLK filename condition {j} and correspondent condition mismatched {i}')
-            BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'].iloc[l] = np.nan
+            print(f'BLK filename condition {t[l]} and correspondent condition mismatched {i}')
+            BaseReport.loc[BaseReport['BLK Names']  == t[l], 'BLK Names'] = np.nan
             count+=1
     return BaseReport, count
 
