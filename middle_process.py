@@ -172,7 +172,9 @@ class Session:
                     try:
                         base_report[[i]] = base_report[[i]].applymap(al.separator_converter)
                     except:
-                        print(f'Column {i} is not a float')                
+                        print(f'Column {i} is not a float')
+                count = al.discrepancy_blk_attribution(base_report)
+                print(f'Mismatch for {count} blk files')                
                 self.base_report = base_report
                 # Check in case of presence of BLK file with no correspondance in BaseReport
                 # In case of presence, they are removed from all_blks
