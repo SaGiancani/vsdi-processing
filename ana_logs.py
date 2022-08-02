@@ -245,6 +245,7 @@ def signal_cutter(analog_timestamp_array, signal_array, pre, end):
 
 def sorting_from_first(first, BaseReport, all_datetimes, blks): #, start_session):
     all_datetimes = [datetime.datetime.strptime(i.split('_')[2] + i.split('_')[3], '%d%m%y%H%M%S') for i in blks]
+    print(all_datetimes
     first = datetime.datetime.strptime(blks[0].split('_')[2] + blks[0].split('_')[3], '%d%m%y%H%M%S')
     #tmp =  - head['Date']
     print(first)
