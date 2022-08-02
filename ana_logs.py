@@ -48,7 +48,7 @@ def get_trial(base_report, blk_name, heart, piezo, grey_end, grey_start, blank_i
             trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
         return trial
     except:
-        print(list(trial_df))
+        print(trial_df)
         print('Exception')
         return None
 
