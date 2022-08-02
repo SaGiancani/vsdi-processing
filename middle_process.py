@@ -623,6 +623,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                 trials_dict[blk_name] = trial   
                 zero = trial.zero_frames
             else:
+                print(blk_name)
                 zero = header['zero_frames']
         sig, delta_f, conditions, raws = None, None, None, None
     return sig, delta_f, conditions, raws, trials_dict
