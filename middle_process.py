@@ -176,12 +176,12 @@ class Session:
                 self.base_report = base_report
                 # Check in case of presence of BLK file with no correspondance in BaseReport
                 # In case of presence, they are removed from all_blks
-                security_check_blks = set(self.all_blks).difference(set(list(base_report.loc[base_report['Preceding Event IT'] == 'FixCorrect','BLK Names'])))
+                security_check_blks = set(self.all_blks).difference(set(list(self.base_report.loc[self.base_report['Preceding Event IT'] == 'FixCorrect','BLK Names'])))
                 if len(security_check_blks) != 0:
                     self.log.info(f'Length of all_blks before popping off the elements: {len(self.all_blks)}')
-                    for i in list(security_check_blks):
+                    for i, j in enumerate(list(security_check_blks)):
                         self.all_blks.pop(i)
-                        self.log.info(f'{i} popped out from all_blks')
+                        self.log.info(f'{j} popped out from all_blks')
                     self.log.info(f'Length of all_blks list after popping off from get_basereport: {len(self.all_blks)}')
 
                 self.log.info('BaseReport properly loaded!')
