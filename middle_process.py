@@ -32,8 +32,8 @@ class Condition:
         if self.session_header is None:
             self.session_name = None
         else:
-            #self.session_name =  self.session_header['path_session'].split('/')[-2]+'-'+self.session_header['path_session'].split('/')[-3].split('-')[1] 
-            self.session_name = self.session_header['path_session'].split('sess-')[1]    
+            comp = os.path.normpath(self.session_header['path_session']).split(os.sep)
+            session_name = comp[-2]+'-'+comp[-3].split('exp-')[1]    
         self.cond_name = condition_name
         self.cond_id = condition_numb
         self.binned_data = None 
@@ -455,7 +455,8 @@ class Session:
 
     def roi_plots(self, cd_i, sig, mask, blks):
         #session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
-        session_name = self.header['path_session'].split('sess-')[1]    
+        comp = os.path.normpath(self.header['path_session']).split(os.sep)
+        session_name = comp[-2]+'-'+comp[-3].split('exp-')[1]    
         blank_sign = self.time_course_blank
         cdi_select = np.where(mask==1)
         cdi_select = cdi_select[0].tolist()
