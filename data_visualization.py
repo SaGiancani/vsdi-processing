@@ -55,7 +55,7 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
     start_time = datetime.datetime.now().replace(microsecond=0)
     #session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
     comp = os.path.normpath(header['path_session']).split(os.sep)
-    session_name = comp[-2]+'-'+comp[-3].split('exp-')[1]    
+    session_name = comp[-2].split('sub-')[1]+'-'+comp[-3].split('exp-')[1] + '_' + comp[-1].split('-')[1]    
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
@@ -117,7 +117,7 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
     strategy = header['strategy']
     #session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
     comp = os.path.normpath(header['path_session']).split(os.sep)
-    session_name = comp[-2]+'-'+comp[-3].split('exp-')[1]    
+    session_name = comp[-2].split('sub-')[1]+'-'+comp[-3].split('exp-')[1] + '_' + comp[-1].split('-')[1] 
     colors_a = utils.COLORS
     xxx=np.linspace(0.001,np.max(list(zip(*coords))[1]),1000)
     #print(len(l))
