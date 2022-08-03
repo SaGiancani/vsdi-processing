@@ -33,7 +33,7 @@ class Condition:
             self.session_name = None
         else:
             comp = os.path.normpath(self.session_header['path_session']).split(os.sep)
-            session_name = comp[-2]+'-'+comp[-3].split('exp-')[1]    
+            self.session_name = comp[-2]+'-'+comp[-3].split('exp-')[1]    
         self.cond_name = condition_name
         self.cond_id = condition_numb
         self.binned_data = None 
