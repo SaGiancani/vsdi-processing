@@ -113,7 +113,7 @@ def add_blknames2basereport(BaseReport, all_blks):
                 print('More than one blk missing/in surplus')
         # Consider the BLK names, in case of FixCorrect preceding event IT
         BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', 'BLK Names'] = all_blks
-    print(f'Tris value: {tris}')
+    #print(f'Tris value: {tris}')
     return BaseReport, tris
 
 def discrepancy_blk_attribution(BaseReport):
