@@ -114,7 +114,8 @@ def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, t
 
 def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indeces_select, mask_array, path):
     strategy = header['strategy']
-    session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
+    #session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
+    session_name = header['path_session'].split('sess-')[1]    
     colors_a = utils.COLORS
     xxx=np.linspace(0.001,np.max(list(zip(*coords))[1]),1000)
     #print(len(l))
