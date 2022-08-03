@@ -85,7 +85,6 @@ class Session:
                  tolerance = 20,
                  mov_switch=False,
                  deblank_switch=False,
-                 raw_switch=False,
                  conditions_id =None,
                  chunks = 1,
                  strategy = 'mae',
@@ -121,7 +120,7 @@ class Session:
         else:
             self.log = logger              
         self.cond_names = None
-        self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch, logs_switch)
+        self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
@@ -311,8 +310,7 @@ class Session:
         if self.storage_switch:
             start_time = datetime.datetime.now().replace(microsecond=0)
             cond = Condition(self.cond_dict[condition], condition, self.header)
-            if self.header['raw_switch']:
-                cond.binned_data = raws
+            cond.binned_data = raws
             cond.df_fz = df_f0
             cond.time_course = sig
             cond.autoselection = mask
@@ -382,7 +380,7 @@ class Session:
                     contents = f.readlines()
                 return  {j+1:i.split('\n')[0] for j, i in enumerate(contents) if len(i.split('\n')[0])>0}
 
-    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, raw_switch, logs_switch):
+    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch):
         header = {}
         header['path_session'] = path_session
         header['spatial_bin'] = spatial_bin
@@ -394,7 +392,6 @@ class Session:
         header['conditions_id'] = conditions_id
         header['chunks'] = chunks
         header['strategy'] = strategy
-        header['raw_switch'] = raw_switch
         header['logs_switch'] = logs_switch
         return header
     
@@ -813,14 +810,6 @@ if __name__=="__main__":
                         action='store_false')
     parser.set_defaults(deblank_switch=False)
 
-    parser.add_argument('--raw', 
-                        dest='raw_switch',
-                        action='store_true')
-    parser.add_argument('--no-raw', 
-                        dest='raw_switch', 
-                        action='store_false')
-    parser.set_defaults(raw_switch=False)
-    
     parser.add_argument('--cid', 
                     action='append', 
                     dest='conditions_id',
