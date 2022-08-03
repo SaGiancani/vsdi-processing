@@ -33,7 +33,7 @@ class Condition:
             self.session_name = None
         else:
             #self.session_name =  self.session_header['path_session'].split('/')[-2]+'-'+self.session_header['path_session'].split('/')[-3].split('-')[1] 
-            self.session_name = self.header['path_session'].split('sess-')[1]    
+            self.session_name = self.session_header['path_session'].split('sess-')[1]    
         self.cond_name = condition_name
         self.cond_id = condition_numb
         self.binned_data = None 
