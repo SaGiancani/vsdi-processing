@@ -456,7 +456,8 @@ class Session:
         return tmp
 
     def roi_plots(self, cd_i, sig, mask, blks):
-        session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
+        #session_name = self.header['path_session'].split('/')[-2]+'-'+self.header['path_session'].split('/')[-3].split('-')[1]
+        session_name = self.header['path_session'].split('sess-')[1]    
         blank_sign = self.time_course_blank
         cdi_select = np.where(mask==1)
         cdi_select = cdi_select[0].tolist()
