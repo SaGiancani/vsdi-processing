@@ -53,7 +53,8 @@ def latency_error_bars(a, title, name_anls, labels = None, store_path = STORAGE_
 
 def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, c_ax_= None, circular_mask = True, log_ = None, max_trials = 15):
     start_time = datetime.datetime.now().replace(microsecond=0)
-    session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
+    #session_name = header['path_session'].split('/')[-2]+'-'+header['path_session'].split('/')[-3].split('-')[1]
+    session_name = header['path_session'].split('sess-')[1]    
     # Array with indeces of considered frames: it starts from the last considerd zero_frames
     considered_frames = np.round(np.linspace(start_frame-1, end_frame-1, n_frames_showed))
     # Borders for caxis
