@@ -127,7 +127,8 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
     #plt.title(f'Condition {cond_num}')
     subfigs = fig.subfigures(nrows=2, ncols=1, height_ratios=[2,1.25])
     axs = subfigs[0].subplots(nrows=1, ncols=3)#, sharey=True)
-
+    # Instance variables
+    tmp_u = None
     for i,j in enumerate(l):
         axs[2].plot(xxx, process.log_norm(xxx, j[1], j[2]), color = colors_a[i], alpha = 0.5)
         axs[2].plot(list(zip(*coords))[1], list(zip(*coords))[0], "k", marker=".", markeredgecolor="red", ls = "")
@@ -180,7 +181,8 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
             axs[0].plot(i, color = col, linewidth = 0.5, alpha = alp)
     #axs[0].plot(np.arange(60),tmp_s, color = 'grey', label = 'Selected trials' )
     shapes = np.shape(tc)
-    axs[0].plot(np.arange(shapes[1]), tmp_u, color = 'crimson', linewidth = 0.5, label = 'Unselected trials')
+    if tmp_u is not None:
+        axs[0].plot(np.arange(shapes[1]), tmp_u, color = 'crimson', linewidth = 0.5, label = 'Unselected trials')
     axs[0].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
     axs[0].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
     axs[0].legend(loc = 'upper left')

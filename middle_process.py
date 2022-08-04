@@ -752,7 +752,7 @@ def get_all_blks(path_session, sort = True):
     The list can be sorted by datetime or not, with the boolean variable sort.
     Sorted by time by default.
     '''
-    tmp = [f.name for f in os.scandir(os.path.join(path_session,'rawdata/')) if (f.is_file()) and (f.name.endswith(".BLK"))]
+    tmp = [f.name for f in os.scandir(os.path.join(path_session,'rawdata')) if (f.is_file()) and (f.name.endswith(".BLK"))]
     if sort:
         return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     else:
