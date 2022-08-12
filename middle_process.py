@@ -324,6 +324,7 @@ class Session:
             t = self.set_md_folder()
             if not os.path.exists(os.path.join(t,'md_data')):
                 os.makedirs(os.path.join(t,'md_data'))
+            print(cond.trials.keys())
             cond.store_cond(t)
             del cond
             self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))                
@@ -655,6 +656,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             else:
                 zero = header['zero_frames']
         sig, delta_f, conditions, raws = None, None, None, None
+    print(trials_dict.keys())
     return sig, delta_f, conditions, raws, trials_dict
     
 def roi_strategy(matrix, tolerance, zero_frames):
