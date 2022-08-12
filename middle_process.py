@@ -611,6 +611,26 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
             sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
 
+            # Trial storing
+            start_time = datetime.datetime.now().replace(microsecond=0)
+            if base_report is not None:
+                trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
+                # If the trial is empty, likely for absence of BLK name correspondance in BaseReport, it pops out the blkname from the list
+                if trial is None:
+                    print('Empty Trial')
+                    blks.remove(blk_name)
+                    if log is None:
+                        print(f'{blk_name} was popped off')
+                    else:
+                        log.info(f'{blk_name} was popped off')
+                # Otherwise store it
+                else:
+                    trials_dict[blk_name] = trial   
+                    zero = trial.zero_frames
+            else:
+                trials_dict[blk_name] = None                
+                zero = header['zero_frames']
+
             if log is None:
                 print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
             else:
