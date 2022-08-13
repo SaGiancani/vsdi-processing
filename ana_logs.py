@@ -36,16 +36,18 @@ class Trial:
         self.heart_signal = heart
         self.piezo_signal = piezo
     
-def get_trial(base_report, blk_name, heart, piezo, grey_end, grey_start, blank_id):
+def get_trial(base_report, blk_name, time, heart, piezo, grey_end, grey_start, blank_id):
     try:
         # To investigate the reason of the try/except construct
         trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
         trial_series = trial_df.iloc[0]
         trial = trial_series.to_dict()
+        trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
         if (heart is not None) and (piezo is not None):
-            trial = Trial(trial, heart[trial_df.index[0]], piezo[trial_df.index[0]], blank_id, grey_end, grey_start)
-        else:
-            trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
+            cut_heartbeat = signal_cutter(time[trial.id_trial], heart[trial.id_trial], trial.start_stim, trial.end_trial)
+            cut_piezo = signal_cutter(time[trial.id_trial], piezo[trial.id_trial], trial.start_stim, trial.end_trial)
+            trial.heart_signal = cut_heartbeat
+            trial.piezo_signal = cut_piezo
         return trial
     except:
         if len(trial_df) == 0:
@@ -214,15 +216,17 @@ def get_analog_signal(session_path, BaseReport, name_report = 'SignalData.csv'):
     t = BaseReport[['Onset Time_ Pre Trial', 'Onset Time_ End Trial']]#.applymap(separator_converter)
     onset_pre = t['Onset Time_ Pre Trial'].tolist()
     onset_end = t['Onset Time_ End Trial'].tolist()
-    tracks_6, tracks_5 = [], []
+    tracks_6, tracks_5, time = [], [], []
     
     for pre, end in zip(onset_pre, onset_end):
         # Piezo
         tracks_6.append(signal_cutter(analog_timestamp_array, analog_ai6_array, pre, end))
         # HeartBeat
         tracks_5.append(signal_cutter(analog_timestamp_array, analog_ai5_array, pre, end))
+        # TimeStamp
+        time.append(signal_cutter(analog_timestamp_array, analog_timestamp_array, pre, end))
   
-    return tracks_6, tracks_5
+    return time, tracks_6, tracks_5
 
 
 def get_grey_frames(png_files_path, cond_id):

@@ -191,20 +191,20 @@ class Session:
                 self.log.info('BaseReport properly loaded!')
                 self.log.info('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
                 start_time = datetime.datetime.now().replace(microsecond=0)
-                self.piezo, self.heart_beat = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
+                self.time_stamp, self.piezo, self.heart_beat = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
                 self.log.info('Piezo and Heart Beat signals properly loaded!')
                 self.log.info('Analogic signals loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
                 self.base_report = self.base_report.loc[(self.base_report['Preceding Event IT'] == 'FixCorrect')] 
             except:
                 self.log.info('Something went wrong loading the BaseReport or SignalData')
-                self.base_report, self.piezo, self.heart_beat  = None, None, None
+                self.base_report, self.time_stamp, self.piezo, self.heart_beat  = None, None, None, None
 
             #try:
             #    path_trackreport = utils.find_thing('TrackerLog.csv', self.header['path_session'])
             #except:
             #    self.log('Something went wrong loading the TrackerLog')
         else:
-            self.base_report, self.piezo, self.heart_beat  = None, None, None
+            self.base_report, self.time_stamp, self.piezo, self.heart_beat  = None, None, None, None
 
         if self.header['deblank_switch']:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
@@ -244,7 +244,7 @@ class Session:
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.piezo, self.heart_beat)
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat)
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
@@ -277,7 +277,7 @@ class Session:
             self.log.info('Blank signal computed')
                         
         else:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.piezo, self.heart_beat)
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat)
             mask = self.get_selection_trials(condition, sig)
             self.conditions = self.conditions + conditions
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
@@ -548,7 +548,7 @@ class Session:
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
 
-def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, piezo, heart, log = None, blks_load = True):
+def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True):
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
@@ -571,7 +571,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
         for i, blk_name in enumerate(blks):
             start_time = datetime.datetime.now().replace(microsecond=0)
             if base_report is not None:
-                trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
+                trial = al.get_trial(base_report, blk_name, time, heart, piezo, greys[1], greys[0], blank_id)
                 trials_dict[blk_name] = trial   
                 zero = trial.zero_frames
             else:
@@ -615,23 +615,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
 
             # Trial storing
             start_time = datetime.datetime.now().replace(microsecond=0)
-            if base_report is not None:
-                trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
-                # If the trial is empty, likely for absence of BLK name correspondance in BaseReport, it pops out the blkname from the list
-                if trial is None:
-                    print('Empty Trial')
-                    blks.remove(blk_name)
-                    if log is None:
-                        print(f'{blk_name} was popped off')
-                    else:
-                        log.info(f'{blk_name} was popped off')
-                # Otherwise store it
-                else:
-                    trials_dict[blk_name] = trial   
-                    zero = trial.zero_frames
-            else:
-                trials_dict[blk_name] = None                
-                zero = header['zero_frames']
 
             if log is None:
                 print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
@@ -641,7 +624,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
         for i, blk_name in enumerate(blks):
             start_time = datetime.datetime.now().replace(microsecond=0)
             if base_report is not None:
-                trial = al.get_trial(base_report, blk_name, heart, piezo, greys[1], greys[0], blank_id)
+                trial = al.get_trial(base_report, blk_name, time, heart, piezo, greys[1], greys[0], blank_id)
                 # If the trial is empty, likely for absence of BLK name correspondance in BaseReport, it pops out the blkname from the list
                 if trial is None:
                     print('Empty Trial')
