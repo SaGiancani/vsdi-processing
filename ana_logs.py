@@ -45,8 +45,8 @@ def get_trial(base_report, blk_name, time, heart, piezo, grey_end, grey_start, b
     trial = trial_series.to_dict()
     trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
     if (heart is not None) and (piezo is not None):
-        cut_heartbeat = signal_cutter(time[trial.id_trial], heart[trial.id_trial], trial.start_stim, trial.end_trial)
-        cut_piezo = signal_cutter(time[trial.id_trial], piezo[trial.id_trial], trial.start_stim, trial.end_trial)
+        cut_heartbeat = signal_cutter(time[trial.id_trial-1], heart[trial.id_trial-1], trial.start_stim, trial.end_trial)
+        cut_piezo = signal_cutter(time[trial.id_trial-1], piezo[trial.id_trial-1], trial.start_stim, trial.end_trial)
         trial.heart_signal = cut_heartbeat
         trial.piezo_signal = cut_piezo
     return trial
