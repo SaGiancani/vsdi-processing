@@ -37,22 +37,22 @@ class Trial:
         self.piezo_signal = piezo
     
 def get_trial(base_report, blk_name, time, heart, piezo, grey_end, grey_start, blank_id):
-    try:
-        # To investigate the reason of the try/except construct
-        trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
-        trial_series = trial_df.iloc[0]
-        trial = trial_series.to_dict()
-        trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
-        if (heart is not None) and (piezo is not None):
-            cut_heartbeat = signal_cutter(time[trial.id_trial], heart[trial.id_trial], trial.start_stim, trial.end_trial)
-            cut_piezo = signal_cutter(time[trial.id_trial], piezo[trial.id_trial], trial.start_stim, trial.end_trial)
-            trial.heart_signal = cut_heartbeat
-            trial.piezo_signal = cut_piezo
-        return trial
-    except:
-        if len(trial_df) == 0:
-            print(f'{blk_name} has not correspondance in BaseReport')
-        return None
+#    try:
+    # To investigate the reason of the try/except construct
+    trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
+    trial_series = trial_df.iloc[0]
+    trial = trial_series.to_dict()
+    trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
+    if (heart is not None) and (piezo is not None):
+        cut_heartbeat = signal_cutter(time[trial.id_trial], heart[trial.id_trial], trial.start_stim, trial.end_trial)
+        cut_piezo = signal_cutter(time[trial.id_trial], piezo[trial.id_trial], trial.start_stim, trial.end_trial)
+        trial.heart_signal = cut_heartbeat
+        trial.piezo_signal = cut_piezo
+    return trial
+ #   except:
+ #       if len(trial_df) == 0:
+ #           print(f'{blk_name} has not correspondance in BaseReport')
+ #       return None
 
     # trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
     # trial_series = trial_df.iloc[0]
