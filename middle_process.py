@@ -881,6 +881,14 @@ if __name__=="__main__":
                         type=int,
                         default = 19,
                         required=False)  
+
+    parser.add_argument('--vis', 
+                        dest='data_vis_switch', 
+                        action='store_true')
+    parser.add_argument('--no-vis', 
+                        dest='data_vis_switch', 
+                        action='store_false')
+    parser.set_defaults(data_vis_switch=False)  
     
 
     logger = utils.setup_custom_logger('myapp')
