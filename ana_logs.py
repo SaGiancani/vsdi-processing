@@ -34,6 +34,7 @@ class Trial:
             self.FOI = 35
         self.start_stim = float(separator_converter(report_series_trial['Onset Time_ Pre Stim']))
         self.end_trial = float(separator_converter(report_series_trial['Onset Time_ End Stim']))
+        print(self.end_trial - self.start_stim)
         self.heart_signal = heart
         self.piezo_signal = piezo
     
