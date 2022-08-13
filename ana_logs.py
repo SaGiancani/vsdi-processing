@@ -46,10 +46,10 @@ def get_trial(base_report, blk_name, time, heart, piezo, grey_end, grey_start, b
         trial = trial_series.to_dict()
         trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
         if (heart is not None) and (piezo is not None):
-            cut_heartbeat = signal_cutter(time[trial.id_trial-1], heart[trial.id_trial-1], trial.start_stim, trial.end_trial)
-            cut_piezo = signal_cutter(time[trial.id_trial-1], piezo[trial.id_trial-1], trial.start_stim, trial.end_trial)
-            trial.heart_signal = cut_heartbeat
-            trial.piezo_signal = cut_piezo
+            #cut_heartbeat = signal_cutter(time[trial.id_trial-1], heart[trial.id_trial-1], trial.start_stim, trial.end_trial)
+            #cut_piezo = signal_cutter(time[trial.id_trial-1], piezo[trial.id_trial-1], trial.start_stim, trial.end_trial)
+            trial.heart_signal = heart
+            trial.piezo_signal = piezo
         return trial
     except:
         if len(trial_df) == 0:
@@ -215,9 +215,10 @@ def get_analog_signal(session_path, BaseReport, name_report = 'SignalData.csv'):
     # Piezo
     analog_ai6_array = np.array(temp['Dev1/ai6'])
     # Three csvs are synchronized
-    t = BaseReport[['Onset Time_ Pre Trial', 'Onset Time_ End Trial']]#.applymap(separator_converter)
-    onset_pre = t['Onset Time_ Pre Trial'].tolist()
-    onset_end = t['Onset Time_ End Trial'].tolist()
+    #t = BaseReport[['Onset Time_ Pre Trial', 'Onset Time_ End Trial']]#.applymap(separator_converter)
+    t = BaseReport[['Onset Time_ Pre Stim',  'Onset Time_ End Stim']]#.applymap(separator_converter)
+    onset_pre = t['Onset Time_ Pre Stim'].tolist()
+    onset_end = t['Onset Time_ End Stim'].tolist()
     tracks_6, tracks_5, time = [], [], []
     
     for pre, end in zip(onset_pre, onset_end):
