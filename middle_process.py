@@ -572,8 +572,18 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             start_time = datetime.datetime.now().replace(microsecond=0)
             if base_report is not None:
                 trial = al.get_trial(base_report, blk_name, time, heart, piezo, greys[1], greys[0], blank_id)
-                trials_dict[blk_name] = trial   
-                zero = trial.zero_frames
+                # If the trial is empty, likely for absence of BLK name correspondance in BaseReport, it pops out the blkname from the list
+                if trial is None:
+                    print('Empty Trial')
+                    blks.remove(blk_name)
+                    if log is None:
+                        print(f'{blk_name} was popped off')
+                    else:
+                        log.info(f'{blk_name} was popped off')
+                # Otherwise store it
+                elif trial is not None:
+                    trials_dict[blk_name] = trial   
+                    zero = trial.zero_frames
             else:
                 zero = header['zero_frames']
             print(f'Employeed zero for normalization is {zero}')
@@ -634,7 +644,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                     else:
                         log.info(f'{blk_name} was popped off')
                 # Otherwise store it
-                else:
+                elif trial is not None:
                     trials_dict[blk_name] = trial   
                     zero = trial.zero_frames
             else:
