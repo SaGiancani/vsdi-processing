@@ -33,27 +33,27 @@ class Trial:
             self.zero_frames = 20
             self.FOI = 35
         self.start_stim = float(separator_converter(report_series_trial['Onset Time_ Pre Stim']))
-        self.end_trial = float(separator_converter(report_series_trial['Time Go Input']))
+        self.end_trial = float(separator_converter(report_series_trial['Onset Time_ End Stim']))
         self.heart_signal = heart
         self.piezo_signal = piezo
     
 def get_trial(base_report, blk_name, time, heart, piezo, grey_end, grey_start, blank_id):
-#    try:
+    try:
     # To investigate the reason of the try/except construct
-    trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
-    trial_series = trial_df.iloc[0]
-    trial = trial_series.to_dict()
-    trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
-    if (heart is not None) and (piezo is not None):
-        cut_heartbeat = signal_cutter(time[trial.id_trial-1], heart[trial.id_trial-1], trial.start_stim, trial.end_trial)
-        cut_piezo = signal_cutter(time[trial.id_trial-1], piezo[trial.id_trial-1], trial.start_stim, trial.end_trial)
-        trial.heart_signal = cut_heartbeat
-        trial.piezo_signal = cut_piezo
-    return trial
- #   except:
- #       if len(trial_df) == 0:
- #           print(f'{blk_name} has not correspondance in BaseReport')
- #       return None
+        trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
+        trial_series = trial_df.iloc[0]
+        trial = trial_series.to_dict()
+        trial = Trial(trial, None, None, blank_id, grey_end, grey_start)
+        if (heart is not None) and (piezo is not None):
+            cut_heartbeat = signal_cutter(time[trial.id_trial-1], heart[trial.id_trial-1], trial.start_stim, trial.end_trial)
+            cut_piezo = signal_cutter(time[trial.id_trial-1], piezo[trial.id_trial-1], trial.start_stim, trial.end_trial)
+            trial.heart_signal = cut_heartbeat
+            trial.piezo_signal = cut_piezo
+        return trial
+    except:
+        if len(trial_df) == 0:
+            print(f'{blk_name} has not correspondance in BaseReport')
+        return None
 
     # trial_df = base_report.loc[base_report['BLK Names'] == blk_name]
     # trial_series = trial_df.iloc[0]

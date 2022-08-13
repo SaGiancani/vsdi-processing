@@ -572,7 +572,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             start_time = datetime.datetime.now().replace(microsecond=0)
             if base_report is not None:
                 trial = al.get_trial(base_report, blk_name, time, heart, piezo, greys[1], greys[0], blank_id)
-                print(trial)
                 trials_dict[blk_name] = trial   
                 zero = trial.zero_frames
             else:
