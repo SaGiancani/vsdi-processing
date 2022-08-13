@@ -47,7 +47,7 @@ class Condition:
         self.z_score = None
     
     def store_cond(self, t):
-        tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names, self.trials]
+        tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names, self.trials, self.z_score]
         utils.inputs_save(tp, os.path.join(t,'md_data','md_data_'+self.cond_name))
         return
     
@@ -64,6 +64,8 @@ class Condition:
         self.averaged_timecourse = tp[8]
         self.autoselection = tp[9]
         self.blk_names = tp[10]
+        self.trials = tp[11]
+        self.z_score = tp[12]
         return
     
     def get_behav_latency(self, blank_id):
