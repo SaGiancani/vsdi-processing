@@ -48,8 +48,10 @@ def get_trial(base_report, blk_name, time, heart, piezo, grey_end, grey_start, b
         if (heart is not None) and (piezo is not None):
             #cut_heartbeat = signal_cutter(time[trial.id_trial-1], heart[trial.id_trial-1], trial.start_stim, trial.end_trial)
             #cut_piezo = signal_cutter(time[trial.id_trial-1], piezo[trial.id_trial-1], trial.start_stim, trial.end_trial)
-            trial.heart_signal = heart
-            trial.piezo_signal = piezo
+            trial.heart_signal = heart[trial.id_trial-1]
+            trial.piezo_signal = piezo[trial.id_trial-1]
+            print(len(trial.piezo_signal))
+            print(len(trial.heart_signal))
         return trial
     except:
         if len(trial_df) == 0:
@@ -281,7 +283,7 @@ def signal_cutter(analog_timestamp_array, signal_array, pre, end):
     end is the Time Go Input -end of the recording-
     '''
     start_trial = np.argmin(np.abs(analog_timestamp_array - pre))
-    end_trial = np.argmin(np.abs(analog_timestamp_array - (end + 1000)))#   +1sec for safety
+    end_trial = np.argmin(np.abs(analog_timestamp_array - (end + 100)))#   +1sec for safety -in trial timing-, 0.1 sec for safety in stimulus timing
     cut_signal = signal_array[start_trial:end_trial]
     return cut_signal
 
