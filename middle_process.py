@@ -69,7 +69,7 @@ class Condition:
         return
     
     def get_behav_latency(self, blank_id):
-        tmp = [trial.behav_latency for trial in self.trials.values() if (trial.correct_behav and trial.fix_correct and self.cond_id != blank_id)]
+        tmp = [trial.behav_latency for trial in self.trials.values() if (trial.fix_correct and self.cond_id != blank_id)]
         return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
 
     def get_success_rate(self):

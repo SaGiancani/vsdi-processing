@@ -13,7 +13,7 @@ class Trial:
         if self.fix_correct and self.correct_behav and self.condition != blank_cond:
             self.behav_latency = int(report_series_trial['Onset Time_ Behav Correct']) -  int(report_series_trial['Onset Time_ Behav Stim']) - 500
         else:
-            self.behav_latency = None
+            self.behav_latency = 0
         self.id_trial = int(report_series_trial['Total Trial Number']) - 1
 
         if self.condition != blank_cond:
