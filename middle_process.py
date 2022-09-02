@@ -814,13 +814,6 @@ if __name__=="__main__":
                         type=int,
                         required=False,
                         help='The time bin value')
-    
-    parser.add_argument('--zero',
-                        dest='zero_frames',
-                        type=int,
-                        default = 20,
-                        required=False,
-                        help='The first frames considered zero')    
 
     parser.add_argument('--tol', 
                         dest='tolerance',
