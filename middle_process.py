@@ -133,8 +133,7 @@ class Session:
         # A blk loaded for useful hyperparameters
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
                             self.header['spatial_bin'], 
-                            self.header['temporal_bin'],
-                            self.header['zero_frames'])
+                            self.header['temporal_bin'])
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
@@ -144,7 +143,7 @@ class Session:
             self.header['ending_frame'] = int(round(self.header['n_frames']*0.9))
         else:
             self.header['ending_frame'] = end_frame
-            
+
         if zero_frames is None:
             self.header['zero_frames'] = int(round(self.header['n_frames']*0.1))
         else:
@@ -611,7 +610,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                     os.path.join(path_rawdata, blk_name),
                     header['spatial_bin'],
                     header['temporal_bin'],
-                    zero,
                     header = None)
 
                 header_blk = BLK.header
@@ -624,7 +622,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                     os.path.join(path_rawdata, blk_name), 
                     header['spatial_bin'], 
                     header['temporal_bin'], 
-                    zero,
                     header = header_blk)
             
             # Log prints
