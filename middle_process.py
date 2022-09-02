@@ -83,7 +83,7 @@ class Session:
                  path_session, 
                  spatial_bin = 3,
                  temporal_bin = 1,
-                 zero_frames = 20,
+                 zero_frames = None,
                  tolerance = 20,
                  mov_switch=False,
                  deblank_switch=False,
@@ -97,7 +97,7 @@ class Session:
                  condid = None, 
                  store_switch = False, 
                  data_vis_switch = True, 
-                 end_frame = 60, 
+                 end_frame = None, 
                  **kwargs):
         """
         Initializes attributes
@@ -122,7 +122,7 @@ class Session:
         else:
             self.log = logger              
         self.cond_names = None
-        self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
+        self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
@@ -138,7 +138,18 @@ class Session:
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
-        self.header['ending_frame'] = end_frame
+        
+        # Setting key frames
+        if end_frame is None:
+            self.header['ending_frame'] = int(round(self.header['n_frames']*0.9))
+        else:
+            self.header['ending_frame'] = end_frame
+            
+        if zero_frames is None:
+            self.header['zero_frames'] = int(round(self.header['n_frames']*0.1))
+        else:
+            self.header['zero_frames'] = zero_frames
+
         # If considered conditions are not explicitly indicated, then all the conditions are considered
         # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
         if self.header['conditions_id'] is None:
@@ -387,12 +398,11 @@ class Session:
                     contents = f.readlines()
                 return  {j+1:i.split('\n')[0] for j, i in enumerate(contents) if len(i.split('\n')[0])>0}
 
-    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch):
+    def get_session_header(self, path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch):
         header = {}
         header['path_session'] = path_session
         header['spatial_bin'] = spatial_bin
         header['temporal_bin'] = temporal_bin
-        header['zero_frames'] = zero_frames
         header['tolerance'] = tolerance
         header['mov_switch'] = mov_switch
         header['deblank_switch'] = deblank_switch
