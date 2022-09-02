@@ -347,7 +347,12 @@ class Session:
         else:
             self.log.info('BLKs for conditions ' + str(self.header['conditions_id']) + 'sorted by time creation')
             tmp = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
-            return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+            try:
+                a = sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+            except:
+                self.log.info('Warning: sorting BLK filenames was not performed')
+                a = tmp
+            return a 
 
     def get_condition_ids(self):
         '''
@@ -421,7 +426,7 @@ class Session:
             dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.percentile(self.z_score, 15), np.percentile(self.z_score, 90)), log_ = self.log)
 
         else:
-            self.log.info('Warning: Something weird in get_session')
+            self.log.info('No visualization charts.')
         return
 
     def get_selection_trials(self, condition, time_course):
@@ -547,6 +552,7 @@ class Session:
             os.makedirs(folder_path)
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
+#                    _, _, _, _, trials = md.signal_extraction(session.header, blks, None, None, session.base_report, blank_id, session.piezo, session.heart_beat, log = session.log, blks_load = False)
 
 def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True):
     #motion_indeces, conditions = [], []
@@ -768,6 +774,12 @@ def get_all_blks(path_session, sort = True):
     Sorted by time by default.
     '''
     tmp = [f.name for f in os.scandir(os.path.join(path_session,'rawdata')) if (f.is_file()) and (f.name.endswith(".BLK"))]
+    try: 
+        _ = datetime.datetime.strptime(tmp[0].split('_')[2] + tmp[0].split('_')[3], '%d%m%y%H%M%S')
+        if sort:
+            sort = True
+    except:
+        sort = False
     if sort:
         return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     else:
