@@ -225,7 +225,7 @@ class Session:
         '''
         if cond_id is None:
             try:
-                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][0]+1
+                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][-1]+1
                 self.log.info('Blank id: ' + str(tmp))
                 return tmp
             except IndexError:
