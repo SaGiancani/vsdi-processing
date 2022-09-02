@@ -903,7 +903,6 @@ if __name__=="__main__":
     # Check on quality of inserted data
     assert args.spatial_bin > 0, "Insert a value greater than 0"    
     assert args.temporal_bin > 0, "Insert a value greater than 0"    
-    assert args.zero_frames > 0, "Insert a value greater than 0"    
     assert args.strategy in ['mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'], "Insert a valid name strategy: 'mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'"    
     start_time = datetime.datetime.now().replace(microsecond=0)
     session = Session(logger = logger, **vars(args))
