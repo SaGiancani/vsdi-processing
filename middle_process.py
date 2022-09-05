@@ -634,7 +634,6 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             conditions.append(BLK.condition)
             raws[i, :, :, :] =  BLK.binned_signal 
             delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
-            print(delta_f[i, :, :, :]) #to delete after debugging
             sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
 
             # Trial storing
