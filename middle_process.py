@@ -689,6 +689,8 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
     if separators is None:
         if  matrix.shape[1] % n_chunks == 0:
             matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
+            print('I am here')
+            print(matrix_) #print to delete after debugging
             tmp_m_ = np.zeros((n_chunks, matrix.shape[0], matrix.shape[0]))
             
             for m in range(n_chunks):
