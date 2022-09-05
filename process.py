@@ -28,6 +28,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
     #df_fz = df_fz - df_fz[0, :, :] 
     print(np.nanmean(df_fz))
+    print(np.nanmean(df_fz).dtype)
     df_fz = np.nan_to_num(df_fz,nan= np.nanmean(df_fz), posinf = np.nanmean(df_fz), neginf=np.nanmean(df_fz))
     #df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
     return df_fz
