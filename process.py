@@ -92,7 +92,6 @@ def lognorm_fitting(array_to_fit, b= 50):
     # Normalization
     tmp = array_to_fit
     # Histogram computation
-    print(tmp)#to delete after debugging
     h = np.histogram(tmp, bins=b)
     n = h[1]
     step = (n[1]-n[0])
