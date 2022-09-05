@@ -748,6 +748,7 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
     ms_norm = list()
 
     for i in range(n_chunks):
+        print(m[i, :]) #print to delete after debugging
         t, l, m_norm = process.lognorm_thresholding(m[i, :], switch = threshold)
         coords.append((l[0], l[3]))
         t_whol.append(t)
