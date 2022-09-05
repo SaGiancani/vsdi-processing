@@ -634,6 +634,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             conditions.append(BLK.condition)
             raws[i, :, :, :] =  BLK.binned_signal 
             delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
+            print(delta_f[i, :, :, :]) #to delete after debugging
             sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
 
             # Trial storing
@@ -689,8 +690,6 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
     if separators is None:
         if  matrix.shape[1] % n_chunks == 0:
             matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
-            print('I am here')
-            print(matrix_) #print to delete after debugging
             tmp_m_ = np.zeros((n_chunks, matrix.shape[0], matrix.shape[0]))
             
             for m in range(n_chunks):
@@ -707,8 +706,6 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
 
                     tmp_m[n, :] = np.asarray(tmp)    
                 tmp_m_[m, :, :] = tmp_m
-            print('I am here')
-            print(tmp_m_) #print to delete after debugging
             m = np.sum(tmp_m_, axis=1)
         else:
             # This check has to be done before running the script
