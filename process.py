@@ -1,4 +1,3 @@
-from cmath import nan
 import cv2 as cv
 import numpy as np
 from scipy.ndimage.filters import uniform_filter1d
@@ -28,7 +27,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
         df_fz = (vsdi_sign/mean_frames_zero) -1
     # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
     #df_fz = df_fz - df_fz[0, :, :] 
-    df_fz = np.nan_to_num(df_fz,nan= -0.00000001)
+    df_fz = np.nan_to_num(df_fz,nan= np.nanmean(df_fz), posinf = np.nanmean(df_fz), neginf=np.nanmean(df_fz))
     #df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
     return df_fz
 
@@ -91,6 +90,7 @@ def lognorm_fitting(array_to_fit, b= 50):
     # Normalization
     tmp = array_to_fit
     # Histogram computation
+    print(tmp)#to delete after debugging
     h = np.histogram(tmp, bins=b)
     n = h[1]
     step = (n[1]-n[0])
