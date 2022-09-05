@@ -255,8 +255,6 @@ class Session:
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
             sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat)
-            print(df_f0)
-            print(sig)
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
