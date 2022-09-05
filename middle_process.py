@@ -686,6 +686,7 @@ def roi_strategy(matrix, tolerance, zero_frames):
     return mask_array
 
 def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators = None, n_chunks = 1, loss = 'mae', threshold = 'median'):
+    print(matrix)
     if separators is None:
         if  matrix.shape[1] % n_chunks == 0:
             matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
