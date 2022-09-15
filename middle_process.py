@@ -1,4 +1,5 @@
-import argparse, blk_file, datetime, process, utils
+import argparse, blk_file, datetime, utils
+import process_vsdi as process
 import data_visualization as dv
 import ana_logs as al
 import matplotlib.pyplot as plt
