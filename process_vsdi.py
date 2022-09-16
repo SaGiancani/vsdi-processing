@@ -157,7 +157,7 @@ def detection_blob(averaged_zscore):
     # Gaussian filter for blob individuation
     blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=15)
     # Blob detection
-    _, blobs = cv.threshold(blurred, np.percentile(blurred, 95), np.percentile(blurred, 100), cv.THRESH_BINARY)
+    _, blobs = cv.threshold(blurred, np.percentile(blurred, 90), np.percentile(blurred, 100), cv.THRESH_BINARY)
     # Normalization and binarization
     blobs = blobs/np.max(blobs)
     blobs = blobs.astype(np.uint8)
