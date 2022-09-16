@@ -151,13 +151,13 @@ def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
 def detection_blob(averaged_zscore):
     # Thresholding of z_score
     averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)
-    _, threshed = cv.threshold(averaged_zscore, np.percentile(averaged_zscore, 90), np.percentile(averaged_zscore, 100), cv.THRESH_BINARY)
+    _, threshed = cv.threshold(averaged_zscore, np.percentile(averaged_zscore, 80), np.percentile(averaged_zscore, 100), cv.THRESH_BINARY)
     # Median filter against salt&pepper noise
     blurred_median = median_filter(threshed, size=(3,3))
     # Gaussian filter for blob individuation
     blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=15)
     # Blob detection
-    _, blobs = cv.threshold(blurred, np.percentile(blurred, 90), np.percentile(blurred, 100), cv.THRESH_BINARY)
+    _, blobs = cv.threshold(blurred, np.percentile(blurred, 95), np.percentile(blurred, 100), cv.THRESH_BINARY)
     # Normalization and binarization
     blobs = blobs/np.max(blobs)
     blobs = blobs.astype(np.uint8)
