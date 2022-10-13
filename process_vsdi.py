@@ -148,10 +148,10 @@ def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
     zscore = (mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2))
     return zscore
 
-def detection_blob(averaged_zscore):
+def detection_blob(averaged_zscore, min_lim=80, max_lim = 100):
     # Thresholding of z_score
     averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)
-    _, threshed = cv.threshold(averaged_zscore, np.percentile(averaged_zscore, 80), np.percentile(averaged_zscore, 100), cv.THRESH_BINARY)
+    _, threshed = cv.threshold(averaged_zscore, np.percentile(averaged_zscore, min_lim), np.percentile(averaged_zscore, max_lim), cv.THRESH_BINARY)
     # Median filter against salt&pepper noise
     blurred_median = median_filter(threshed, size=(3,3))
     # Gaussian filter for blob individuation
@@ -173,5 +173,5 @@ def detection_blob(averaged_zscore):
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
             centroids.append((cx, cy))
-            print((cx, cy))    
+            #print((cx, cy))    
     return contours, centroids, blobs
