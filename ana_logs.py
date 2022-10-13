@@ -19,13 +19,13 @@ class Trial:
         if self.condition != blank_cond:
             if stimulus_fr is None:
                 # Total registration time (End registration (PNG flow + Post Stimulus time) - Start registration) - Starting Grey frames*temporal resolution - Ending Grey frames*temporal resolution + 25 ms latency 
-                stimulus_fr = round((report_series_trial['Onset Time_ End Stim'] - report_series_trial['Onset Time_ Stim'] - grey_end*time_res - grey_start*time_res + 25)/time_res)         
+                stimulus_fr = round((report_series_trial['Onset Time_ End Stim'] - report_series_trial['Onset Time_ Stim'] - (grey_end*time_res) - (grey_start*time_res) + 25)/time_res)         
             
             self.FOI = stimulus_fr
 
             if zero_fr is None:
                 #PreStimulus Time + nGreyFrames*10ms + 25ms Response Latency
-                zero_fr = round(((report_series_trial['Onset Time_ Stim'] - report_series_trial['Onset Time_ Pre Stim']) + 25 + grey_start*time_res)/time_res) 
+                zero_fr = round(((report_series_trial['Onset Time_ Stim'] - report_series_trial['Onset Time_ Pre Stim']) + 25 + (grey_start*time_res))/time_res) 
             
             self.zero_frames = zero_fr
 
@@ -33,8 +33,9 @@ class Trial:
             self.zero_frames = 20
             self.FOI = 35
         self.start_stim = float(separator_converter(report_series_trial['Onset Time_ Pre Stim']))
+        self.onset_stim = float(separator_converter(report_series_trial['Onset Time_ Stim']))
         self.end_trial = float(separator_converter(report_series_trial['Onset Time_ End Stim']))
-        print(self.end_trial - self.start_stim)
+        print(self.onset_stim - self.start_stim)
         self.heart_signal = heart
         self.piezo_signal = piezo
     

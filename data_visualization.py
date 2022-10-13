@@ -3,6 +3,8 @@ import numpy as np
 import os
 import datetime, utils
 import process_vsdi as process
+from scipy.ndimage.filters import gaussian_filter
+from mpl_toolkits.axes_grid1 import AxesGrid
 
 STORAGE_PATH = '/envau/work/neopto/USERS/GIANCANI/Analysis/'
 
@@ -202,4 +204,41 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
         os.makedirs(os.path.join(tmp,'chunks_analysis'))
     plt.savefig(os.path.join(tmp,'chunks_analysis', session_name+'_chunks_0'+str(cd_i)+'.png'))
     plt.close('all')
+    return
+
+def whole_time_sequence(data, max=80, min=10, mask = None, name = 'Prova', blur = True):
+    fig = plt.figure(figsize=(30,90))
+    fig.subplots_adjust(bottom=0.2)
+    #plt.viridis()
+    
+    grid = AxesGrid(fig, 111,
+                    nrows_ncols=(int(np.ceil(np.shape(data)[0]/10)), 10),
+                    axes_pad=0.3,
+                    share_all=True,
+                    label_mode="L",
+                    cbar_mode= None#'edge', 'each','single'
+                    )
+
+    max_bord = np.nanpercentile(data, max)
+    min_bord = np.nanpercentile(data, min)
+    #fig.suptitle(name, fontsize=16)
+    for ax, l in zip(grid, data):
+        if blur:
+            blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=1)
+        else:
+            blurred = l
+
+        if mask is not None:
+            blurred[~mask] = np.NAN
+        
+        p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=utils.PARULA_MAP)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        #ax.set_title('prova')
+        #ax.set_xlabel(key, size=28)
+        #ax.set_ylabel(key, size=28)
+        contours, centroids, blobs = process.detection_blob(blurred)
+        ax.contour(blobs, 4, colors='k', linestyles = 'dotted')
+        for j in centroids:
+            ax.scatter(j[0],j[1],color='r', marker = 'X')
     return
