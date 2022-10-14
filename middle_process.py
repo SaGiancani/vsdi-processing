@@ -305,6 +305,8 @@ class Session:
             if self.base_report is not None:
                 zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
                 foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
+                print('Average Prestimulus time: ') 
+                print(np.mean([v.start_stim - v.onset_stim for v in trials.values]))
                 end_of_cond = zero_of_cond + foi_of_cond
             temp_raw = raws[indeces_select, :, :, :]
             t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = True, blank_sign=None) for i in temp_raw])
