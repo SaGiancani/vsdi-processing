@@ -276,7 +276,7 @@ def delete_chars(s, to_substitute = '"', substitute = ''):
         tmp = s
     return tmp
 
-def signal_cutter(analog_timestamp_array, signal_array, pre, end):
+def signal_cutter(analog_timestamp_array, signal_array, pre, end, safe_value = 100):
     '''
     analog_timestamp_array is the time array for each trial
     signal_array could be piezo or heart
@@ -284,7 +284,7 @@ def signal_cutter(analog_timestamp_array, signal_array, pre, end):
     end is the Time Go Input -end of the recording-
     '''
     start_trial = np.argmin(np.abs(analog_timestamp_array - pre))
-    end_trial = np.argmin(np.abs(analog_timestamp_array - (end + 100)))#   +1sec for safety -in trial timing-, 0.1 sec for safety in stimulus timing
+    end_trial = np.argmin(np.abs(analog_timestamp_array - (end + safe_value)))#   +1sec for safety -in trial timing-, 0.1 sec for safety in stimulus timing
     cut_signal = signal_array[start_trial:end_trial]
     return cut_signal
 
