@@ -52,10 +52,6 @@ def time_course_signal(df_fz, roi_mask):#, hand_made=False):
         roi_sign.append(np.ma.masked_array(i, mask = roi_mask).mean())
     return np.array(roi_sign)
 
-
-def traject_designing():
-    return
-
 def gauss_1d(x, a, mean, stddev):
     return a*np.exp((-(x-mean)**2)/(2*stddev**2))
     #return a * np.exp(-((x - mean) / 4 / stddev)**2)
@@ -81,7 +77,7 @@ def gaussian_fitting(td_mat, ax_to_fit, perc_wind = 3):
     #print(np.min(proj))
     #proj = proj-proj[0]
     proj = proj-np.min(proj)
-    proj = uniform_filter1d(proj, size=(len(proj)//100)*perc_wind) # Moving Average Filter: check the result
+    proj = round(uniform_filter1d(proj, size=(len(proj)/100)*perc_wind)) # Moving Average Filter: check the result
     popt,pcov = optimize.curve_fit(gauss_1d, ax, proj)#, bounds=bounds) or ,maxfev = 5000)
     return ax, proj, popt, pcov 
 
@@ -119,6 +115,20 @@ def lognorm_thresholding(array_to_fit, switch = 'median'):
     thresh_std = (thresh + 2*np.sqrt((np.exp(sigma*sigma)-1)*np.exp(mu+mu+sigma*sigma)))
     select_trials_id = np.where(((array_to_fit)<(thresh_std)))[0].tolist()
     return select_trials_id, (tmp, mu, sigma, xx), array_to_fit.tolist()
+
+def rotate_distribution(xs, ys, theta = None):
+    if theta is None:
+        theta = -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
+    print(theta)
+    # subtracting mean from original coordinates and saving result to X_new and Y_new 
+    X_new = xs - np.mean(xs)
+    Y_new = ys - np.mean(ys)
+
+    X_apu = [np.cos(theta)*i-np.sin(theta)*j for i, j in zip(X_new, Y_new) ]
+    Y_apu = [np.sin(theta)*i+np.cos(theta)*j for i, j in zip(X_new, Y_new) ]
+
+    # adding mean back to rotated coordinates
+    return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
     
 def sobel_filter(im, k, N):
     (nrows, ncols) = im.shape
@@ -133,17 +143,44 @@ def sobel_filter(im, k, N):
     return sobel
 
 
-def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
-    # Blank mean and stder computation
-    if (sig_blank is None) or (std_blank is None):
-        mean_signblnk_overcond = np.mean(sig_cond[:, :zero_frames, :, :], axis = 0)
-        stder_signblnk_overcond = np.std(sig_cond[:, :zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
-    else:
-        mean_signblnk_overcond = sig_blank
-        stder_signblnk_overcond = std_blank#np.std(sig_blank[:, :, :], axis = 0)/np.sqrt(np.shape(sig_blank)[0])
-    # Condition mean and stder computation
-    mean_sign_overcond = np.mean(sig_cond[:, :, :, :], axis = 0)
-    stder_sign_overcond = np.std(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 20):
+    # Security check
+    if len(np.shape(sig_cond))<3 or len(np.shape(sig_cond))>4:
+        print('The signal has to be 3 or 4 dimensional')
+        return
+    # Case for average over trials for a condition
+    elif len(np.shape(sig_cond))==4:
+        # Blank mean and stder computation
+        if (sig_blank is None) or (std_blank is None):
+            mean_signblnk_overcond = np.mean(sig_cond[:, :zero_frames, :, :], axis = 0)
+            stder_signblnk_overcond = np.std(sig_cond[:, :zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
+        else:
+            mean_signblnk_overcond = sig_blank
+            stder_signblnk_overcond = std_blank#np.std(sig_blank[:, :, :], axis = 0)/np.sqrt(np.shape(sig_blank)[0])
+
+        # Condition mean and stder computation
+        mean_sign_overcond = np.mean(sig_cond[:, :, :, :], axis = 0)
+        stder_sign_overcond = np.std(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+
+    # Case for single trial analysis: full time sequence analysis    
+    elif len(np.shape(sig_cond))==3:
+        # Blank mean and stder computation
+        if (sig_blank is None) or (std_blank is None):
+            mean_signblnk_overcond = np.mean(sig_cond[:zero_frames, :, :], axis = 0)
+            stder_signblnk_overcond = np.std(sig_cond[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
+        else:
+            mean_signblnk_overcond = sig_blank
+            stder_signblnk_overcond = std_blank#np.std(sig_blank[:, :, :], axis = 0)/np.sqrt(np.shape(sig_blank)[0])
+        
+        if full_seq:
+            # Condition mean and stder computation
+            mean_sign_overcond = sig_cond
+            stder_sign_overcond = 0
+        else:        
+            # Condition mean and stder computation
+            mean_sign_overcond = np.mean(sig_cond[:, :, :, :], axis = 0)
+            stder_sign_overcond = np.std(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+    
     # Try to fix the zscore defected for Hip AM3Strokes second session.
     zscore = (mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2))
     return zscore
