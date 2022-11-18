@@ -1,10 +1,12 @@
+import datetime, utils
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import AxesGrid
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
-import datetime, utils
 import process_vsdi as process
 from scipy.ndimage.filters import gaussian_filter
-from mpl_toolkits.axes_grid1 import AxesGrid
+from scipy.stats import norm
 
 STORAGE_PATH = '/envau/work/neopto/USERS/GIANCANI/Analysis/'
 
@@ -206,23 +208,130 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
     plt.close('all')
     return
 
-def whole_time_sequence(data, max=80, min=10, mask = None, name = 'Prova', blur = True):
+def retino_pos_visualization(x, y, center, titles, green):
+    colors = ['royalblue', 'gold', 'crimson', 'lime', 'black', 'darkorchid']
+    fig, axScatter = plt.subplots(figsize=(10, 10))
+    pc = axScatter.pcolormesh(green, cmap= 'gray')
+    
+    for i, (x_, y_) in enumerate(zip(x,y)):
+        # the scatter plot:
+        axScatter.scatter(x_, y_, color = colors[i], label = titles[i], alpha=0.8)
+    
+    massx = np.max([j for i in x for j in i])
+    massy = np.max([j for i in y for j in i])
+    
+    axScatter.set_ylim(0, green.shape[0])
+    axScatter.set_xlim(0, green.shape[1])
+    axScatter.set_aspect(1.)
+
+    # create new axes on the right and on the top of the current axes
+    # The first argument of the new_vertical(new_horizontal) method is
+    # the height (width) of the axes to be created in inches.
+    divider = make_axes_locatable(axScatter)
+    axHistx = divider.append_axes("top", 1.5, pad=0.1, sharex=axScatter)
+    axHisty = divider.append_axes("right", 1.5, pad=0.1, sharey=axScatter)
+
+    # make some labels invisible
+    plt.setp(axHistx.get_xticklabels() + axHisty.get_yticklabels(),
+             visible=False)
+    
+    for i, (x_, y_) in enumerate(zip(x,y)):
+        # now determine nice limits by hand:
+        hist, bins, _ = axHistx.hist(x_, bins=40, color = colors[i], alpha=0.8)
+        # Plot the PDF.
+        #xmin, xmax = [0.5e-3, 1.5e-3] #plt.xlim()
+        mu_x = np.mean(x_)
+        std_x = np.std(x_)
+        # changes here
+        p = norm.pdf(bins, mu_x, std_x)           
+        axHistx.plot(bins, p/p.sum() * hist.sum(), color='k', alpha=1, lw=1)
+        f = p/p.sum() * hist.sum()
+        indx = np.argmin(abs(bins-mu_x))
+        axHistx.plot(mu_x, f[indx], 'red', marker = 'x')
+        axHistx.spines['top'].set_visible(False)
+        axHistx.spines['right'].set_visible(False)
+        # mu value on the upper histogram distribution
+        #axHistx.vlines(mu_x, 0, np.max(hist)+1, color = colors[i], ls = '--', lw=1.5, label = title_center)
+
+        #ax.spines['bottom'].set_visible(False)
+        #ax.spines['left'].set_visible(False)
+        # Plot the histogram.
+        hist, bins, _ = axHisty.hist(y_, bins=40, orientation='horizontal', color = colors[i], alpha=0.8)
+        # Plot the PDF.
+        #xmin, xmax = [0.5e-3, 1.5e-3] #plt.xlim()
+        mu_y = np.mean(y_)
+        std_y = np.std(y_)
+        # changes here
+        p = norm.pdf(bins, mu_y, std_y)           
+        #axHistx.vlines(center[0], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5, label = title_center)
+        # mu value on the right histogram distribution
+        #axHisty.hlines(mu_y, 0, np.max(hist)+1, color = colors[i], ls = '--', lw=1.5)
+        axHisty.plot(p/p.sum() * hist.sum(), bins , color='k', lw=1)
+        f = p/p.sum() * hist.sum()
+        indx = np.argmin(abs(f-mu_y))
+        axHisty.plot(f[indx], mu_y, 'red', marker = 'x')
+        #if i == len(x)-1:
+        #    axHistx.vlines(center[0], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5, label = title_center)
+        #    axHisty.hlines(center[1], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5, label = title_center)
+        #else:
+        #    axHistx.vlines(center[0], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5)
+        #    axHisty.hlines(center[1], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5)
+        axHisty.spines['top'].set_visible(False)
+        axHisty.spines['right'].set_visible(False)
+        # mu values for the distributions -on the green image-
+        axScatter.vlines(mu_x, mu_y, mu_y + massy, color = colors[i], ls = '--', lw=1.5, alpha = 1)
+        axScatter.hlines(mu_y, mu_x, mu_x + massx, color = colors[i], ls = '--', lw=1.5, alpha = 1 )#
+        if i == len(x)-1:
+            lab = r'$\mu$ of distributions'
+        else:
+            lab= ''
+        axScatter.scatter(mu_x, mu_y, marker = '+', color = 'red', s=150, label = lab)
+
+
+    # the xaxis of axHistx and yaxis of axHisty are shared with axScatter,
+    # thus there is no need to manually adjust the xlim and ylim of these
+    # axis.
+    axScatter.legend(loc='lower left')
+    
+    #axHistx.axis["bottom"].major_ticklabels.set_visible(False)
+    for tl in axHistx.get_xticklabels():
+        tl.set_visible(False)
+    #axHistx.set_yticks([0, 3, 6])## TO MODIFY
+
+    #axHisty.axis["left"].major_ticklabels.set_visible(False)
+    for tl in axHisty.get_yticklabels():
+        tl.set_visible(False)
+    #axHisty.set_xticks([])## TO MODIFY
+    plt.draw()
+    plt.show()
+    plt.close('all')
+    return
+
+def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask = None, name = None, blur = True, adaptive_vm = False, n_columns = 10, store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions'):
     fig = plt.figure(figsize=(30,90))
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
     
     grid = AxesGrid(fig, 111,
-                    nrows_ncols=(int(np.ceil(np.shape(data)[0]/10)), 10),
+                    nrows_ncols=(int(np.ceil(np.shape(data)[0]/n_columns)), n_columns),
                     axes_pad=0.3,
                     share_all=True,
                     label_mode="L",
                     cbar_mode= None#'edge', 'each','single'
                     )
+    
+    # One max-min value for all the colormap. If True, each colormap the values are recomputed
+    if not adaptive_vm:
+        max_bord = np.nanpercentile(data, max)
+        min_bord = np.nanpercentile(data, min)
 
-    max_bord = np.nanpercentile(data, max)
-    min_bord = np.nanpercentile(data, min)
     #fig.suptitle(name, fontsize=16)
-    for ax, l in zip(grid, data):
+    for i, (ax, l) in enumerate(zip(grid, data)):
+        
+        if adaptive_vm:
+            max_bord = np.nanpercentile(l, max)
+            min_bord = np.nanpercentile(l, min)
+
         if blur:
             blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=1)
         else:
@@ -234,11 +343,24 @@ def whole_time_sequence(data, max=80, min=10, mask = None, name = 'Prova', blur 
         p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=utils.PARULA_MAP)
         ax.set_xticks([])
         ax.set_yticks([])
-        #ax.set_title('prova')
+        #ax.set_title(name)
         #ax.set_xlabel(key, size=28)
         #ax.set_ylabel(key, size=28)
-        contours, centroids, blobs = process.detection_blob(blurred)
+
+        # If centroids and blobs are provided, it avoids this computation
+        if (cntrds is None) and (blbs is None):
+            _, centroids, blobs = process.detection_blob(blurred)
+        else:
+            centroids = [cntrds[i]]
+            blobs = blbs[i]
+
         ax.contour(blobs, 4, colors='k', linestyles = 'dotted')
         for j in centroids:
             ax.scatter(j[0],j[1],color='r', marker = 'X')
+            
+    if name is not None:
+        tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
+        plt.savefig(os.path.join(tmp, name +'.png'))
+        plt.close('all')
+
     return
