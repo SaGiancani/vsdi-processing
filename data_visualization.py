@@ -308,7 +308,7 @@ def retino_pos_visualization(x, y, center, titles, green):
     return
 
 def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask = None, name = None, blur = True, adaptive_vm = False, n_columns = 10, store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions'):
-    fig = plt.figure(figsize=(30,90))
+    fig = plt.figure(figsize=(25,25))
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
     
