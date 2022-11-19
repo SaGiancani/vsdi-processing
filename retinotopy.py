@@ -70,7 +70,7 @@ class Retinotopy:
             print('Time limits loaded successfully')
             return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
-    def get_retinotopic_features(FOI, min_lim=80, max_lim = 100, circular_mask_dim = 100, mask_switch = True):
+    def get_retinotopic_features(self, FOI, min_lim=80, max_lim = 100, circular_mask_dim = 100, mask_switch = True):
         blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=1)
         _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim)
         if mask_switch:
@@ -79,7 +79,7 @@ class Retinotopy:
             circular_mask = None
         return centroids, blobs, circular_mask, blurred
 
-    def centroid_poly(X, Y):
+    def centroid_poly(self, X, Y):
         """
         https://en.wikipedia.org/wiki/Centroid#Of_a_polygon
         """
@@ -118,7 +118,7 @@ class Retinotopy:
             # the algo from above link
             return int(np.round(Cx)), int(np.round(Cy))#, abs(A)
 
-    def centroid_max(X, Y, data):
+    def centroid_max(self, X, Y, data):
         '''
         Pick the point in the matrix data with higher value.
         X and Y are list of x and y coordinates.
