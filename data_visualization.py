@@ -364,3 +364,45 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
         plt.close('all')
 
     return
+
+
+def plot_retinotopic_positions(dictionar, distribution_shown = None, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH):
+    # 
+    fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
+    if len(list(dictionar.keys()))>1:
+        for (ax, (k, v)) in zip(axs, dictionar.items()):
+            ax.contour(v[1], 4, colors='k', linestyles = 'dotted')
+            pc = ax.pcolormesh(v[3], vmin=v[0][0],vmax=v[0][1], cmap=utils.PARULA_MAP)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            plt.colorbar(pc, shrink=1, ax=ax)
+            if distribution_shown is not None:
+                ax.scatter(distribution_shown[0], distribution_shown[1],color='purple', marker = 'x', label = 'Single trial retinotopy')
+            for l, j in enumerate(v[2]):
+                if l == len(v[2])-1:
+                    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
+                else:
+                    ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
+            ax.set_title(k)
+            ax.legend()
+    else:
+        ax.contour(v[1], 4, colors='k', linestyles = 'dotted')
+        pc = ax.pcolormesh(v[3], vmin=v[0][0],vmax=v[0][1], cmap=utils.PARULA_MAP)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        plt.colorbar(pc, shrink=1, ax=ax)
+        if distribution_shown is not None:
+            ax.scatter(distribution_shown[0], distribution_shown[1],color='purple', marker = 'x', label = 'Single trial retinotopy')
+        for l, j in enumerate(v[2]):
+            if l == len(v[2])-1:
+                ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
+            else:
+                ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
+        ax.set_title(k)
+        ax.legend()
+
+    if name is not None:
+        tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
+        plt.savefig(os.path.join(tmp, name +'.png'))
+        plt.close('all')
+    return
