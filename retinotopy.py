@@ -133,18 +133,17 @@ class Retinotopy:
 
 
     def single_seq_retinotopy(self,df_f0, 
-                            global_centroid,
-                            dim_side,
-                            start_frame,
-                            end_frame,
-                            df_confront = None,
-                            df_confront_foi = None,
-                            df_f0_foi = None,
-                            zero_frames = 20,
-                            lim_blob_detect = 75,
-                            single_frame_analysis = False,
-                            time_window = 1):
-    
+                                global_centroid,
+                                dim_side,
+                                start_frame,
+                                end_frame,
+                                df_confront = None,
+                                df_confront_foi = None,
+                                df_f0_foi = None,
+                                zero_frames = 20,
+                                lim_blob_detect = 75,
+                                single_frame_analysis = False,
+                                time_window = 1):
         '''
         The method gets as input:
         df_f0: 3 dimensional matrix
@@ -173,8 +172,6 @@ class Retinotopy:
         it performs the subtraction between the two matrices: if either df_confront_foi and df_f0_foi are provided, it timewindows the
         two signals. If the df_confront is not provided it performs the zscore only on df_f0.
         '''
-            
-        
         # Considering small portion of the frame, corresponding to a square of dim_side pixel of side, centered on blob centroid
         if global_centroid is not None:
             check_seq =df_f0[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
@@ -232,7 +229,7 @@ class Retinotopy:
                 # Centroid at maximum response
                 (a,b), _ = self.centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 # Centroid at the centroid of the polygon given by all the points
-                #(a,b) = self.centroid_poly(coords_singl[0], coords_singl[1])
+                #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
                 # If global_centroid, then normalization of resulting centroid
                 if global_centroid is None:
