@@ -241,7 +241,7 @@ class Retinotopy:
         else:
             single_centroids = []
 
-        centroids, blobs, _, blurred = self.get_retinotopic_features(np.mean(ztmp, axis=0), min_lim=lim_blob_detect, mask_switch = False)
+        centroids, blobs, _, blurred = self.get_retinotopic_features(np.mean(ztmp, axis=0), min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
         coords = np.array(list(zip(*centroids)))
         (a,b), _ = self.centroid_max(coords[0], coords[1], blurred)
         
