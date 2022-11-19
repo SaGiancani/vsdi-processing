@@ -15,15 +15,16 @@ class Retinotopy:
                  session_name = None, 
                  signal = None, 
                  averaged_simple_retino_pos = None, 
-                 averaged_inferred_retino_pos = None, 
+                 distribution_centroids = list(),
                  blob = None, 
                  mask = None):
+
         self.path_session = session_path
         self.name = name
         self.session_name = session_name
         self.signal = signal
-        self.averaged_simple_retino_pos = averaged_simple_retino_pos
-        self.averaged_inferred_retino_pos = averaged_inferred_retino_pos
+        self.retino_pos = averaged_simple_retino_pos
+        self.distribution_positions = distribution_centroids
         self.blob = blob
         self.mask = mask
         self.time_limits = self.get_time_limits(self)
