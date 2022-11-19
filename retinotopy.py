@@ -223,8 +223,7 @@ class Retinotopy:
                         except:
                             tmp_ = np.mean(ztmp[i-time_window//2:, :, :], axis=0)
                             print(f'from {i-time_window//2} to {len(ztmp)}')
-                print(lim_blob_detect.shape)
-                print(lim_blob_detect)
+                            
                 centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, mask_switch = False)
                 coords_singl = np.array(list(zip(*centroids_singl)))
                 # Centroid at maximum response
@@ -242,6 +241,8 @@ class Retinotopy:
         else:
             single_centroids = []
 
+        print(lim_blob_detect.shape)
+        print(lim_blob_detect)
         centroids, blobs, _, blurred = self.get_retinotopic_features(np.mean(ztmp, axis=0), min_lim=lim_blob_detect, mask_switch = False)
         coords = np.array(list(zip(*centroids)))
         (a,b), _ = self.centroid_max(coords[0], coords[1], blurred)
