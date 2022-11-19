@@ -2,6 +2,7 @@ import cv2 as cv
 
 import json
 import numpy as np
+import os
 import process_vsdi as process
 
 from scipy.ndimage.filters import gaussian_filter
@@ -11,6 +12,7 @@ import utils
 class Retinotopy:
     def __init__(self, 
                  session_path,
+                 cond_name = None,
                  name = None, 
                  session_name = None, 
                  signal = None, 
@@ -20,6 +22,7 @@ class Retinotopy:
                  mask = None):
 
         self.path_session = session_path
+        self.cond_name = cond_name
         self.name = name
         self.session_name = session_name
         self.signal = signal
@@ -27,7 +30,26 @@ class Retinotopy:
         self.distribution_positions = distribution_centroids
         self.blob = blob
         self.mask = mask
-        self.time_limits = self.get_time_limits(self)
+        self.time_limits = self.get_time_limits()
+
+    def store_retino(self, t):
+        tp = [self.path_session, self.cond_name, self.name, self.session_name, self.signal, self.retino_pos, self.distribution_positions, self.blob, self.mask, self.time_limits]
+        utils.inputs_save(tp, os.path.join(t,'retino','retinotopy_'+self.cond_name))
+        return
+    
+    def load_retino(self, path):
+        tp = utils.inputs_load(path)
+        self.path_session = tp[0]
+        self.cond_name = tp[1]
+        self.name = tp[2]
+        self.session_name = tp[3]
+        self.signal = tp[4]
+        self.retino_pos = tp[5]
+        self.distribution_positions = tp[6]
+        self.blob = tp[7]
+        self.mask = tp[8]
+        self.time_limits = tp[9]
+        return
 
     def get_time_limits(self):
         '''
