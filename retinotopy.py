@@ -68,7 +68,7 @@ class Retinotopy:
             data = json.load(f)
             a = json.loads(data)
             print('Time limits loaded successfully')
-            return ((a[list(a.keys())[0]]['bottom limit'], a[list(a.keys())[0]]['upper limit']))
+            return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
     def get_retinotopic_features(FOI, min_lim=80, max_lim = 100, circular_mask_dim = 100, mask_switch = True):
         blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=1)
