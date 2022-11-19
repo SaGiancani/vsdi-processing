@@ -310,7 +310,8 @@ class Session:
                 end_of_cond = zero_of_cond + foi_of_cond
             temp_raw = raws[indeces_select, :, :, :]
             t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = True, blank_sign=None) for i in temp_raw])
-            z = process.zeta_score(t_, self.f_f0_blank, self.stde_f_f0_blank)
+            z = process.zeta_score(self.avrgd_df_fz[-1, :, :, :], None, None, full_seq = True)
+            #z = process.zeta_score(t_, self.f_f0_blank, self.stde_f_f0_blank)
              #def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
 
             self.z_score = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
