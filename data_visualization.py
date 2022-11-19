@@ -366,7 +366,7 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
     return
 
 
-def plot_retinotopic_positions(dictionar, distribution_shown = None, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH):
+def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH):
     # 
     fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
     if len(list(dictionar.keys()))>1:
@@ -376,8 +376,8 @@ def plot_retinotopic_positions(dictionar, distribution_shown = None, name = None
             ax.set_xticks([])
             ax.set_yticks([])
             plt.colorbar(pc, shrink=1, ax=ax)
-            if distribution_shown is not None:
-                ax.scatter(distribution_shown[0], distribution_shown[1],color='purple', marker = 'x', label = 'Single trial retinotopy')
+            if distribution_shown:
+                ax.scatter(v[4][0], v[4][1],color='purple', marker = 'x', label = 'Single trial retinotopy')
             for l, j in enumerate(v[2]):
                 if l == len(v[2])-1:
                     ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
@@ -391,8 +391,8 @@ def plot_retinotopic_positions(dictionar, distribution_shown = None, name = None
         ax.set_xticks([])
         ax.set_yticks([])
         plt.colorbar(pc, shrink=1, ax=ax)
-        if distribution_shown is not None:
-            ax.scatter(distribution_shown[0], distribution_shown[1],color='purple', marker = 'x', label = 'Single trial retinotopy')
+        if distribution_shown:
+            ax.scatter(v[4][0], v[4][1],color='purple', marker = 'x', label = 'Single trial retinotopy')
         for l, j in enumerate(v[2]):
             if l == len(v[2])-1:
                 ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
