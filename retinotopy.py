@@ -206,23 +206,23 @@ class Retinotopy:
             # Strategy for time windowing
             for i in range(len(ztmp)):
                 if time_window==1:
-                    print(f'the {i}th frame')
+                    #print(f'the {i}th frame')
                     tmp_ = ztmp[i, :, :]
                 elif time_window >1:
                     if i == 0:
-                        print(f'from 0 to {time_window//2}')
+                        #print(f'from 0 to {time_window//2}')
                         tmp_ = np.mean(ztmp[i:time_window//2, :, :], axis=0)                    
                     elif i<=time_window//2-1:
-                        print(f'from 0 to {time_window//2}')
+                        #print(f'from 0 to {time_window//2}')
                         tmp_ = np.mean(ztmp[0:i:time_window//2, :, :], axis=0)
 
                     elif i>time_window//2-1:
                         try:
                             tmp_ = np.mean(ztmp[i-time_window//2:i+time_window//2, :, :], axis=0)
-                            print(f'from {i-time_window//2} to {i+time_window//2}')
+                            #print(f'from {i-time_window//2} to {i+time_window//2}')
                         except:
                             tmp_ = np.mean(ztmp[i-time_window//2:, :, :], axis=0)
-                            print(f'from {i-time_window//2} to {len(ztmp)}')
+                            #print(f'from {i-time_window//2} to {len(ztmp)}')
 
                 centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
                 coords_singl = np.array(list(zip(*centroids_singl)))
