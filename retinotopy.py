@@ -19,7 +19,8 @@ class Retinotopy:
                  averaged_simple_retino_pos = None, 
                  distribution_centroids = list(),
                  blob = None, 
-                 mask = None):
+                 mask = None,
+                 green = None):
 
         self.path_session = session_path
         self.cond_name = cond_name
@@ -31,9 +32,10 @@ class Retinotopy:
         self.blob = blob
         self.mask = mask
         self.time_limits = self.get_time_limits()
+        self.green = green
 
     def store_retino(self, t):
-        tp = [self.path_session, self.cond_name, self.name, self.session_name, self.signal, self.retino_pos, self.distribution_positions, self.blob, self.mask, self.time_limits]
+        tp = [self.path_session, self.cond_name, self.name, self.session_name, self.signal, self.retino_pos, self.distribution_positions, self.blob, self.mask, self.time_limits, self.green]
         utils.inputs_save(tp, os.path.join(t,'retino','retinotopy_'+self.cond_name))
         return
     
@@ -49,6 +51,7 @@ class Retinotopy:
         self.blob = tp[7]
         self.mask = tp[8]
         self.time_limits = tp[9]
+        self.green = tp[10]
         return
 
     def get_time_limits(self):
