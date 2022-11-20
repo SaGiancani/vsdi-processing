@@ -571,7 +571,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
-
+    flag_remove = False
     if base_report is not None:
         trials_dict = dict()
         greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split('vsd_C')[1][0:2]))
@@ -595,58 +595,61 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                 if trial is None:
                     print('Empty Trial')
                     blks.remove(blk_name)
+                    flag_remove = True
                     if log is None:
                         print(f'{blk_name} was popped off')
                     else:
                         log.info(f'{blk_name} was popped off')
                 # Otherwise store it
                 elif trial is not None:
+                    flag_remove = False
                     trials_dict[blk_name] = trial   
                     zero = trial.zero_frames
             else:
                 zero = header['zero_frames']
             print(f'Employeed zero for normalization is {zero}')
-            
-            # Get BLK file
-            # If first BLK file, than the header is stored
-            if i == 0:
-                BLK = blk_file.BlkFile(
-                    os.path.join(path_rawdata, blk_name),
-                    header['spatial_bin'],
-                    header['temporal_bin'],
-                    header = None)
+            # If the blk name is not popped off, the blk is loaded
+            if not flag_remove:    
+                # Get BLK file
+                # If first BLK file, than the header is stored
+                if i == 0:
+                    BLK = blk_file.BlkFile(
+                        os.path.join(path_rawdata, blk_name),
+                        header['spatial_bin'],
+                        header['temporal_bin'],
+                        header = None)
 
-                header_blk = BLK.header
-                raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                sig = np.zeros((len(blks), header['n_frames']))
-                roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
-            else:
-                BLK = blk_file.BlkFile(
-                    os.path.join(path_rawdata, blk_name), 
-                    header['spatial_bin'], 
-                    header['temporal_bin'], 
-                    header = header_blk)
-            
-            # Log prints
-            if log is None:
-                print(f'The blk file {blk_name} is loaded')
-            else:
-                log.info(f'The blk file {blk_name} is loaded')
+                    header_blk = BLK.header
+                    raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    sig = np.zeros((len(blks), header['n_frames']))
+                    roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
+                else:
+                    BLK = blk_file.BlkFile(
+                        os.path.join(path_rawdata, blk_name), 
+                        header['spatial_bin'], 
+                        header['temporal_bin'], 
+                        header = header_blk)
                 
-            #at the end something like (nblks, 70, 1)         
-            conditions.append(BLK.condition)
-            raws[i, :, :, :] =  BLK.binned_signal 
-            delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
-            sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
+                # Log prints
+                if log is None:
+                    print(f'The blk file {blk_name} is loaded')
+                else:
+                    log.info(f'The blk file {blk_name} is loaded')
+                    
+                #at the end something like (nblks, 70, 1)         
+                conditions.append(BLK.condition)
+                raws[i, :, :, :] =  BLK.binned_signal 
+                delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
+                sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
 
-            # Trial storing
-            start_time = datetime.datetime.now().replace(microsecond=0)
+                # Trial storing
+                start_time = datetime.datetime.now().replace(microsecond=0)
 
-            if log is None:
-                print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-            else:
-                log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+                if log is None:
+                    print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+                else:
+                    log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
     else:
         for i, blk_name in enumerate(blks):
             start_time = datetime.datetime.now().replace(microsecond=0)
