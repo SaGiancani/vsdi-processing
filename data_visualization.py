@@ -378,7 +378,7 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
             plt.colorbar(pc, shrink=1, ax=ax)
             if distribution_shown:
                 ax.scatter(v[4][0], v[4][1],color='purple', marker = 'x')#, label = 'Single trial retinotopy')
-            for l, j in enumerate(v[2]):
+            for j in v[2]:
                 #if l == len(v[2])-1:
                 #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
                 #else:
@@ -386,14 +386,14 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
             ax.set_title(k)
             ax.legend()
     else:
-        ax.contour(v[1], 4, colors='k', linestyles = 'dotted')
-        pc = ax.pcolormesh(v[3], vmin=v[0][0],vmax=v[0][1], cmap=utils.PARULA_MAP)
+        ax.contour(dictionar.values()[1], 4, colors='k', linestyles = 'dotted')
+        pc = ax.pcolormesh(dictionar.values()[3], vmin=dictionar.values()[0][0],vmax=dictionar.values()[0][1], cmap=utils.PARULA_MAP)
         ax.set_xticks([])
         ax.set_yticks([])
         plt.colorbar(pc, shrink=1, ax=ax)
         if distribution_shown:
-            ax.scatter(v[4][0], v[4][1],color='purple', marker = 'x')#, label = 'Single trial retinotopy')
-        for l, j in enumerate(v[2]):
+            ax.scatter(dictionar.values()[4][0], dictionar.values()[4][1],color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+        for j in dictionar.values()[2]:
             #if l == len(v[2])-1:
             #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
             #else:
