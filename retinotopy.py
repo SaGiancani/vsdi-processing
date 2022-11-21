@@ -256,6 +256,8 @@ class Retinotopy:
                 centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
                 coords_singl = np.array(list(zip(*centroids_singl)))
                 if coords_singl is not None:
+                    print(coords_singl)
+                    print(blurred_singl.shape)
                     # Centroid at maximum response
                     (a,b), _ = self.centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 # Centroid at the centroid of the polygon given by all the points
