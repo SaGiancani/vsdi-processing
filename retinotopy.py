@@ -214,7 +214,6 @@ class Retinotopy:
                 df_confront = df_confront[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
                                 (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
         else:
-            print('I am here')
             check_seq = df_f0
             sig_blank = np.mean(check_seq[:zero_frames, :, :], axis = 0)
             std_blank = np.std(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames        
