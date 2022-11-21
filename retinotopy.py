@@ -151,9 +151,8 @@ class Retinotopy:
         '''
         max_point = -100000000
         for x, y in zip(X, Y):
-            if data[x, y] > max_point:
+            if data[y, x] > max_point:
                 index = (x, y)
-                print(index)
                 max_point = data[y, x]
         return index, max_point
 
