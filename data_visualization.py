@@ -393,6 +393,7 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
         ax.set_yticks([])
         plt.colorbar(pc, shrink=1, ax=ax)
         if distribution_shown:
+            print(v[0])
             ax.scatter(v[0][0], v[0][1],color='purple', marker = 'x')#, label = 'Single trial retinotopy')
         for j in dictionar.values()[2]:
             #if l == len(v[2])-1:
