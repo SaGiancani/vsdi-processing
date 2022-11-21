@@ -199,10 +199,10 @@ class Retinotopy:
         '''
         # Considering small portion of the frame, corresponding to a square of dim_side pixel of side, centered on blob centroid
         if (global_centroid is not None) and \
-           (global_centroid[1] + dim_side<df_f0.shape[-2]) and\
-           (global_centroid[1] - dim_side>0) and\
-           (global_centroid[0] + dim_side<df_f0.shape[-1]) and\
-           (global_centroid[0] - dim_side>0):
+           (global_centroid[1] + dim_side//2<df_f0.shape[-2]) and\
+           (global_centroid[1] - dim_side//2>0) and\
+           (global_centroid[0] + dim_side//2<df_f0.shape[-1]) and\
+           (global_centroid[0] - dim_side//2>0):
             check_seq =df_f0[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
                             (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
             
