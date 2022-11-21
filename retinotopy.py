@@ -198,7 +198,11 @@ class Retinotopy:
         two signals. If the df_confront is not provided it performs the zscore only on df_f0.
         '''
         # Considering small portion of the frame, corresponding to a square of dim_side pixel of side, centered on blob centroid
-        if global_centroid is not None:
+        if (global_centroid is not None) and \
+           (global_centroid[1] + dim_side<df_f0.shape[-2]) and\
+           (global_centroid[1] - dim_side>0) and\
+           (global_centroid[0] + dim_side<df_f0.shape[-1]) and\
+           (global_centroid[0] - dim_side>0):
             check_seq =df_f0[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
                             (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
             
@@ -251,8 +255,9 @@ class Retinotopy:
 
                 centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
                 coords_singl = np.array(list(zip(*centroids_singl)))
-                # Centroid at maximum response
-                (a,b), _ = self.centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
+                if coords_singl is not None:
+                    # Centroid at maximum response
+                    (a,b), _ = self.centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 # Centroid at the centroid of the polygon given by all the points
                 #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
