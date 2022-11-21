@@ -379,7 +379,8 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
             if distribution_shown:
                 print(v[4])
                 pos_s_ = list(zip(*v[4]))
-                ax.scatter(pos_s_[0], pos_s_[1],color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+                print(pos_s_)
+                ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
             for j in v[2]:
                 #if l == len(v[2])-1:
                 #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
@@ -396,7 +397,8 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
         if distribution_shown:
             print(v[4])
             pos_s_ = list(zip(*v[4]))
-            ax.scatter(pos_s_[0], pos_s_[1],color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+            print(pos_s_)
+            ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
         for j in dictionar.values()[2]:
             #if l == len(v[2])-1:
             #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
