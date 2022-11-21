@@ -77,7 +77,8 @@ def time_course_signal(df_fz, roi_mask):#, hand_made=False):
     for i in df_fz:
     #	print(np.shape(i))
         c = np.asarray(i).copy
-        a = np.nanmean(np.ma.masked_array(c, mask = roi_mask))
+        print(c.shape)
+        a = np.nanmean(np.ma.masked_array(c[0], mask = roi_mask))
         roi_sign.append(a)
         del c
     return np.array(roi_sign)
