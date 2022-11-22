@@ -25,6 +25,7 @@ class Retinotopy:
                  mask_tc = None,
                  tc = None,
                  averaged_tc = None,
+                 df = None,
                  stroke_type = 'single stroke'):
 
         self.path_session = session_path
@@ -42,6 +43,7 @@ class Retinotopy:
         self.tc_mask = mask_tc
         self.time_courses = tc
         self.average_time_course = averaged_tc
+        self.df_fz = df
 
     def store_retino(self, t):
         tp = [self.path_session,
@@ -58,7 +60,8 @@ class Retinotopy:
               self.map, 
               self.tc_mask,
               self.time_courses,
-              self.average_time_course]
+              self.average_time_course,
+              self.df_fz]
         utils.inputs_save(tp, os.path.join(t,'retino','retinotopy_'+self.cond_name))
         return
     
@@ -75,6 +78,12 @@ class Retinotopy:
         self.mask = tp[8]
         self.time_limits = tp[9]
         self.green = tp[10]
+        self.map = tp[11]
+        self.tc_mask = tp[12]
+        self.time_courses = tp[13]
+        self.average_time_course = tp[14]
+        self.df_fz = tp[15]
+
         return
 
     def get_time_limits(self, stroke_type):
