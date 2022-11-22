@@ -215,10 +215,12 @@ class Retinotopy:
             if df_confront is not None:
                 df_confront = df_confront[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
                                 (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
+            flag_adjust_centroid = True
         else:
             check_seq = df_f0
             sig_blank = np.mean(check_seq[:zero_frames, :, :], axis = 0)
             std_blank = np.std(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames        
+            flag_adjust_centroid = False
                 
         # Check for presence of df to subtract to df_f0: used for single trial analysis in AMstrokes
         if df_confront is not None:
@@ -277,7 +279,8 @@ class Retinotopy:
         coords = np.array(list(zip(*centroids)))
         (a,b), _ = self.centroid_max(coords[0], coords[1], blurred)
         
-        if global_centroid is None:
+        # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
+        if global_centroid is None or (not flag_adjust_centroid):
             c,d = ((a,b))
         else:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
