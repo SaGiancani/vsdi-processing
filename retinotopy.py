@@ -24,7 +24,8 @@ class Retinotopy:
                  maps = None,
                  mask_tc = None,
                  tc = None,
-                 averaged_tc = None):
+                 averaged_tc = None,
+                 stroke_type = 'single stroke'):
 
         self.path_session = session_path
         self.cond_name = cond_name
@@ -35,7 +36,7 @@ class Retinotopy:
         self.distribution_positions = distribution_centroids
         self.blob = blob
         self.mask = mask
-        self.time_limits = self.get_time_limits()
+        self.time_limits = self.get_time_limits(stroke_type)
         self.green = green
         self.map = maps
         self.tc_mask = mask_tc
@@ -76,7 +77,7 @@ class Retinotopy:
         self.green = tp[10]
         return
 
-    def get_time_limits(self):
+    def get_time_limits(self, stroke_type):
         '''
         Reading metadata json file for time limits
         '''
@@ -93,7 +94,8 @@ class Retinotopy:
             data = json.load(f)
             a = json.loads(data)
             print('Time limits loaded successfully')
-            return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
+            return ((int(a[list(a.keys())[0]][stroke_type]['bottom limit']), int(a[list(a.keys())[0]][stroke_type]['upper limit'])))
+            #return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
     def get_retinotopic_features(self, FOI, min_lim=80, max_lim = 100, circular_mask_dim = 100, mask_switch = True):
         blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=1)
