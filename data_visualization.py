@@ -366,7 +366,7 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
     return
 
 
-def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
+def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
     # 
     fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
     if len(list(dictionar.keys()))>1:
@@ -380,13 +380,13 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
             if distribution_shown:
                 print(v[4])
                 b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
-                b.collections[0].set_label(labs[0])
+                #b.collections[0].set_label(labs[0])
             for j in v[2]:
                 #if l == len(v[2])-1:
                 #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
                 #else:
                 c = ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
-            c.collections[0].set_label(labs[1])
+            #c.collections[0].set_label(labs[1])
 
             ax.set_title(k)
             ax.legend()
@@ -399,15 +399,15 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
         if distribution_shown:
             print(v[4])
             b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
-            b.collections[0].set_label(labs[0])
+            #b.collections[0].set_label(labs[0])
         for j in dictionar.values()[2]:
             #if l == len(v[2])-1:
             #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
             #else:
             c = ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
-        c.collections[0].set_label(labs[1])
+        #c.collections[0].set_label(labs[1])
         ax.set_title(k)
-        ax.legend()
+        #ax.legend()
 
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
