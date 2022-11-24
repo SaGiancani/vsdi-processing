@@ -308,7 +308,7 @@ def retino_pos_visualization(x, y, center, titles, green):
     return
 
 def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask = None, name = None, blur = True, adaptive_vm = False, n_columns = 10, store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions'):
-    fig = plt.figure(figsize=(20,20))
+    fig = plt.figure(figsize=(20,20), dpi=1000)
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
     
@@ -360,51 +360,57 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
             
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
-        plt.savefig(os.path.join(tmp, name +'.png'))
+        plt.savefig(os.path.join(tmp, name +'.svg'), dpi=1000)
         plt.close('all')
 
     return
 
 
-def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH):
+def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
     # 
     fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
     if len(list(dictionar.keys()))>1:
         for (ax, (k, v)) in zip(axs, dictionar.items()):
-            ax.contour(v[1], 4, colors='k', linestyles = 'dotted')
+            a = ax.contour(v[1], 4, colors='k', linestyles = 'dotted')
+            #a.collections[0].set_label('Inferred pos2: AM12-pos1')
             pc = ax.pcolormesh(v[3], vmin=v[0][0],vmax=v[0][1], cmap=utils.PARULA_MAP)
             ax.set_xticks([])
             ax.set_yticks([])
             plt.colorbar(pc, shrink=1, ax=ax)
             if distribution_shown:
                 print(v[4])
-                ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+                b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+                b.collections[0].set_label(labs[0])
             for j in v[2]:
                 #if l == len(v[2])-1:
                 #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
                 #else:
-                ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
+                c = ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
+            c.collections[0].set_label(labs[1])
+
             ax.set_title(k)
             ax.legend()
     else:
-        ax.contour(dictionar.values()[1], 4, colors='k', linestyles = 'dotted')
+        a = ax.contour(dictionar.values()[1], 4, colors='k', linestyles = 'dotted')
         pc = ax.pcolormesh(dictionar.values()[3], vmin=dictionar.values()[0][0],vmax=dictionar.values()[0][1], cmap=utils.PARULA_MAP)
         ax.set_xticks([])
         ax.set_yticks([])
         plt.colorbar(pc, shrink=1, ax=ax)
         if distribution_shown:
             print(v[4])
-            ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+            b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+            b.collections[0].set_label(labs[0])
         for j in dictionar.values()[2]:
             #if l == len(v[2])-1:
             #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
             #else:
-            ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
+            c = ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
+        c.collections[0].set_label(labs[1])
         ax.set_title(k)
         ax.legend()
 
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
-        plt.savefig(os.path.join(tmp, name +'.png'))
+        plt.savefig(os.path.join(tmp, name +'.svg'), dpi=1000)
         plt.close('all')
     return
