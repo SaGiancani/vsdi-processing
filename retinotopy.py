@@ -154,20 +154,6 @@ class Retinotopy:
             # the algo from above link
             return int(np.round(Cx)), int(np.round(Cy))#, abs(A)
 
-    def centroid_max(self, X, Y, data):
-        '''
-        Pick the point in the matrix data with higher value.
-        X and Y are list of x and y coordinates.
-        The method returns the coordinates and the value of higher point.
-        '''
-        max_point = -100000000
-        for x, y in zip(X, Y):
-            if data[y, x] > max_point:
-                index = (x, y)
-                max_point = data[y, x]
-        return index, max_point
-
-
     def single_seq_retinotopy(self,df_f0, 
                                 global_centroid,
                                 dim_side,
@@ -270,7 +256,7 @@ class Retinotopy:
                 coords_singl = np.array(list(zip(*centroids_singl)))
                 if coords_singl is not None:
                     # Centroid at maximum response
-                    (a,b), _ = self.centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
+                    (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 # Centroid at the centroid of the polygon given by all the points
                 #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
@@ -286,7 +272,7 @@ class Retinotopy:
 
         centroids, blobs, _, blurred = self.get_retinotopic_features(np.mean(ztmp, axis=0), min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
         coords = np.array(list(zip(*centroids)))
-        (a,b), _ = self.centroid_max(coords[0], coords[1], blurred)
+        (a,b), _ = centroid_max(coords[0], coords[1], blurred)
         
         # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
         if global_centroid is None or (not flag_adjust_centroid):
@@ -327,6 +313,16 @@ class Retinotopy:
         # adding mean back to rotated coordinates
         return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
  
-        
-                
+def centroid_max(X, Y, data):
+    '''
+    Pick the point in the matrix data with higher value.
+    X and Y are list of x and y coordinates.
+    The method returns the coordinates and the value of higher point.
+    '''
+    max_point = -100000000
+    for x, y in zip(X, Y):
+        if data[y, x] > max_point:
+            index = (x, y)
+            max_point = data[y, x]
+    return index, max_point                
         
