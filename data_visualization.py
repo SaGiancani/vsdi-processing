@@ -386,6 +386,7 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
                 #if l == len(v[2])-1:
                 #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
                 #else:
+                print(j)
                 c = ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
             #c.collections[0].set_label(labs[1])
 
