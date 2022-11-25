@@ -307,7 +307,7 @@ def retino_pos_visualization(x, y, center, titles, green):
     plt.close('all')
     return
 
-def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask = None, name = None, blur = True, adaptive_vm = False, n_columns = 10, store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions'):
+def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask = None, name = None, blur = True, adaptive_vm = False, n_columns = 10, store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions', ext= '.svg'):
     fig = plt.figure(figsize=(20,20), dpi=1000)
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
@@ -360,13 +360,14 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
             
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
-        plt.savefig(os.path.join(tmp, name +'.svg'), dpi=1000)
+        plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
+        print(name + ext+ ' stored successfully!')
         plt.close('all')
 
     return
 
 
-def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
+def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, ext = '.svg'):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
     # 
     fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
     if len(list(dictionar.keys()))>1:
@@ -411,6 +412,7 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
 
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
-        plt.savefig(os.path.join(tmp, name +'.svg'), dpi=1000)
+        plt.savefig(os.path.join(tmp, name + ext), dpi=1000)
+        print(name + ext+ ' stored successfully!')
         plt.close('all')
     return
