@@ -391,7 +391,7 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
             #c.collections[0].set_label(labs[1])
 
             ax.set_title(k)
-            ax.legend()
+            #ax.legend()
     else:
         a = ax.contour(dictionar.values()[1], 4, colors='k', linestyles = 'dotted')
         pc = ax.pcolormesh(dictionar.values()[3], vmin=dictionar.values()[0][0],vmax=dictionar.values()[0][1], cmap=utils.PARULA_MAP)
