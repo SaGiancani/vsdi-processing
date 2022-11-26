@@ -321,7 +321,7 @@ def centroid_max(X, Y, data):
     X and Y are list of x and y coordinates.
     The method returns the coordinates and the value of higher point.
     '''
-    max_point = -100000000
+    max_point = -np.inf
     for i, (x, y) in enumerate(zip(X, Y)):
         print(data[y, x])
         if data[y, x] > max_point:
