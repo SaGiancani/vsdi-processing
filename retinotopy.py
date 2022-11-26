@@ -324,12 +324,11 @@ def centroid_max(X, Y, data):
     The method returns the coordinates and the value of higher point.
     '''
     max_point = -100000000
-    for x, y in zip(X, Y):
+    for i, (x, y) in enumerate(zip(X, Y)):
         if data[y, x] > max_point:
             index = (x, y)
             max_point = data[y, x]
-        else:
-            print('No max point detected')
-            index, max_point = None, None
+        elif i == 0:
+            print('Something wrong with the centroid_max method')
     return index, max_point                
         
