@@ -325,6 +325,7 @@ def centroid_max(X, Y, data):
     '''
     max_point = -100000000
     for i, (x, y) in enumerate(zip(X, Y)):
+        print(data[y, x])
         if data[y, x] > max_point:
             index = (x, y)
             max_point = data[y, x]
