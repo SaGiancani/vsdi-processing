@@ -263,7 +263,7 @@ class Retinotopy:
                 #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
                 # If global_centroid, then normalization of resulting centroid
-                if global_centroid is None:
+                if global_centroid is None  or (not flag_adjust_centroid):
                     c,d = ((a,b))
                 else:
                     c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
