@@ -257,13 +257,14 @@ class Retinotopy:
                 centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
                 coords_singl = np.array(list(zip(*centroids_singl)))
                 if coords_singl is not None:
+                    print(coords_singl)
                     # Centroid at maximum response
                     (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 # Centroid at the centroid of the polygon given by all the points
                 #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
                 # If global_centroid, then normalization of resulting centroid
-                if global_centroid is None  or (not flag_adjust_centroid):
+                if global_centroid is None:
                     c,d = ((a,b))
                 else:
                     c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
@@ -323,7 +324,7 @@ def centroid_max(X, Y, data):
     '''
     max_point = -np.inf
     for i, (x, y) in enumerate(zip(X, Y)):
-        print(data[y, x])
+        #print(data[y, x])
         if data[y, x] > max_point:
             index = (x, y)
             max_point = data[y, x]
