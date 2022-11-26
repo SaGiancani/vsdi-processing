@@ -377,7 +377,6 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
 
 def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, ext = '.svg'):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
     # 
-    print(dictionar)
     fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
     if len(list(dictionar.keys()))>1:
         for (ax, (k, v)) in zip(axs, dictionar.items()):
