@@ -361,6 +361,7 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
+        plt.savefig(os.path.join(tmp, name + '.png'))
         print(name + ext+ ' stored successfully!')
         plt.close('all')
 
@@ -414,6 +415,7 @@ def plot_retinotopic_positions(dictionar, distribution_shown = False, name = Non
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         plt.savefig(os.path.join(tmp, name + ext), dpi=1000)
+        plt.savefig(os.path.join(tmp, name + '.png'))
         print(name + ext+ ' stored successfully!')
         plt.close('all')
     return
