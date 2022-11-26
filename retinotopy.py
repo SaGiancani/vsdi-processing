@@ -327,5 +327,8 @@ def centroid_max(X, Y, data):
         if data[y, x] > max_point:
             index = (x, y)
             max_point = data[y, x]
+        else:
+            print('No max point detected')
+            index, max_point = None, None
     return index, max_point                
         
