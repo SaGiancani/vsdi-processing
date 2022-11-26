@@ -1,5 +1,6 @@
 import cv2 as cv
 
+import data_visualization as dv
 import json
 import numpy as np
 import os
@@ -62,7 +63,9 @@ class Retinotopy:
               self.time_courses,
               self.average_time_course,
               self.df_fz]
-        utils.inputs_save(tp, os.path.join(t,'retino','retinotopy_'+self.cond_name))
+        storage_path = os.path.join(t, 'retino')
+        tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
+        utils.inputs_save(tp, os.path.join(tmp,'retinotopy_'+self.cond_name))
         return
     
     def load_retino(self, path):
