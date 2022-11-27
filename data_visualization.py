@@ -389,7 +389,7 @@ def plot_retinotopic_positions(dictionar,titles = ['Inferred centroids', 'Single
             ax.set_yticks([])
             plt.colorbar(pc, shrink=1, ax=ax)
             if distribution_shown:
-                b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x', alpha = 0.8, label = titles[0])#, label = 'Single trial retinotopy')
+                b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x', alpha = 0.5, label = titles[0])#, label = 'Single trial retinotopy')
                 #b.collections[0].set_label(labs[0])
             for j in v[2]:
                 #if l == len(v[2])-1:

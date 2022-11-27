@@ -287,14 +287,6 @@ class Retinotopy:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
 
-
-    def get_trajectory(xs, ys, limits):
-        print(limits[0], limits[1])
-        xs_to_fit =  np.round(np.linspace(limits[0], limits[1]-1, limits[1]-limits[0])) 
-        ys_to_fit = np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs_to_fit))
-        #ys_fitted = [int(round(np.interp(i, xs_to_fit, ys_to_fit))) for i in xs_fitted]
-        return xs_to_fit, ys_to_fit
-
     def get_mask_on_trajectory(self, dims, xs, ys, radius = 2):
         up = int(np.max(xs))
         bottom = int(np.min(xs))
@@ -319,6 +311,14 @@ class Retinotopy:
         # adding mean back to rotated coordinates
         return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
  
+def get_trajectory(xs, ys, limits):
+    print(limits[0], limits[1])
+    xs_to_fit =  np.round(np.linspace(limits[0], limits[1]-1, limits[1]-limits[0])) 
+    ys_to_fit = np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs_to_fit))
+    #ys_fitted = [int(round(np.interp(i, xs_to_fit, ys_to_fit))) for i in xs_fitted]
+    return xs_to_fit, ys_to_fit
+
+
 def centroid_max(X, Y, data):
     '''
     Pick the point in the matrix data with higher value.
