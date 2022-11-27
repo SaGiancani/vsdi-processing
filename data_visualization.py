@@ -260,8 +260,8 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
         hist, bins, _ = axHisty.hist(y_, bins=40, orientation='horizontal', color = colors[i], alpha=0.8)
         # Plot the PDF.
         #xmin, xmax = [0.5e-3, 1.5e-3] #plt.xlim()
-        mu_y = np.mean(y_)
-        std_y = np.std(y_)
+        mu_y = np.nanmean(y_)
+        std_y = np.nanstd(y_)
         # changes here
         p = norm.pdf(bins, mu_y, std_y)           
         #axHistx.vlines(center[0], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5, label = title_center)
