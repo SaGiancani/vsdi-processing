@@ -256,10 +256,11 @@ class Retinotopy:
                             #print(f'from {i-time_window//2} to {len(ztmp)}')
                 centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
                 coords_singl = np.array(list(zip(*centroids_singl)))
-                print(len(coords_singl))
                 if (coords_singl is not None) and (len(coords_singl)>0) :
                     # Centroid at maximum response
                     (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
+                else:
+                    (a,b) = (None, None)
                 # Centroid at the centroid of the polygon given by all the points
                 #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
@@ -275,8 +276,10 @@ class Retinotopy:
 
         centroids, blobs, _, blurred = self.get_retinotopic_features(np.mean(ztmp, axis=0), min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
         coords = np.array(list(zip(*centroids)))
-        (a,b), _ = centroid_max(coords[0], coords[1], blurred)
-        
+        if (coords is not None) and (len(coords)>0) :
+            (a,b), _ = centroid_max(coords[0], coords[1], blurred)
+        else:
+            (a,b) = (None, None)
         # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
         if global_centroid is None or (not flag_adjust_centroid):
             c,d = ((a,b))
