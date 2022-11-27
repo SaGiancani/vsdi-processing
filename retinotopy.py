@@ -259,7 +259,7 @@ class Retinotopy:
                 print(len(coords_singl))
                 if (coords_singl is not None) and (len(coords_singl)>0) :
                     # Centroid at maximum response
-                    (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl))
+                    (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 # Centroid at the centroid of the polygon given by all the points
                 #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
