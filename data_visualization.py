@@ -280,7 +280,7 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
         axHisty.spines['top'].set_visible(False)
         axHisty.spines['right'].set_visible(False)
         # mu values for the distributions -on the green image-
-        print(mu_x, mu_y, mu_y+massy)
+        #print(mu_x, mu_y, mu_y+massy)
         axScatter.vlines(mu_x, mu_y, mu_y + massy, color = colors[i], ls = '--', lw=1.5, alpha = 1)
         axScatter.hlines(mu_y, mu_x, mu_x + massx, color = colors[i], ls = '--', lw=1.5, alpha = 1 )#
         if i == len(x)-1:
