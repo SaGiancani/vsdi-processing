@@ -377,29 +377,43 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
     return
 
 
-def plot_retinotopic_positions(dictionar, distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, ext = '.svg'):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
+def plot_retinotopic_positions(dictionar,titles = ['Inferred centroids', 'Single stroke centroids'], distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, ext = '.svg'):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
     # 
     fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
     if len(list(dictionar.keys()))>1:
         for (ax, (k, v)) in zip(axs, dictionar.items()):
-            a = ax.contour(v[1], 4, colors='k', linestyles = 'dotted')
+            a = ax.contour(v[1], 4, colors='purple', linestyles = 'dotted')
             #a.collections[0].set_label('Inferred pos2: AM12-pos1')
             pc = ax.pcolormesh(v[3], vmin=v[0][0],vmax=v[0][1], cmap=utils.PARULA_MAP)
             ax.set_xticks([])
             ax.set_yticks([])
             plt.colorbar(pc, shrink=1, ax=ax)
             if distribution_shown:
-                b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+                b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x', alpha = 0.8, label = titles[0])#, label = 'Single trial retinotopy')
                 #b.collections[0].set_label(labs[0])
             for j in v[2]:
                 #if l == len(v[2])-1:
                 #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
                 #else:
-                c = ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
+                c = ax.scatter(j[0],j[1],color='purple', marker = '+', s=150)
             #c.collections[0].set_label(labs[1])
+            try:
+                a = ax.contour(v[10], 4, colors='k', linestyles = 'dotted')
+                #a.collections[0].set_label('Inferred pos2: AM12-pos1')
+                if len(v[9])>1:
+                    for j in v[9][:-1]:
+                        #if l == len(v[2])-1:
+                        #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
+                        #else:
+                        c = ax.scatter(j[0],j[1],color='k', marker = '+', s=150)
+                    c = ax.scatter(v[9][-1][0],v[9][-1][1],color='k', marker = '+', s=150, label=titles[1])
+                else:
+                    c = ax.scatter(v[9][0],v[9][1],color='k', marker = '+', s=150, label=titles[1])
+            except:
+                pass
 
             ax.set_title(k)
-            #ax.legend()
+            ax.legend()
     else:
         a = ax.contour(dictionar.values()[1], 4, colors='k', linestyles = 'dotted')
         pc = ax.pcolormesh(dictionar.values()[3], vmin=dictionar.values()[0][0],vmax=dictionar.values()[0][1], cmap=utils.PARULA_MAP)
