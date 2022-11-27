@@ -260,7 +260,7 @@ class Retinotopy:
                     # Centroid at maximum response
                     (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 else:
-                    (a,b) = None
+                    (a,b) = (None, None)
                 # Centroid at the centroid of the polygon given by all the points
                 #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
