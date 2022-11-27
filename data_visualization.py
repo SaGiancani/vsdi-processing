@@ -400,15 +400,16 @@ def plot_retinotopic_positions(dictionar,titles = ['Inferred centroids', 'Single
             try:
                 a = ax.contour(v[10], 4, colors='k', linestyles = 'dotted')
                 #a.collections[0].set_label('Inferred pos2: AM12-pos1')
-                if len(v[9])>1:
-                    for j in v[9][:-1]:
-                        #if l == len(v[2])-1:
-                        #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
-                        #else:
-                        c = ax.scatter(j[0],j[1],color='k', marker = '+', s=150)
-                    c = ax.scatter(v[9][-1][0],v[9][-1][1],color='k', marker = '+', s=150, label=titles[1])
-                else:
-                    c = ax.scatter(v[9][0],v[9][1],color='k', marker = '+', s=150, label=titles[1])
+                for i,  j in enumerate(v[9]):
+                    #if l == len(v[2])-1:
+                    #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
+                    #else:
+                    if i == len(v[9])-1:
+                        titolo = titles[1]
+                    else:
+                        titolo = None
+                    c = ax.scatter(j[0],j[1],color='k', marker = '+', s=150, label=titolo)
+
             except:
                 pass
 
