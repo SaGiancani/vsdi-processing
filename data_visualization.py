@@ -241,8 +241,8 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
         hist, bins, _ = axHistx.hist(x_, bins=40, color = colors[i], alpha=0.8)
         # Plot the PDF.
         #xmin, xmax = [0.5e-3, 1.5e-3] #plt.xlim()
-        mu_x = np.mean(x_)
-        std_x = np.std(x_)
+        mu_x = np.nanmean(x_)
+        std_x = np.nanstd(x_)
         # changes here
         p = norm.pdf(bins, mu_x, std_x)           
         axHistx.plot(bins, p/p.sum() * hist.sum(), color='k', alpha=1, lw=1)
