@@ -256,7 +256,7 @@ class Retinotopy:
                             #print(f'from {i-time_window//2} to {len(ztmp)}')
                 centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
                 coords_singl = np.array(list(zip(*centroids_singl)))
-                if (coords_singl is not None) or (len(coords)>0) :
+                if (coords_singl is not None) and (len(coords_singl)>0) :
                     # Centroid at maximum response
                     (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 else:
