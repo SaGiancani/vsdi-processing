@@ -218,8 +218,8 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
         axScatter.scatter(x_, y_, color = colors[i], label = titles[i], alpha=0.8)
     
     #print(x, y)
-    massx = np.nanmax(x)
-    massy = np.nanmax(y)
+    massx = np.nanmax(x[0])
+    massy = np.nanmax(y[0])
     
     axScatter.set_ylim(0, green.shape[0])
     axScatter.set_xlim(0, green.shape[1])
