@@ -260,7 +260,7 @@ class Retinotopy:
                     # Centroid at maximum response
                     (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
                 else:
-                    (a,b) = (None, None)
+                    (a,b) = (np.nan, np.nan)
                 # Centroid at the centroid of the polygon given by all the points
                 #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
                 
@@ -279,7 +279,7 @@ class Retinotopy:
         if (coords is not None) and (len(coords)>0) :
             (a,b), _ = centroid_max(coords[0], coords[1], blurred)
         else:
-            (a,b) = (None, None)
+            (a,b) = (np.nan, np.nan)
         # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
         if global_centroid is None or (not flag_adjust_centroid):
             c,d = ((a,b))
