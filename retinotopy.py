@@ -97,7 +97,7 @@ class Retinotopy:
         tmp = utils.find_thing('json_data.json', self.path_session)
         # If also with find_thing there is no labelConds.txt file, than loaded as name Condition n#
         if len(tmp) == 0:
-            self.log.info('Check the json_data.json presence inside the session folder and subfolders')
+            print('Check the json_data.json presence inside the session folder and subfolders')
             return None
         # else, load the labelConds from the alternative path
         else :
@@ -287,29 +287,29 @@ class Retinotopy:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
 
-    def get_mask_on_trajectory(self, dims, xs, ys, radius = 2):
-        up = int(np.max(xs))
-        bottom = int(np.min(xs))
-        x, y = self.get_trajectory(xs, ys, (bottom, up))
-        xs_fit_lins = np.round(np.linspace(bottom,up,(up-bottom)*2))
-        masks_small = [utils.sector_mask(dims, (int(round(np.interp(i, x, y))), i), radius, (0,360)) for i in xs_fit_lins]
-        small_mask = sum(masks_small)
-        small_mask[np.where(small_mask>1)] = 1
-        return small_mask
+def get_mask_on_trajectory(dims, xs, ys, radius = 2):
+    up = int(np.max(xs))
+    bottom = int(np.min(xs))
+    x, y = get_trajectory(xs, ys, (bottom, up))
+    xs_fit_lins = np.round(np.linspace(bottom,up,(up-bottom)*2))
+    masks_small = [utils.sector_mask(dims, (int(round(np.interp(i, x, y))), i), radius, (0,360)) for i in xs_fit_lins]
+    small_mask = sum(masks_small)
+    small_mask[np.where(small_mask>1)] = 1
+    return small_mask
 
-    def rotate_distribution(xs, ys, theta = None):
-        if theta is None:
-            theta = -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
-        print(theta)
-        # subtracting mean from original coordinates and saving result to X_new and Y_new 
-        X_new = xs - np.mean(xs)
-        Y_new = ys - np.mean(ys)
+def rotate_distribution(xs, ys, theta = None):
+    if theta is None:
+        theta = -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
+    print(theta)
+    # subtracting mean from original coordinates and saving result to X_new and Y_new 
+    X_new = xs - np.mean(xs)
+    Y_new = ys - np.mean(ys)
 
-        X_apu = [np.cos(theta)*i-np.sin(theta)*j for i, j in zip(X_new, Y_new) ]
-        Y_apu = [np.sin(theta)*i+np.cos(theta)*j for i, j in zip(X_new, Y_new) ]
+    X_apu = [np.cos(theta)*i-np.sin(theta)*j for i, j in zip(X_new, Y_new) ]
+    Y_apu = [np.sin(theta)*i+np.cos(theta)*j for i, j in zip(X_new, Y_new) ]
 
-        # adding mean back to rotated coordinates
-        return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
+    # adding mean back to rotated coordinates
+    return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
  
 def get_trajectory(xs, ys, limits):
     print(limits[0], limits[1])
