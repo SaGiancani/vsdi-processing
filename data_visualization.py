@@ -366,7 +366,8 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
         ax.contour(blobs, 4, colors='k', linestyles = 'dotted')
         for j in centroids:
             ax.scatter(j[0],j[1],color='r', marker = 'X')
-            
+
+    print(f'Limits values for heatmaps: {max_bord} - {min_bord}')   
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         #plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
