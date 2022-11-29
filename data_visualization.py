@@ -317,7 +317,7 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
     return
 
 def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask = None, name = None, blur = True, adaptive_vm = False, n_columns = 10, store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions', ext= '.svg'):
-    fig = plt.figure(figsize=(20,20), dpi=1000)
+    fig = plt.figure(figsize=(15,15), dpi=1000)
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
     
@@ -373,8 +373,9 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
         #plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
         plt.savefig(os.path.join(tmp, name + '.png'))
         print(name + ext+ ' stored successfully!')
-        plt.close('all')
-
+    else:
+        plt.show()
+    plt.close('all')
     return
 
 
