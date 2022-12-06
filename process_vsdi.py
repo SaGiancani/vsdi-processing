@@ -88,7 +88,8 @@ def time_course_signal(df_fz, roi_mask):#, hand_made=False):
     """
     roi_sign = list()
     for i in df_fz:
-        roi_sign.append(np.ma.masked_array(i, mask = roi_mask).mean())
+        to_app = np.nanmean(np.ma.masked_array(i, mask = roi_mask))
+        roi_sign.append(to_app)
     return np.array(roi_sign)
 
 def gauss_1d(x, a, mean, stddev):
