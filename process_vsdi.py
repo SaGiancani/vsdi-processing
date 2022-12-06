@@ -28,10 +28,14 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
         t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
         vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val)
         
+        temp = (vsdi_sign/mean_frames_zero)
+        t_val = np.nanmean(np.ma.masked_invalid(temp))
+        temp = np.nan_to_num(temp,nan= t_val, posinf = t_val, neginf= t_val)
+
         t_val = np.nanmean(np.ma.masked_invalid(blank_sign))
         blank_sign = np.nan_to_num(blank_sign,nan= t_val, posinf = t_val, neginf= t_val)          
         
-        df_fz = ((vsdi_sign/mean_frames_zero)/(blank_sign)) - 1
+        df_fz = (temp/blank_sign) - 1
     # The case without deblank
     elif (not deblank):
         t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
@@ -41,7 +45,8 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
     #df_fz = df_fz - df_fz[0, :, :] 
     t_val = np.nanmean(np.ma.masked_invalid(df_fz))
-    df_fz = np.nan_to_num(df_fz,nan= t_val, posinf = t_val, neginf= t_val)
+    t_val_min = np.nanmin(np.ma.masked_invalid(df_fz))
+    df_fz = np.nan_to_num(df_fz,nan= t_val_min, posinf = t_val, neginf= t_val_min)
     #df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
     return df_fz
 
