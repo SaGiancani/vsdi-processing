@@ -15,16 +15,28 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
 		-------
 		df_fz : np.array, with shape nframes, width, height
     '''
-    mean_frames_zero = np.mean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
+    mean_frames_zero = np.nanmean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
     #mean_frames_zero[np.where(mean_frames_zero==0)] = np.min(mean_frames_zero)
     # The case for precalculating the blank signal or not deblank at all
     if (deblank and (blank_sign is None)):
+        t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
+        vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val) 
+        
         df_fz= (vsdi_sign/mean_frames_zero) 
     # The case for calculating the signal deblanked
     elif deblank and (blank_sign is not None):
+        t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
+        vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val)
+        
+        t_val = np.nanmean(np.ma.masked_invalid(blank_sign))
+        blank_sign = np.nan_to_num(blank_sign,nan= t_val, posinf = t_val, neginf= t_val)          
+        
         df_fz = ((vsdi_sign/mean_frames_zero)/(blank_sign)) - 1
     # The case without deblank
     elif (not deblank):
+        t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
+        vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val) 
+        
         df_fz = (vsdi_sign/mean_frames_zero) -1
     # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
     #df_fz = df_fz - df_fz[0, :, :] 
