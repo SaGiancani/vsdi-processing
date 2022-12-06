@@ -184,6 +184,7 @@ def sobel_filter(im, k, N):
 
 
 def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 20):
+    eps = np.nanmin(sig_cond)/10000
     # Security check
     if len(np.shape(sig_cond))<3 or len(np.shape(sig_cond))>4:
         print('The signal has to be 3 or 4 dimensional')
@@ -223,6 +224,6 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
     
     # Try to fix the zscore defected for Hip AM3Strokes second session.
     #zscore = np.nan_to_num(np.nan_to_num(mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)))
-    zscore = (mean_sign_overcond-mean_signblnk_overcond)/np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
+    zscore = (mean_sign_overcond-mean_signblnk_overcond)/(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2+eps))
     return zscore
 
