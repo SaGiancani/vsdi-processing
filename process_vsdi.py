@@ -184,7 +184,7 @@ def sobel_filter(im, k, N):
 
 
 def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 20):
-    eps = np.nanmin(sig_cond)/10000
+    eps = np.nanmin(sig_cond)
     # Security check
     if len(np.shape(sig_cond))<3 or len(np.shape(sig_cond))>4:
         print('The signal has to be 3 or 4 dimensional')
