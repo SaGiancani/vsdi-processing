@@ -666,6 +666,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                     sig = np.empty((len(blks-1), header['n_frames']))
                     roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
                 else:
+                    # Discarding one element in the trial dimension, since the blk was deleted
                     raws = raws[0:-2, :, :, :]
                     delta_f = delta_f[0:-2, :, :, :]
                     sig = sig[0:-2, :]
