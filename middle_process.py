@@ -639,7 +639,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                     
                 #at the end something like (nblks, 70, 1)         
                 conditions.append(BLK.condition)
-                raws[i, :, :, :] =  BLK.binned_signal 
+                BLK.binned_signal[np.where(BLK.binned_signal==0)] = np.nan
+                raws[i, :, :, :] = BLK.binned_signal 
                 delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
                 sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
 
