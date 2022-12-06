@@ -192,22 +192,22 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
     elif len(np.shape(sig_cond))==4:
         # Blank mean and stder computation
         if (sig_blank is None) or (std_blank is None):
-            mean_signblnk_overcond = np.mean(sig_cond[:, :zero_frames, :, :], axis = 0)
-            stder_signblnk_overcond = np.std(sig_cond[:, :zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
+            mean_signblnk_overcond = np.nanmean(sig_cond[:, :zero_frames, :, :], axis = 0)
+            stder_signblnk_overcond = np.nanstd(sig_cond[:, :zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
         else:
             mean_signblnk_overcond = sig_blank
             stder_signblnk_overcond = std_blank#np.std(sig_blank[:, :, :], axis = 0)/np.sqrt(np.shape(sig_blank)[0])
 
         # Condition mean and stder computation
-        mean_sign_overcond = np.mean(sig_cond[:, :, :, :], axis = 0)
-        stder_sign_overcond = np.std(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+        mean_sign_overcond = np.nanmean(sig_cond[:, :, :, :], axis = 0)
+        stder_sign_overcond = np.nanstd(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
 
     # Case for single trial analysis: full time sequence analysis    
     elif len(np.shape(sig_cond))==3:
         # Blank mean and stder computation
         if (sig_blank is None) or (std_blank is None):
-            mean_signblnk_overcond = np.mean(sig_cond[:zero_frames, :, :], axis = 0)
-            stder_signblnk_overcond = np.std(sig_cond[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
+            mean_signblnk_overcond = np.nanmean(sig_cond[:zero_frames, :, :], axis = 0)
+            stder_signblnk_overcond = np.nanstd(sig_cond[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])# Normalization of standard over all the frames, not only the zero_frames        
         else:
             mean_signblnk_overcond = sig_blank
             stder_signblnk_overcond = std_blank#np.std(sig_blank[:, :, :], axis = 0)/np.sqrt(np.shape(sig_blank)[0])
@@ -218,10 +218,11 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
             stder_sign_overcond = 0
         else:        
             # Condition mean and stder computation
-            mean_sign_overcond = np.mean(sig_cond[:, :, :, :], axis = 0)
-            stder_sign_overcond = np.std(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+            mean_sign_overcond = np.nanmean(sig_cond[:, :, :, :], axis = 0)
+            stder_sign_overcond = np.nanstd(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
     
     # Try to fix the zscore defected for Hip AM3Strokes second session.
-    zscore = np.nan_to_num(np.nan_to_num(mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)))
+    #zscore = np.nan_to_num(np.nan_to_num(mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)))
+    zscore = (mean_sign_overcond-mean_signblnk_overcond)/np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
     return zscore
 
