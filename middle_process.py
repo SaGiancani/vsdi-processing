@@ -620,9 +620,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         header = None)
 
                     header_blk = BLK.header
-                    raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                    delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                    sig = np.zeros((len(blks), header['n_frames']))
+                    raws = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    delta_f = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    sig = np.empty((len(blks), header['n_frames']))
                     roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
                 else:
                     BLK = blk_file.BlkFile(
