@@ -224,6 +224,6 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
     
     # Try to fix the zscore defected for Hip AM3Strokes second session.
     #zscore = np.nan_to_num(np.nan_to_num(mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)))
-    zscore = (mean_sign_overcond-mean_signblnk_overcond)/(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2+eps))
+    zscore = (mean_sign_overcond-mean_signblnk_overcond)/(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)+eps)
     return zscore
 
