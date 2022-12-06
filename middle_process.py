@@ -268,8 +268,8 @@ class Session:
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()      
             # In this order for deblank signal
-            tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
-            tmp_std = np.std(df_f0[indeces_select, :, :, :], axis=0)
+            tmp = np.nanmean(df_f0[indeces_select, :, :, :], axis=0)
+            tmp_std = np.nanstd(df_f0[indeces_select, :, :, :], axis=0)
             self.f_f0_blank = tmp
             self.stde_f_f0_blank = tmp_std/np.sqrt(len(indeces_select))
             z = process.zeta_score(df_f0[indeces_select, :, :, :], self.f_f0_blank, self.stde_f_f0_blank)
@@ -278,9 +278,9 @@ class Session:
             self.z_score = np.reshape(z, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # Subtraction for 1 equivalent to deblanking (F0) -dF/F0-
             df_f0 = df_f0 - 1
-            self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            self.avrgd_df_fz = np.reshape(np.nanmean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # Average time course over the condition
-            tmp_ = np.mean(sig[indeces_select, :], axis=0)
+            tmp_ = np.nanmean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
             # employed for normalize the signal             
@@ -296,17 +296,17 @@ class Session:
             indeces_select = np.where(np.array(mask)==1)
             indeces_select = indeces_select[0].tolist()
             #df_f0 = df_f0.reshape(1, df_f0.shape[1], df_f0.shape[2], df_f0.shape[3] ) 
-            t =  np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            t =  np.nanmean(df_f0[indeces_select, :, :, :], axis=0)
             self.avrgd_df_fz = np.concatenate((self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2])), axis=0) 
             self.log.info(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
-            t_ =  np.mean(sig[indeces_select, :], axis=0)
+            t_ =  np.nanmean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.concatenate((self.avrgd_time_courses,  t_.reshape(1,  t_.shape[0])), axis=0) 
             self.log.info(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
             if self.base_report is not None:
-                zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
-                foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
+                zero_of_cond = int(np.nanmean([v.zero_frames for v in trials.values()]))
+                foi_of_cond = int(np.nanmean([v.FOI for v in trials.values()]))
                 print('Average Prestimulus time: ') 
-                print(np.mean([v.start_stim - v.onset_stim for v in trials.values()]))
+                print(np.nanmean([v.start_stim - v.onset_stim for v in trials.values()]))
                 end_of_cond = zero_of_cond + foi_of_cond
             temp_raw = raws[indeces_select, :, :, :]
             t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = True, blank_sign=None) for i in temp_raw])
@@ -661,9 +661,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         header = None)
 
                     header_blk = BLK.header
-                    raws = np.zeros((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                    delta_f = np.zeros((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                    sig = np.zeros((len(blks-1), header['n_frames']))
+                    raws = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    delta_f = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    sig = np.empty((len(blks-1), header['n_frames']))
                     roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
                 else:
                     raws = raws[0:-2, :, :, :]
