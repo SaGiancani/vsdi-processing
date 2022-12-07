@@ -316,8 +316,22 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
         plt.close('all')
     return
 
-def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask = None, name = None, blur = True, adaptive_vm = False, n_columns = 10, store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions', ext= '.svg'):
-    fig = plt.figure(figsize=(15,15), dpi=1000)
+def whole_time_sequence(data, 
+                        global_cntrds = None, 
+                        colors_centr = ['black', 'purple', 'aqua'], 
+                        cntrds = None, 
+                        blbs = None, 
+                        max=80, min=10, 
+                        mask = None, 
+                        name = None, 
+                        blur = True, 
+                        adaptive_vm = False, 
+                        n_columns = 10, 
+                        store_path = STORAGE_PATH,
+                        handle_lims_blobs = ((80, 100)), 
+                        name_analysis_ = 'RetinotopicPositions', 
+                        ext= '.svg'):
+    fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
     
@@ -358,7 +372,7 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
 
         # If centroids and blobs are provided, it avoids this computation
         if (cntrds is None) and (blbs is None):
-            _, centroids, blobs = process.detection_blob(blurred)
+            _, centroids, blobs = process.detection_blob(blurred, min_lim = handle_lims_blobs[0], max_lim = handle_lims_blobs[1])
         else:
             centroids = [cntrds[i]]
             blobs = blbs[i]
@@ -366,6 +380,10 @@ def whole_time_sequence(data, cntrds = None, blbs = None, max=80, min=10, mask =
         ax.contour(blobs, 4, colors='k', linestyles = 'dotted')
         for j in centroids:
             ax.scatter(j[0],j[1],color='r', marker = 'X')
+
+        if global_cntrds is not None:
+            for i, cc in zip(global_cntrds, colors_centr):
+                ax.vlines(i[0], 0, blurred.shape[0], color = cc, lw= 1.5)
 
     print(f'Limits values for heatmaps: {max_bord} - {min_bord}')   
     if name is not None:
