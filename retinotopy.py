@@ -246,8 +246,8 @@ class Retinotopy:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
         
         # Thresholding values
-        lim_inf = np.nanpercentile(ztmp, lim_blob_detect)
-        lim_sup = np.nanpercentile(ztmp, 100)
+        lim_inf = np.nanpercentile(np.mean(ztmp, axis=0), lim_blob_detect)
+        lim_sup = np.nanpercentile(np.mean(ztmp, axis=0), 100)
         
         # If want to store information from single frame
         if single_frame_analysis:
