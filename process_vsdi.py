@@ -55,8 +55,8 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, m
     else:
         min_thresh = min_lim
         max_thresh = max_lim
-    print((min_thresh, max_thresh))
-    print(( np.percentile(averaged_zscore, 80),  np.percentile(averaged_zscore, 100)))
+    #print((min_thresh, max_thresh))
+    #print(( np.percentile(averaged_zscore, 80),  np.percentile(averaged_zscore, 100)))
     # Thresholding of z_score
     _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
     # Median filter against salt&pepper noise
@@ -72,7 +72,7 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, m
 #    else:
 #        min_thresh2 = min_2_lim
 #        max_thresh2 = max_2_lim
-    print((min_thresh2, max_thresh2))
+    #print((min_thresh2, max_thresh2))
 
     _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
     # Normalization and binarization
