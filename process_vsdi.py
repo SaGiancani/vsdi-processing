@@ -46,16 +46,32 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     #df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
     return df_fz
 
-def detection_blob(averaged_zscore, min_lim=80, max_lim = 100):
+def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, max_2_lim = 100, std = 15, adaptive_thresh = True):
+    averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
+    # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
+    if adaptive_thresh:
+        min_thresh = np.percentile(averaged_zscore, min_lim)
+        max_thresh = np.percentile(averaged_zscore, max_lim)
+    else:
+        min_thresh = min_lim
+        max_thresh = max_lim
     # Thresholding of z_score
-    averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)
-    _, threshed = cv.threshold(averaged_zscore, np.percentile(averaged_zscore, min_lim), np.percentile(averaged_zscore, max_lim), cv.THRESH_BINARY)
+    _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
     # Median filter against salt&pepper noise
     blurred_median = median_filter(threshed, size=(3,3))
     # Gaussian filter for blob individuation
-    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=15)
+    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=std)# This could be an issue: using nanmin and divide the results by 10
+    
     # Blob detection
-    _, blobs = cv.threshold(blurred, np.percentile(blurred, 95), np.percentile(blurred, 100), cv.THRESH_BINARY)
+    # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
+    if adaptive_thresh:
+        min_thresh2 = np.percentile(blurred, min_2_lim)
+        max_thresh2 = np.percentile(blurred, max_2_lim)
+    else:
+        min_thresh2 = min_2_lim
+        max_thresh2 = max_2_lim
+
+    _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
     # Normalization and binarization
     blobs = blobs/np.max(blobs)
     blobs = blobs.astype(np.uint8)
