@@ -38,7 +38,8 @@ class Retinotopy:
         self.distribution_positions = distribution_centroids
         self.blob = blob
         self.mask = mask
-        self.time_limits = self.get_time_limits(stroke_type)
+        if stroke_type is not None:
+            self.time_limits = self.get_time_limits(stroke_type)
         self.green = green
         self.map = maps
         self.tc_mask = mask_tc
@@ -109,9 +110,10 @@ class Retinotopy:
             return ((int(a[list(a.keys())[0]][stroke_type]['bottom limit']), int(a[list(a.keys())[0]][stroke_type]['upper limit'])))
             #return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
-    def get_retinotopic_features(self, FOI, min_lim=80, max_lim = 100, circular_mask_dim = 100, mask_switch = True):
-        blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=1)
-        _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim)
+    def get_retinotopic_features(self, FOI, min_lim=80, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True):
+        num_for_nan = np.nanmin(FOI)/10
+        blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
+        _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, adaptive_thresh=adaptive_thresh)
         if mask_switch:
             circular_mask = utils.sector_mask(np.shape(blurred), (centroids[0][1], centroids[0][0]), circular_mask_dim, (0,360))
         else:
@@ -166,9 +168,11 @@ class Retinotopy:
                                 df_confront_foi = None,
                                 df_f0_foi = None,
                                 zero_frames = 20,
-                                lim_blob_detect = 75,
+                                lim_blob_detect = 80,
                                 single_frame_analysis = False,
-                                time_window = 1):
+                                time_window = 1,
+                                sig_blank = None,
+                                std_blank = None):
         '''
         The method gets as input:
         df_f0: 3 dimensional matrix
@@ -205,9 +209,16 @@ class Retinotopy:
            (global_centroid[0] - dim_side//2>0):
             check_seq =df_f0[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
                             (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
-            
-            sig_blank = np.mean(check_seq[:zero_frames, :, :], axis = 0)
-            std_blank = np.std(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames        
+
+            # Handling the case in which blank signal is provided or not
+            if (sig_blank is None) and (std_blank is None):
+                sig_blank = np.mean(check_seq[:zero_frames, :, :], axis = 0)
+                std_blank = np.std(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames
+            else:
+                sig_blank = sig_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
+                                      (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
+                std_blank = std_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
+                                      (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]               
         
             # Check for presence of df to subtract to df_f0: used for single trial analysis in AMstrokes
             if df_confront is not None:
@@ -216,8 +227,10 @@ class Retinotopy:
             flag_adjust_centroid = True
         else:
             check_seq = df_f0
-            sig_blank = np.mean(check_seq[:zero_frames, :, :], axis = 0)
-            std_blank = np.std(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames        
+            # Handling the case in which blank signal is provided or not
+            if (sig_blank is None) and (std_blank is None):
+                sig_blank = np.mean(check_seq[:zero_frames, :, :], axis = 0)
+                std_blank = np.std(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames        
             flag_adjust_centroid = False
                 
         # Check for presence of df to subtract to df_f0: used for single trial analysis in AMstrokes
@@ -230,6 +243,10 @@ class Retinotopy:
             ztmp = process.zeta_score(tmp[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
         else:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
+        
+        # Thresholding values
+        lim_inf = np.nanpercentile(ztmp, lim_blob_detect)
+        lim_sup = np.nanpercentile(ztmp, 100)
         
         # If want to store information from single frame
         if single_frame_analysis:
@@ -274,7 +291,7 @@ class Retinotopy:
         else:
             single_centroids = []
 
-        centroids, blobs, _, blurred = self.get_retinotopic_features(np.mean(ztmp, axis=0), min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
+        centroids, blobs, _, blurred = self.get_retinotopic_features(np.mean(ztmp, axis=0), min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False)
         coords = np.array(list(zip(*centroids)))
         if (coords is not None) and (len(coords)>0) :
             (a,b), _ = centroid_max(coords[0], coords[1], blurred)
