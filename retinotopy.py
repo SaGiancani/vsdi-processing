@@ -112,6 +112,7 @@ class Retinotopy:
 
     def get_retinotopic_features(self, FOI, min_lim=80, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True):
         num_for_nan = np.nanmin(FOI)/10
+        print((min_lim, max_lim))
         blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
         _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, adaptive_thresh=adaptive_thresh)
         if mask_switch:

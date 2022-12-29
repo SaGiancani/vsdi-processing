@@ -64,12 +64,12 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, m
     
     # Blob detection
     # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
-    if adaptive_thresh:
-        min_thresh2 = np.percentile(blurred, min_2_lim)
-        max_thresh2 = np.percentile(blurred, max_2_lim)
-    else:
-        min_thresh2 = min_2_lim
-        max_thresh2 = max_2_lim
+#    if adaptive_thresh:
+    min_thresh2 = np.percentile(blurred, min_2_lim)
+    max_thresh2 = np.percentile(blurred, max_2_lim)
+#    else:
+#        min_thresh2 = min_2_lim
+#        max_thresh2 = max_2_lim
 
     _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
     # Normalization and binarization
