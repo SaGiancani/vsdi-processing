@@ -208,22 +208,29 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
     plt.close('all')
     return
 
-def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions',):#center):
-    colors = ['royalblue', 'gold', 'crimson', 'lime', 'black', 'darkorchid']
+def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = '.svg', store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions', colors = ['royalblue', 'gold', 'crimson', 'darkorchid','lime', 'black']):#center):
     fig, axScatter = plt.subplots(figsize=(10, 10))
-    pc = axScatter.pcolormesh(green, cmap= 'gray')
+    if green is not None:
+        pc = axScatter.pcolormesh(green, cmap= 'gray')
+        axScatter.set_ylim(0, green.shape[0])
+        axScatter.set_xlim(0, green.shape[1])
+        axScatter.set_aspect(1.)
+        shap = green.shape
+
+    else:
+        axScatter.set_ylim(-0.3, 0.3)
+        axScatter.set_xlim(-0.3, 0.3)
+        axScatter.set_aspect(1.)
+        shap = (-0.3, 0.3)
+        
     
     for i, (x_, y_) in enumerate(zip(x,y)):
         # the scatter plot:
         axScatter.scatter(x_, y_, color = colors[i], label = titles[i], alpha=0.8)
     
-    #print(x, y)
-    massx = np.nanmax(x[0])
-    massy = np.nanmax(y[0])
+    massx = np.nanmax([j for i in x for j in i])
+    massy = np.nanmax([j for i in y for j in i])
     
-    axScatter.set_ylim(0, green.shape[0])
-    axScatter.set_xlim(0, green.shape[1])
-    axScatter.set_aspect(1.)
 
     # create new axes on the right and on the top of the current axes
     # The first argument of the new_vertical(new_horizontal) method is
@@ -235,7 +242,7 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
     # make some labels invisible
     plt.setp(axHistx.get_xticklabels() + axHisty.get_yticklabels(),
              visible=False)
-    
+    print(len(x), len(y))
     for i, (x_, y_) in enumerate(zip(x,y)):
         # now determine nice limits by hand:
         hist, bins, _ = axHistx.hist(x_, bins=40, color = colors[i], alpha=0.8)
@@ -280,9 +287,8 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
         axHisty.spines['top'].set_visible(False)
         axHisty.spines['right'].set_visible(False)
         # mu values for the distributions -on the green image-
-        #print(mu_x, mu_y, mu_y+massy)
-        axScatter.vlines(mu_x, mu_y, mu_y + massy, color = colors[i], ls = '--', lw=1.5, alpha = 1)
-        axScatter.hlines(mu_y, mu_x, mu_x + massx, color = colors[i], ls = '--', lw=1.5, alpha = 1 )#
+        axScatter.vlines(mu_x, mu_y, abs(shap[0]), color = colors[i], ls = '--', lw=1.5, alpha = 1)
+        axScatter.hlines(mu_y, mu_x,  abs(shap[1]), color = colors[i], ls = '--', lw=1.5, alpha = 1 )#
         if i == len(x)-1:
             lab = r'$\mu$ of distributions'
         else:
@@ -313,7 +319,6 @@ def retino_pos_visualization(x, y, titles, green, name = None, ext = '.svg', sto
     else:
         plt.draw()
         plt.show()
-        plt.close('all')
     return
 
 def whole_time_sequence(data, 
@@ -328,8 +333,10 @@ def whole_time_sequence(data,
                         adaptive_vm = False, 
                         n_columns = 10, 
                         store_path = STORAGE_PATH,
-                        handle_lims_blobs = ((80, 100)), 
-                        name_analysis_ = 'RetinotopicPositions', 
+                        handle_lims_blobs = ((99, 100)), 
+                        name_analysis_ = 'RetinotopicPositions',
+                        max_bord = None,
+                        min_bord = None,
                         ext= '.svg'):
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
@@ -344,7 +351,7 @@ def whole_time_sequence(data,
                     )
     
     # One max-min value for all the colormap. If True, each colormap the values are recomputed
-    if not adaptive_vm:
+    if (not adaptive_vm) and ((max_bord is None) or (min_bord is None)):
         max_bord = np.nanpercentile(data, max)
         min_bord = np.nanpercentile(data, min)
 
@@ -372,7 +379,7 @@ def whole_time_sequence(data,
 
         # If centroids and blobs are provided, it avoids this computation
         if (cntrds is None) and (blbs is None):
-            _, centroids, blobs = process.detection_blob(blurred, min_lim = handle_lims_blobs[0], max_lim = handle_lims_blobs[1])
+            _, centroids, blobs = process.detection_blob(blurred, min_2_lim = handle_lims_blobs[0], max_2_lim = handle_lims_blobs[1])
         else:
             centroids = [cntrds[i]]
             blobs = blbs[i]
@@ -397,7 +404,7 @@ def whole_time_sequence(data,
     return
 
 
-def plot_retinotopic_positions(dictionar,titles = ['Inferred centroids', 'Single stroke centroids'], distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, ext = '.svg'):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
+def plot_retinotopic_positions(dictionar, titles = ['Inferred centroids', 'Single stroke centroids'], distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, ext = '.svg'):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
     # 
     fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
     if len(list(dictionar.keys()))>1:
@@ -456,7 +463,7 @@ def plot_retinotopic_positions(dictionar,titles = ['Inferred centroids', 'Single
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         #plt.savefig(os.path.join(tmp, name + ext), dpi=1000)
-        plt.savefig(os.path.join(tmp, name + '.png'))
+        plt.savefig(os.path.join(tmp, name + ext))
         print(name + ext+ ' stored successfully!')
         plt.close('all')
     return
