@@ -225,7 +225,6 @@ class Session:
             # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
             _ = self.get_signal(self.blank_id)
 
-
     def get_blank_id(self, cond_id = None):
         '''
         The method returns the index of blank condition.
@@ -817,6 +816,11 @@ def get_all_blks(path_session, sort = True):
         return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     else:
         return tmp
+
+def get_selected(matrix, autoselection):
+    indeces = np.where(autoselection == 1)[0]
+    df = matrix[indeces, :, :, :]
+    return df
 
 
 if __name__=="__main__":
