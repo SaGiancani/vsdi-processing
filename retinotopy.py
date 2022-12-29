@@ -110,7 +110,7 @@ class Retinotopy:
             return ((int(a[list(a.keys())[0]][stroke_type]['bottom limit']), int(a[list(a.keys())[0]][stroke_type]['upper limit'])))
             #return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
-    def get_retinotopic_features(self, FOI, min_lim=80, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True):
+    def get_retinotopic_features(self, FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True):
         num_for_nan = np.nanmin(FOI)/10
         print((min_lim, max_lim))
         blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
