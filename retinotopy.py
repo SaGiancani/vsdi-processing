@@ -353,9 +353,9 @@ def centroid_max(X, Y, data):
     return index, max_point
 
 def get_session_metainfo(path_session):
-    experiment_name = path_session.split('exp-')[1].split('\sub-')[0] 
+    experiment_name = path_session.split('exp-')[1].split('sub-')[0][:-1]  
     session_name = path_session.split('sess-')[1][0:12]
-    sub_name = path_session.split('sub-')[1].split('\sess-')[0]
+    sub_name = path_session.split('sub-')[1].split('sess-')[0][:-1]
     return sub_name, experiment_name, session_name
 
 def get_retinotopy(name_cond, 
@@ -448,49 +448,5 @@ def get_retinotopy(name_cond,
     print('Condition ' +v + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
 
     return single_stroke
-    
-    # # Variables for plotting timecourses and averaged heatmap
-    # tcs_single_pos.append(single_stroke.time_courses)
-    # tcs_single_pos_avrg.append(single_stroke.average_time_course)
-    # names_cd.append(v)
-    # centroids_singlepos.append([single_stroke.retino_pos])
-    # tc_masks.append(single_stroke.tc_mask)
-
-    # # Plotting time sequences 
-    # dv.whole_time_sequence(single_stroke.signal, 
-    #                         mask = mask,
-    #                         name='z_sequence_'+ v + ID_NAME, 
-    #                         max=80, min=20, 
-    #                         global_cntrds = [single_stroke.retino_pos],
-    #                         colors_centr = [COLORS[counter]],
-    #                         name_analysis_= os.path.join(NAME_ANALYSIS, ID_NAME, v))
-    
-    # # Plotting retinotopic positions over averaged maps
-    # if counter == 0:
-    #     min_bord = np.nanpercentile(single_stroke.map, 15)
-    #     max_bord = np.nanpercentile(single_stroke.map, 98)
-    # fig, ax = plt.subplots(1,1, figsize=(9,7), dpi=300)
-    # ax.contour(single_stroke.blob, 4, colors='k', linestyles = 'dotted')
-    # pc = ax.pcolormesh(single_stroke.map, vmin=min_bord,vmax=max_bord, cmap=utils.PARULA_MAP)
-    # ax.set_xticks([])
-    # ax.set_yticks([])
-    # fig.colorbar(pc, shrink=1, ax=ax)
-    # ax.scatter(single_stroke.retino_pos[0],single_stroke.retino_pos[1],color='r', marker = '+', s=150)
-    # ax.scatter(single_stroke.distribution_positions[0],single_stroke.distribution_positions[1], color=COLORS[counter], marker = '.', s=150)
-    # ax.vlines(single_stroke.retino_pos[0], 0, single_stroke.map.shape[0], color = COLORS[counter], lw= 3, ls='--', alpha=1)
-    # ax.set_title(ID_NAME + ' condition: ' + v )
-    # # Storing picture
-    # tmp = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis =  os.path.join(NAME_ANALYSIS, ID_NAME, v))
-    # plt.savefig(os.path.join(tmp, 'averagedheatmap_' +v+ '.svg'))
-    # print('averagedheatmap_' +v+ '.svg'+ ' stored successfully!')
-    # plt.savefig(os.path.join(tmp, 'averagedheatmap_' +v+ '.png'))
-    # plt.close('all')
-    # counter +=1
-    # print('Condition ' +v + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-
-    # # Storing retino object
-    # single_stroke.df_fz = None
-    # single_stroke.time_courses = None
-    # single_stroke.store_retino(os.path.join(dv.STORAGE_PATH, NAME_ANALYSIS, ID_NAME, v))
                 
         
