@@ -337,7 +337,8 @@ def whole_time_sequence(data,
                         name_analysis_ = 'RetinotopicPositions',
                         max_bord = None,
                         min_bord = None,
-                        ext= '.svg'):
+                        ext= '.svg',
+                        mappa = utils.PARULA_MAP):
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
@@ -370,7 +371,7 @@ def whole_time_sequence(data,
         if mask is not None:
             blurred[~mask] = np.NAN
         
-        p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=utils.PARULA_MAP)
+        p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=mappa)
         ax.set_xticks([])
         ax.set_yticks([])
         #ax.set_title(name)
