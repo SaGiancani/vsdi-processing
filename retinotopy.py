@@ -46,6 +46,7 @@ class Retinotopy:
         self.average_time_course = averaged_tc
         self.df_fz = df
 
+
     def store_retino(self, t):
         tp = [self.path_session,
               self.cond_name, 
@@ -68,6 +69,7 @@ class Retinotopy:
         utils.inputs_save(tp, os.path.join(tmp,'retinotopy_'+self.cond_name))
         return
     
+
     def load_retino(self, path):
         tp = utils.inputs_load(path)
         self.path_session = tp[0]
@@ -89,6 +91,7 @@ class Retinotopy:
 
         return
 
+
     def get_time_limits(self, stroke_type):
         '''
         Reading metadata json file for time limits
@@ -109,9 +112,11 @@ class Retinotopy:
             return ((int(a[list(a.keys())[0]][stroke_type]['bottom limit']), int(a[list(a.keys())[0]][stroke_type]['upper limit'])))
             #return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
+
     def get_retinotopic_features(self, FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True):
         num_for_nan = np.nanmin(FOI)/10
-        print((min_lim, max_lim))
+        #num_for_nan = -33e-10
+        print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
         blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
         _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, adaptive_thresh=adaptive_thresh)
         if mask_switch:
@@ -119,6 +124,7 @@ class Retinotopy:
         else:
             circular_mask = None
         return centroids, blobs, circular_mask, blurred
+
 
     def centroid_poly(self, X, Y):
         """
@@ -158,6 +164,7 @@ class Retinotopy:
             # returning abs of A is the only difference to
             # the algo from above link
             return int(np.round(Cx)), int(np.round(Cy))#, abs(A)
+
 
     def single_seq_retinotopy(self,df_f0, 
                                 global_centroid,
@@ -212,8 +219,8 @@ class Retinotopy:
 
             # Handling the case in which blank signal is provided or not
             if (sig_blank is None) and (std_blank is None):
-                sig_blank = np.mean(check_seq[:zero_frames, :, :], axis = 0)
-                std_blank = np.std(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames
+                sig_blank = np.nanmean(check_seq[:zero_frames, :, :], axis = 0)
+                std_blank = np.nanstd(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames
             else:
                 sig_blank = sig_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
                                       (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
@@ -229,8 +236,8 @@ class Retinotopy:
             check_seq = df_f0
             # Handling the case in which blank signal is provided or not
             if (sig_blank is None) and (std_blank is None):
-                sig_blank = np.mean(check_seq[:zero_frames, :, :], axis = 0)
-                std_blank = np.std(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames        
+                sig_blank = np.nanmean(check_seq[:zero_frames, :, :], axis = 0)
+                std_blank = np.nanstd(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames        
             flag_adjust_centroid = False
                 
         # Check for presence of df to subtract to df_f0: used for single trial analysis in AMstrokes
@@ -245,9 +252,10 @@ class Retinotopy:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
         
         # Thresholding values
-        lim_inf = np.nanpercentile(np.mean(ztmp, axis=0), lim_blob_detect)
-        lim_sup = np.nanpercentile(np.mean(ztmp, axis=0), 100)
-        
+        lim_inf = np.nanpercentile(np.nanmean(ztmp, axis=0), lim_blob_detect)
+        lim_sup = np.nanpercentile(np.nanmean(ztmp, axis=0), 100)
+        #print(lim_inf, lim_sup)
+
         # If want to store information from single frame
         if single_frame_analysis:
             single_centroids = list()
@@ -259,17 +267,17 @@ class Retinotopy:
                 elif time_window >1:
                     if i == 0:
                         #print(f'from 0 to {time_window//2}')
-                        tmp_ = np.mean(ztmp[i:time_window//2, :, :], axis=0)                    
+                        tmp_ = np.nanmean(ztmp[i:time_window//2, :, :], axis=0)                    
                     elif i<=time_window//2-1:
                         #print(f'from 0 to {time_window//2}')
-                        tmp_ = np.mean(ztmp[0:i:time_window//2, :, :], axis=0)
+                        tmp_ = np.nanmean(ztmp[0:i:time_window//2, :, :], axis=0)
 
                     elif i>time_window//2-1:
                         try:
-                            tmp_ = np.mean(ztmp[i-time_window//2:i+time_window//2, :, :], axis=0)
+                            tmp_ = np.nanmean(ztmp[i-time_window//2:i+time_window//2, :, :], axis=0)
                             #print(f'from {i-time_window//2} to {i+time_window//2}')
                         except:
-                            tmp_ = np.mean(ztmp[i-time_window//2:, :, :], axis=0)
+                            tmp_ = np.nanmean(ztmp[i-time_window//2:, :, :], axis=0)
                             #print(f'from {i-time_window//2} to {len(ztmp)}')
                 centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
                 coords_singl = np.array(list(zip(*centroids_singl)))
@@ -291,7 +299,7 @@ class Retinotopy:
         else:
             single_centroids = []
 
-        centroids, blobs, _, blurred = self.get_retinotopic_features(np.mean(ztmp, axis=0), min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False)
+        centroids, blobs, _, blurred = self.get_retinotopic_features(np.nanmean(ztmp, axis=0), min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False)
         coords = np.array(list(zip(*centroids)))
         if (coords is not None) and (len(coords)>0) :
             (a,b), _ = centroid_max(coords[0], coords[1], blurred)
@@ -304,6 +312,7 @@ class Retinotopy:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
 
+
 def get_mask_on_trajectory(dims, xs, ys, radius = 2):
     up = int(np.max(xs))
     bottom = int(np.min(xs))
@@ -313,6 +322,7 @@ def get_mask_on_trajectory(dims, xs, ys, radius = 2):
     small_mask = sum(masks_small)
     small_mask[np.where(small_mask>1)] = 1
     return small_mask
+
 
 def rotate_distribution(xs, ys, theta = None):
     if theta is None:
@@ -328,6 +338,7 @@ def rotate_distribution(xs, ys, theta = None):
     # adding mean back to rotated coordinates
     return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
  
+
 def get_trajectory(xs, ys, limits):
     print(limits[0], limits[1])
     xs_to_fit =  np.round(np.linspace(limits[0], limits[1]-1, limits[1]-limits[0])) 
@@ -345,18 +356,20 @@ def centroid_max(X, Y, data):
     max_point = -np.inf
     for i, (x, y) in enumerate(zip(X, Y)):
         #print(data[y, x])
-        if data[y, x] > max_point:
+        if data[y, x] >= max_point:
             index = (x, y)
             max_point = data[y, x]
         elif i == 0:
             print('Something wrong with the centroid_max method')
     return index, max_point
 
+
 def get_session_metainfo(path_session):
     experiment_name = path_session.split('exp-')[1].split('sub-')[0][:-1]  
     session_name = path_session.split('sess-')[1][0:12]
     sub_name = path_session.split('sub-')[1].split('sess-')[0][:-1]
     return sub_name, experiment_name, session_name
+
 
 def get_retinotopy(name_cond, 
                    path_md_files,
@@ -367,7 +380,8 @@ def get_retinotopy(name_cond,
                    mean_blank = None,
                    std_blank = None,
                    tc_window_dimension = 10,
-                   zero_frames = 20):
+                   zero_frames = 20,
+                   retino_features = True):
 
     start_time = datetime.datetime.now().replace(microsecond=0)
     
@@ -394,7 +408,7 @@ def get_retinotopy(name_cond,
             std_blank = np.nanstd(cd.averaged_df[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(cd.averaged_df)[0])
 
     z_s = process.zeta_score(cd.averaged_df, mean_blank, std_blank, full_seq = True)
-
+    
     # Instance retinotopy object: single stroke
     single_stroke = Retinotopy(PATH,
                                cond_name = v,
@@ -406,47 +420,186 @@ def get_retinotopy(name_cond,
                                stroke_type = None)
 
     single_stroke.time_limits = TIME_LIMITS_SINGLE
-    # Blob and centroids extraction_ averaged 
-    _, blurred, blobs, centroids, _, _, _ = single_stroke.single_seq_retinotopy(cd.averaged_df, None, None,
-                                                                                single_stroke.time_limits[0],
-                                                                                single_stroke.time_limits[1])
+
+    if retino_features:
+
+        # Blob and centroids extraction_ averaged 
+        _, blurred, blobs, centroids, _, _, _ = single_stroke.single_seq_retinotopy(cd.averaged_df, None, None,
+                                                                                    single_stroke.time_limits[0],
+                                                                                    single_stroke.time_limits[1])
+        
+        print(f'Centroids found: {centroids}')
+
+        # Storing values
+        single_stroke.blob = blobs
+        single_stroke.retino_pos = centroids[0]
+        blurred[~mask] = np.NAN
+        single_stroke.map = blurred
+
+        # Single trial centroids distribution
+        print(f'Shape of signal for single trial extracting centroids: {df.shape}\n')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+        print(f'Centroids and dimension of windows: {(single_stroke.retino_pos, DIM_WINDOW)}\n')
+        print(single_stroke.retino_pos, DIM_WINDOW, single_stroke.time_limits[0],single_stroke.time_limits[1])                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+        pos_single_trials_data = [single_stroke.single_seq_retinotopy(i, 
+                                                                    single_stroke.retino_pos,
+                                                                    DIM_WINDOW, 
+                                                                    single_stroke.time_limits[0],
+                                                                    single_stroke.time_limits[1],
+                                                                    sig_blank = mean_blank,
+                                                                    std_blank = std_blank) for i in df]    
+
+        # Storing distribution of points
+        pos_centroids = list(list(zip(*pos_single_trials_data))[0])
+        single_stroke.distribution_positions = list(zip(*pos_centroids))
+        (y_bnnd_size, x_bnnd_size) = df.shape[-2:]
+        # Masking for time course extraction
+        single_stroke.tc_mask = utils.sector_mask((y_bnnd_size, x_bnnd_size),
+                                                    (single_stroke.retino_pos[1], single_stroke.retino_pos[0]),
+                                                    DIM_TC_MASK, 
+                                                    (0,360))
+
+        # Time courses making
+        single_stroke.time_courses = np.array([process.time_course_signal(np.nan_to_num(w, copy = False, nan=0.0000001, posinf=None, neginf=None), abs(single_stroke.tc_mask - 1)) for w in df])
+        single_stroke.average_time_course = np.nanmean(single_stroke.time_courses, axis = 0)
     
-    print(f'Centroids found: {centroids}')
-
-    # Storing values
-    single_stroke.blob = blobs
-    single_stroke.retino_pos = centroids[0]
-    blurred[~mask] = np.NAN
-    single_stroke.map = blurred
-
-    # Single trial centroids distribution
-    print(f'Shape of signal for single trial extracting centroids: {df.shape}\n')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-    print(f'Centroids and dimension of windows: {(single_stroke.retino_pos, DIM_WINDOW)}\n')
-    print(single_stroke.retino_pos, DIM_WINDOW, single_stroke.time_limits[0],single_stroke.time_limits[1])                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
-    pos_single_trials_data = [single_stroke.single_seq_retinotopy(i, 
-                                                                  single_stroke.retino_pos,
-                                                                  DIM_WINDOW, 
-                                                                  single_stroke.time_limits[0],
-                                                                  single_stroke.time_limits[1],
-                                                                  sig_blank = mean_blank,
-                                                                  std_blank = std_blank) for i in df]    
-
-    # Storing distribution of points
-    pos_centroids = list(list(zip(*pos_single_trials_data))[0])
-    single_stroke.distribution_positions = list(zip(*pos_centroids))
-    (y_bnnd_size, x_bnnd_size) = df.shape[-2:]
-    # Masking for time course extraction
-    single_stroke.tc_mask = utils.sector_mask((y_bnnd_size, x_bnnd_size),
-                                                (single_stroke.retino_pos[1], single_stroke.retino_pos[0]),
-                                                DIM_TC_MASK, 
-                                                (0,360))
-
-    # Time courses making
-    single_stroke.time_courses = np.array([process.time_course_signal(np.nan_to_num(w, copy = False, nan=0.0000001, posinf=None, neginf=None), abs(single_stroke.tc_mask - 1)) for w in df])
-    single_stroke.average_time_course = np.nanmean(single_stroke.time_courses, axis = 0)
     single_stroke.df_fz = df
     print('Condition ' +v + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
 
     return single_stroke
+
+def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, id_name, sub = 'No Wallace or Bretzel'):
+    
+    #if (sub == 'Bretzel') or (sub == 'Wallace'):
+    if (sub == 'Bretzel') or (sub == 'Wallace') or (sub=='Ziggy'):
+        dim_window = None
+        centroids_ = None
+    else:
+        centroids_ = retino_object.retino_pos
+
+    print(f'Shape of signal for single trial extracting centroids: {retino_object.df_fz.shape}\n')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+    print(f'Centroids and dimension of windows: {(centroids_, dim_window)}\n')
+    print(centroids_, dim_window, time_window_inference[0], time_window_inference[1], time_limits_second, time_limits_first)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+    pos_single_trials_data = [retino_object.single_seq_retinotopy(i, 
+                                                                  centroids_,
+                                                                  dim_window, 
+                                                                  time_window_inference[0],
+                                                                  time_window_inference[1],
+                                                                  df_confront = df_conf,
+                                                                  df_confront_foi = time_limits_second,
+                                                                  df_f0_foi = time_limits_first,
+                                                                  single_frame_analysis=True,
+                                                                  time_window=3) for i in retino_object.df_fz]    
+    
+    # Storing distribution of points
+    pos_centroids = list(list(zip(*pos_single_trials_data))[0])
+    retino_object.distribution_positions = list(zip(*pos_centroids))
+    print('Centroids found!\n')               
+    #print('The dots for single trial analysis are:\n')
+    #print(single_stroke.distribution_positions)
+    # blurrs_pos_single_trials = list(list(zip(*pos_single_trials_data))[1])
+    # blobs_pos_single_trials = list(list(zip(*pos_single_trials_data))[2])
+    # #pos_centroids_single_trials = list(list(zip(*pos_single_trials_data))[3])
+    # not_normlzd_pos_centroids = list(list(zip(*pos_single_trials_data))[4])
+    #z_scores_pos_single_trials = list(list(zip(*pos_single_trials_data))[5])
+    #centroids_pos_single_frame = list(list(zip(*pos_single_trials_data))[6])
+                    
+    return retino_object
+
+def subtraction_among_conditions(path_session, 
+                                 first, second, 
+                                 time_limits_first, 
+                                 time_limits_second, 
+                                 id_name, 
+                                 name,
+                                 session_name, 
+                                 mask, 
+                                 traject_mask, 
+                                 time_courses, 
+                                 green, 
+                                 df, 
+                                 params, 
+                                 name_params, 
+                                 time_window_inference, 
+                                 multiple_stroke_123,
+                                 stroke_type = 'multiple stroke', sub = 'No Wallace or Bretzel', single_trial_analysis = True, dim_window = 50):
+    
+    #First
+    _, _, _, _, _, z_123_shrinked, _ = multiple_stroke_123.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1])
+    sign = z_123_shrinked
+
+    if (second is not None) and (time_limits_second is not None):
+        #AM12
+        _, _, _, _, _, z_12_shrinked, _ = multiple_stroke_123.single_seq_retinotopy(second, None, None, time_limits_second[0], time_limits_second[1])
+        sign = z_123_shrinked-z_12_shrinked
+
+    # AM123 - AM12
+    pos_inferred_averaged = Retinotopy(path_session, 
+                                        cond_name = id_name + name, 
+                                        name = id_name + name,
+                                        signal = sign,
+                                        averaged_simple_retino_pos = None, 
+                                        session_name = session_name, 
+                                        distribution_centroids = list(),
+                                        blob = None, 
+                                        mask = mask,
+                                        maps = None,
+                                        mask_tc = traject_mask,
+                                        tc = time_courses,
+                                        averaged_tc = np.nanmean(time_courses, axis=0),
+                                        df = df,
+                                        green = green, 
+                                        stroke_type = stroke_type)
+
+    pos_inferred_averaged.time_limits = ((time_limits_first[0], time_limits_first[1]))
+    if (sub != 'Wallace' ) and (sub !='Bretzel') and (sub!='Ziggy'):
+        FOI = np.mean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
+    else:
+        FOI = np.mean(pos_inferred_averaged.signal, axis=0)
+
+    # Find retinotopic position in averaged signal over 15 frames
+    centroids, blobs, _, blurred = pos_inferred_averaged.get_retinotopic_features(FOI, mask_switch = False)
+    min_bord = np.percentile(blurred, 15)
+    max_bord = np.percentile(blurred, 98)
+    #coords_singl = np.array(list(zip(*centroids)))
+    #(a,b), _ = retino.centroid_max(coords_singl[0], coords_singl[1], blurred)
+    pos_inferred_averaged.retino_pos = centroids[0]
+    pos_inferred_averaged.blob = blobs
+    
+    #if (sub != 'Wallace' ) and (sub !='Bretzel'):
+    if (sub != 'Wallace' ) and (sub !='Bretzel') and (sub!='Ziggy'):
+        blurred[~pos_inferred_averaged.mask] = np.NAN
+    pos_inferred_averaged.map = blurred
+    
+    if single_trial_analysis:
+    #        if (second is None) or (time_limits_second is None):
+            #retino_object, pos_centroids, blurrs_pos_single_trials, blobs_pos_single_trials, pos_centroids_single_trials, not_normlzd_pos_centroids, z_scores_pos_single_trials, centroids_pos_single_frame 
+            #print(dim_window, time_window_inference, second, pos_inferred_averaged.time_limits, time_limits_second,id_name, sub)
+    #            time_limits_first = None
+    #        else:
+        pos_inferred_averaged = single_trial_detection(pos_inferred_averaged, dim_window, time_window_inference, second, pos_inferred_averaged.time_limits, time_limits_second, id_name, sub = sub)
+    else:
+        pos_inferred_averaged.distribution_positions = list()
+    
+    # Storing parameters
+    params[name_params].append((min_bord, max_bord)) #heatmaps limits
+    params[name_params].append(pos_inferred_averaged.blob) #blob contours
+    params[name_params].append(centroids) #averaged retinotopic position
+    params[name_params].append(pos_inferred_averaged.map) #averaged zscore
+    params[name_params].append(pos_inferred_averaged.distribution_positions)#pos3_inferred_averaged.distribution_positions) #single trial centroids distribution
+    params[name_params].append(np.arange(pos_inferred_averaged.time_limits[0]-7,pos_inferred_averaged.time_limits[1]+7,1).astype(int)) #xlimits for timecourse plot
+    params[name_params].append(pos_inferred_averaged.tc_mask) #mask
+    params[name_params].append(pos_inferred_averaged.time_courses) #average timecourse
+    params[name_params].append(pos_inferred_averaged.average_time_course) #average timecourse 8
+
+    # Build the 'retino_inferred' folder for the session 
+    # storage_path = os.path.join(NAME_ANALYSIS, id_name, 'retino_inferred')
+    # tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
+    # # Storing retinotopic objects
+    # # Deleting df_fz and time courses for sparing storage volume
+    # pos_inferred_averaged.df_fz = None
+    # pos_inferred_averaged.time_courses = None
+    # pos_inferred_averaged.store_retino(os.path.join(dv.STORAGE_PATH, NAME_ANALYSIS, tmp))
+
+    return params, pos_inferred_averaged 
                 
         
