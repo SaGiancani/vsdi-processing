@@ -819,7 +819,10 @@ def get_all_blks(path_session, sort = True):
 
 def get_selected(matrix, autoselection):
     indeces = np.where(autoselection == 1)[0]
-    df = matrix[indeces, :, :, :]
+    if len(matrix.shape) == 4:
+        df = matrix[indeces, :, :, :]
+    elif len(matrix.shape) == 2:
+        df = matrix[indeces, :]
     return df
 
 
