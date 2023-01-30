@@ -10,6 +10,8 @@ from scipy.stats import norm
 
 STORAGE_PATH = '/envau/work/neopto/USERS/GIANCANI/Analysis/'
 
+COLORS_7 = ['crimson', 'tomato', 'magenta', 'darkorange', 'burlywood', 'palevioletred', 'chocolate']
+
 def set_storage_folder(storage_path = STORAGE_PATH, name_analysis = 'prova'):    
     folder_path = os.path.join(storage_path, name_analysis)               
     if not os.path.exists(folder_path):
