@@ -312,7 +312,24 @@ class Retinotopy:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
 
-
+def get_conditions_correspondance(path):
+    '''
+    Reading metadata json file for conditions positions
+    '''
+    tmp = utils.find_thing('json_data.json', path)
+    # If also with find_thing there is no json file, than return None and a warning#
+    if len(tmp) == 0:
+        print('Check the json_data.json presence inside the session folder and subfolders')
+        return None
+    # else, load the json
+    else :
+        f = open(tmp[0])
+        # returns JSON object as a dictionary
+        data = json.load(f)
+        a = json.loads(data)
+        print('Positions condition metadata loaded successfully')
+        return a[list(a.keys())[0]]['pos metadata']
+        
 def get_mask_on_trajectory(dims, xs, ys, radius = 2):
     up = int(np.max(xs))
     bottom = int(np.min(xs))
