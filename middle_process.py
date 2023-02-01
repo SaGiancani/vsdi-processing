@@ -125,6 +125,8 @@ class Session:
         self.cond_names = None
         self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
+        if len(self.all_blks) == 0:
+            print('Check the path: no blks found')
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
         self.blank_id = self.get_blank_id(cond_id=condid)
@@ -132,7 +134,6 @@ class Session:
         # This can be automatized, with zero_frames, extracting parameters from BaseReport
         # Avoiding to load a BLK file
         # A blk loaded for useful hyperparameters
-        print(len(self.all_blks))
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
                             self.header['spatial_bin'], 
                             self.header['temporal_bin'])
