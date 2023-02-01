@@ -132,6 +132,7 @@ class Session:
         # This can be automatized, with zero_frames, extracting parameters from BaseReport
         # Avoiding to load a BLK file
         # A blk loaded for useful hyperparameters
+        print(len(self.all_blks))
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
                             self.header['spatial_bin'], 
                             self.header['temporal_bin'])
@@ -305,12 +306,12 @@ class Session:
                 zero_of_cond = int(np.nanmean([v.zero_frames for v in trials.values()]))
                 foi_of_cond = int(np.nanmean([v.FOI for v in trials.values()]))
                 print('Average Prestimulus time: ') 
-                print(np.nanmean([v.start_stim - v.onset_stim for v in trials.values()]))
+                print(np.nanmean([v.onset_stim - v.start_stim for v in trials.values()]))
                 end_of_cond = zero_of_cond + foi_of_cond
             temp_raw = raws[indeces_select, :, :, :]
             t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = True, blank_sign=None) for i in temp_raw])
-            z = process.zeta_score(self.avrgd_df_fz[-1, :, :, :], None, None, full_seq = True)
-            #z = process.zeta_score(t_, self.f_f0_blank, self.stde_f_f0_blank)
+            #z = process.zeta_score(self.avrgd_df_fz[-1, :, :, :], None, None, full_seq = True)
+            z = process.zeta_score(t_, self.f_f0_blank, self.stde_f_f0_blank)
              #def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
 
             self.z_score = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
