@@ -436,7 +436,8 @@ def get_retinotopy(name_cond,
                                green = green,
                                stroke_type = None)
 
-    single_stroke.time_limits = TIME_LIMITS_SINGLE
+    if TIME_LIMITS_SINGLE is not None:
+        single_stroke.time_limits = TIME_LIMITS_SINGLE
 
     if retino_features:
 
