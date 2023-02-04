@@ -97,6 +97,7 @@ class Retinotopy:
         Reading metadata json file for time limits
         '''
         #sub + '_' + i.split('exp-')[1] + '_'+path_session.split('sess-')[1][0:12]
+        print( self.path_session)
         tmp = utils.find_thing('json_data.json', self.path_session)
         # If also with find_thing there is no labelConds.txt file, than loaded as name Condition n#
         if len(tmp) == 0:
