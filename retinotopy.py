@@ -404,7 +404,7 @@ def get_retinotopy(name_cond,
 
     start_time = datetime.datetime.now().replace(microsecond=0)
     
-    PATH = path_md_files.split('\derivatives')[0]
+    PATH = path_md_files.split('derivatives')[0]
     print(PATH)
     TIME_LIMITS_SINGLE = time_limits
     DIM_WINDOW = window_dimension
