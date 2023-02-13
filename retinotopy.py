@@ -62,13 +62,13 @@ class RetinoSession(md.Session):
                 self.log = logger        
 
             self.cond_names = None
-            self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
+            self.header = super().get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
             self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
 
             if len(self.all_blks) == 0:
                 print('Check the path: no blks found')
 
-            self.blank_id = self.get_blank_id(cond_id=condid)
+            self.blank_id = super().get_blank_id(cond_id=condid)
             
             self.single_stroke_label = single_stroke_label
             self.multiple_stroke_label = multiple_stroke_label
