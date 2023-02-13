@@ -91,10 +91,11 @@ class RetinoSession(md.Session):
             self.mask = self.get_mask()
     
         def get_condition_name(self):
-            #print(self.single_stroke_label, self.multiple_stroke_label)
+            self.cond_dict = super().get_condition_name()
+            print(self.single_stroke_label, self.multiple_stroke_label)
             # Two dictionaries, for type of conditions -pos or am-
-            single_pos_conds = {k: v for k,v in super().get_condition_name().items() if self.single_stroke_label.lower() in v.lower()}
-            am_conds = {k: v for k,v in super().get_condition_name().items() if (self.single_stroke_label.lower() not in v.lower()) and (v.lower() != 'blank')}
+            single_pos_conds = self.get_conditions_pos()
+            am_conds = self.get_conditions_am()
 
             # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
             return {**single_pos_conds, **am_conds}                           
