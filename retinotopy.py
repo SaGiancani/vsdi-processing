@@ -91,6 +91,7 @@ class RetinoSession(md.Session):
     
         def get_condition_name(self):
             tmp = super().get_condition_name()
+            print(tmp)
             # Two dictionaries, for type of conditions -pos or am-
             single_pos_conds = {k: v for k,v in tmp.items() if self.single_stroke_label.lower() in v.lower()}
             am_conds = {k: v for k,v in tmp.items() if (self.single_stroke_label.lower() not in v.lower()) and (v.lower() != 'blank')}
