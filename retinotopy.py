@@ -68,6 +68,12 @@ class RetinoSession(md.Session):
             if len(self.all_blks) == 0:
                 print('Check the path: no blks found')
 
+            self.blank_id = self.get_blank_id(cond_id=condid)
+            
+            self.single_stroke_label = single_stroke_label
+            self.multiple_stroke_label = multiple_stroke_label
+            self.path_session = path_session
+            self.path_md = path_md
             # All the conditions    
             self.cond_dict = self.get_condition_name()
             self.cond_dict_all = self.cond_dict
@@ -77,12 +83,6 @@ class RetinoSession(md.Session):
             print(f'All session conditions: {self.cond_dict_all}')
             # Name condition extraction
             self.cond_names = list(self.cond_dict.values())
-            self.blank_id = self.get_blank_id(cond_id=condid)
-            
-            self.single_stroke_label = single_stroke_label
-            self.multiple_stroke_label = multiple_stroke_label
-            self.path_session = path_session
-            self.path_md = path_md
             self.blank_condition = self.get_blank()
             self.id_name = self.get_session_id_name()
             self.green = self.get_green(green_name)
