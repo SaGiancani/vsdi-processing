@@ -917,14 +917,14 @@ if __name__=="__main__":
                         default=None,
                         type=int,
                         help='Conditions to analyze: None by default -all the conditions-')   
-                        
+
     start_process_time = datetime.datetime.now().replace(microsecond=0)
     args = parser.parse_args()
 
     print(args)
 
     # Store time boundaries
-    time_limits_single = ((args.bottom_time_window, args.upper_time_window))
+    #time_limits_single = ((args.bottom_time_window, args.upper_time_window))
 
     # Instantiate variables
     global_centroid, masks, blobs_pos = list(), list(), list()
