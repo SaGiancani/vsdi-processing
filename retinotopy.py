@@ -36,7 +36,7 @@ class RetinoSession(md.Session):
 
             #path_session, logs_switch = False, deblank_switch = False
 
-            super().__init__(path_session, 
+            super(RetinoSession, self).__init__(path_session, 
                              spatial_bin = 3,
                              temporal_bin = 1,
                              zero_frames = None,
