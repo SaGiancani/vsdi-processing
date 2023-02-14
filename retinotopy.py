@@ -184,19 +184,21 @@ class RetinoSession(md.Session):
             try:
                 cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
                 self.blank_condition = cd_blank
+                print('Blank condition loaded succesfully!')
                 #mean_blank = np.nanmean(cd_blank.averaged_df[:20, :,:], axis=0)
                 #std_blank = np.nanstd(cd_blank.averaged_df[:20, :,:], axis=0)/np.sqrt(np.shape(cd_blank.averaged_df)[0]) 
             except:
+                print('Blank condition not found')
                 # In case of absence of the blank condition, it processes and stores it
                 self.storage_switch = True
                 self.visualization_switch = False
-
                 # It is gonna get the blank signal automatically
+                print('Processing blank signal')
                 _ = self.get_signal(self.blank_id)
-
                 self.storage_switch = False
                 cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
                 self.blank_condition = cd_blank
+                print('Blank condition loaded succesfully!')
             return 
 
 class Retinotopy:
