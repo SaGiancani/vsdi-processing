@@ -151,12 +151,11 @@ class RetinoSession(md.Session):
             # Loading handmade mask
             try:
                 mask = np.load(os.path.join(self.path_session, 'derivatives','handmade_mask.npy'))
-                print(mask.shape)
                 (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
                 x_bnnd_size = x_size
                 y_bnnd_size = y_size
-                print( (x_bnnd_size, y_bnnd_size))
                 mask = mask[0:y_bnnd_size , 0:x_bnnd_size ]
+                print('Mask loaded succesfully!')
 
             except:
                 print('No mask present in derivatives folder for session ' + self.id_name)
@@ -174,16 +173,15 @@ class RetinoSession(md.Session):
                 # Loading green
                 green_path = utils.find_thing(green_name, self.path_session)
                 green = cv.imread(green_path[0], cv.IMREAD_UNCHANGED)
-                print(green.shape)
 
                 # Resizing green
                 (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
                 x_bnnd_size = x_size
                 y_bnnd_size = y_size
-                print( (x_bnnd_size, y_bnnd_size))
 
                 tmp = cv.resize(np.array(green, dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
                 green_ = np.copy(tmp)
+                print('Green '+green_name+' loaded succesfully!')
                 return green_
 
             except:
