@@ -15,21 +15,21 @@ class RetinoSession(md.Session):
                      green_name,                   
                      spatial_bin = 3,
                      temporal_bin = 1,
-                     zero_frames = None,
-                     tolerance = 20,
-                     mov_switch=False,
+                     #zero_frames = None,
+                     #tolerance = 20,
+                     #mov_switch=False,
                      deblank_switch=False,
                      conditions_id =None,
                      chunks = 1,
                      strategy = 'mae',
                      logs_switch =False,  
-                     base_report_name= 'BaseReport.csv',
-                     base_head_dim = 19, 
+                     #base_report_name= 'BaseReport.csv',
+                     #base_head_dim = 19, 
                      logger = None, 
                      condid = None, 
-                     store_switch = False, 
-                     data_vis_switch = True, 
-                     end_frame = None,
+                     #store_switch = False, 
+                     #data_vis_switch = True, 
+                     #end_frame = None,
                      single_stroke_label = 'pos',
                      multiple_stroke_label = 'am',
                      **kwargs):
@@ -954,9 +954,10 @@ if __name__=="__main__":
 
     retino_pos_ = dict()    
 
-    # Instance of the retinotopy session
+    # Session path extraction
     path_session = args.path_md.split('derivatives')[0]
-
+    
+    # Instance of the retinotopy session
     retino_session = RetinoSession(path_session, 
                                    args.path_md, 
                                    args.green_name, 
