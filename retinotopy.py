@@ -81,7 +81,6 @@ class RetinoSession(md.Session):
             self.blank_id = super().get_blank_id(cond_id=condid)
             # Store all conditions
             self.cond_dict_all = self.cond_dict
-            print(self.cond_dict_all)
             # Pick only inserted conditions and corresponding single positions
             self.cond_dict = self.get_conditions_intersect()
             # Name condition extraction
@@ -137,8 +136,6 @@ class RetinoSession(md.Session):
                 all_considered_conds = list(set(list(conds.values()) + cond_t_list))
                 # Rebuild dictionary with id as key and condition name as value
                 conds = {k: v for k,v in conds_full.items() if v in all_considered_conds}
-                print('I am within the get_conditions_intersect')
-                print(conds)
             else:
                 conds = conds_full
             print(f'Conditions picked: {conds}')
@@ -957,7 +954,7 @@ if __name__=="__main__":
                                    args.green_name, 
                                    conditions_id=args.conditions_id, 
                                    single_stroke_label=args.single_stroke_label, 
-                                   multiple_stroke_label=args.multiple_stroke_label) 
+                                   multiple_stroke_label=args.apparent_motion_label) 
     
     # conds, green_, mask, mean_blank, std_blank, ID_NAME, path_md_files, RETINO_POS_AM = set_retinotopy_session(args.path_md, args.green_name, args.single_stroke_label, args.conditions_id)
 
