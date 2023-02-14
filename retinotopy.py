@@ -94,6 +94,8 @@ class RetinoSession(md.Session):
 
             # Blank condition loading            
             self.blank_condition = self.get_blank()
+            print(dir(self.blank_condition))
+
             self.id_name = self.get_session_id_name()
             print('Session ID name: ' + self.id_name)
             self.green = self.get_green(green_name)
@@ -149,7 +151,7 @@ class RetinoSession(md.Session):
             try:
                 mask = np.load(os.path.join(self.path_session, 'derivatives','handmade_mask.npy'))
                 print(mask.shape)
-                (y_size, x_size) = self.blank_signal.averaged_df[0, :,:].shape
+                (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
                 x_bnnd_size = x_size
                 y_bnnd_size = y_size
                 print( (x_bnnd_size, y_bnnd_size))
@@ -174,7 +176,7 @@ class RetinoSession(md.Session):
                 print(green.shape)
 
                 # Resizing green
-                (y_size, x_size) = self.blank_signal.averaged_df[0, :,:].shape
+                (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
                 x_bnnd_size = x_size
                 y_bnnd_size = y_size
                 print( (x_bnnd_size, y_bnnd_size))
