@@ -92,8 +92,9 @@ class RetinoSession(md.Session):
             print(f'Only picked conditions: {self.cond_dict}')
             print(f'All session conditions: {self.cond_dict_all}')
 
-            # Blank condition loading            
-            self.blank_condition = self.get_blank()
+            # Blank condition loading
+            self.blank_condition = None            
+            self.get_blank()
             print(dir(self.blank_condition))
 
             self.id_name = self.get_session_id_name()
