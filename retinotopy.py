@@ -33,7 +33,6 @@ class RetinoSession(md.Session):
                      single_stroke_label = 'pos',
                      multiple_stroke_label = 'am',
                      **kwargs):
-
             #path_session, logs_switch = False, deblank_switch = False
 
             super(RetinoSession, self).__init__(path_session, 
@@ -76,10 +75,12 @@ class RetinoSession(md.Session):
             self.path_session = path_session
             self.path_md = path_md
             # All the conditions    
-            self.cond_dict = self.get_condition_name()
+            self.cond_dict = super().get_condition_name()
             self.cond_dict_all = self.cond_dict
+            print(self.cond_dict_all)
             # Pick only inserted conditions and corresponding single positions
             self.cond_dict = self.get_conditions_intersect()
+            print(self.cond_dict)
             print(f'Only picked conditions: {self.cond_dict}')
             print(f'All session conditions: {self.cond_dict_all}')
             # Name condition extraction
@@ -90,15 +91,15 @@ class RetinoSession(md.Session):
             self.retino_pos_am = get_conditions_correspondance(self.path_session)
             self.mask = self.get_mask()
     
-        def get_condition_name(self):
-            self.cond_dict = super().get_condition_name()
-            print(self.single_stroke_label, self.multiple_stroke_label)
-            # Two dictionaries, for type of conditions -pos or am-
-            single_pos_conds = self.get_conditions_pos()
-            am_conds = self.get_conditions_am()
+        # def get_condition_name(self):
+        #     self.cond_dict = super().get_condition_name()
+        #     print(self.single_stroke_label, self.multiple_stroke_label)
+        #     # Two dictionaries, for type of conditions -pos or am-
+        #     single_pos_conds = self.get_conditions_pos()
+        #     am_conds = self.get_conditions_am()
 
-            # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
-            return {**single_pos_conds, **am_conds}                           
+        #     # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
+        #     return {**single_pos_conds, **am_conds}                           
 
         def get_conditions_pos(self):
             return {k: v for k,v in self.cond_dict.items() if self.single_stroke_label.lower() in v.lower()}
@@ -109,8 +110,8 @@ class RetinoSession(md.Session):
         def get_conditions_intersect(self):
             conditions_id = self.header['conditions_id']
             # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
-            am_conds = self.get_conditions_am
-            single_conds = self.get_conditions_pos
+            am_conds = self.get_conditions_am()
+            single_conds = self.get_conditions_pos()
             conds_full = {**single_conds, **am_conds}
 
             # Intersect the set of all the conditions with the picked one in the parser
