@@ -74,6 +74,9 @@ class RetinoSession(md.Session):
             self.path_session = path_session
             self.path_md = path_md
 
+            # Corresponding single stroke for each AM condition
+            self.retino_pos_am = get_conditions_correspondance(self.path_session)
+            print(self.retino_pos_am)
             # All the conditions    
             self.cond_dict = super().get_condition_name()
             self.cond_names = list(self.cond_dict.values())
@@ -94,8 +97,6 @@ class RetinoSession(md.Session):
             self.id_name = self.get_session_id_name()
             print('Session ID name: ' + self.id_name)
             self.green = self.get_green(green_name)
-            self.retino_pos_am = get_conditions_correspondance(self.path_session)
-            print(self.retino_pos_am)
             self.mask = self.get_mask()
     
         # def get_condition_name(self):
