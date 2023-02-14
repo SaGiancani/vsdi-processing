@@ -62,6 +62,7 @@ class RetinoSession(md.Session):
 
             self.cond_names = None
             self.header = super().get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
+            print(self.header)
             self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
 
             if len(self.all_blks) == 0:
