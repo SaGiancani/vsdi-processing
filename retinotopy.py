@@ -89,8 +89,10 @@ class RetinoSession(md.Session):
             # Name condition extraction
             self.blank_condition = self.get_blank()
             self.id_name = self.get_session_id_name()
+            print('Session ID name: ' + self.id_name)
             self.green = self.get_green(green_name)
             self.retino_pos_am = get_conditions_correspondance(self.path_session)
+            print(self.retino_pos_am)
             self.mask = self.get_mask()
     
         # def get_condition_name(self):
