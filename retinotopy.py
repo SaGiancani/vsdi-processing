@@ -72,6 +72,7 @@ class RetinoSession(md.Session):
             print(self.single_stroke_label, self.multiple_stroke_label)
             self.path_session = path_session
             self.path_md = path_md
+
             # All the conditions    
             self.cond_dict = super().get_condition_name()
             self.cond_names = list(self.cond_dict.values())
@@ -82,11 +83,13 @@ class RetinoSession(md.Session):
             print(self.cond_dict_all)
             # Pick only inserted conditions and corresponding single positions
             self.cond_dict = self.get_conditions_intersect()
+            # Name condition extraction
             self.cond_names = list(self.cond_dict.values())
             print(self.cond_dict)
             print(f'Only picked conditions: {self.cond_dict}')
             print(f'All session conditions: {self.cond_dict_all}')
-            # Name condition extraction
+
+            # Blank condition loading            
             self.blank_condition = self.get_blank()
             self.id_name = self.get_session_id_name()
             print('Session ID name: ' + self.id_name)
@@ -113,6 +116,7 @@ class RetinoSession(md.Session):
 
         def get_conditions_intersect(self):
             conditions_id = self.header['conditions_id']
+            print(f'The picked ID conditions are: {conditions_id}')
             # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
             am_conds = self.get_conditions_am()
             single_conds = self.get_conditions_pos()
@@ -132,7 +136,8 @@ class RetinoSession(md.Session):
                 all_considered_conds = list(set(list(conds.values()) + cond_t_list))
                 # Rebuild dictionary with id as key and condition name as value
                 conds = {k: v for k,v in conds_full.items() if v in all_considered_conds}
-
+                print('I am within the get_conditions_intersect')
+                print(conds)
             else:
                 conds = conds_full
             print(f'Conditions picked: {conds}')
