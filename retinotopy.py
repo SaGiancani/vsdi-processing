@@ -132,11 +132,9 @@ class RetinoSession(md.Session):
                 # Taking the am conditions ONLY
                 am_tmp = list(set(conds_names).intersection(set(am_conds.values())))
                 # Taking the single stroke conditions that make the AM
-                cond_t_list =  [self.retino_pos_am[v] for v in am_tmp]
+                cond_t_list =  [j for v in am_tmp for j in self.retino_pos_am[v]]
                 # Considering a sum of single stroke that make the picked AMs and unifying them to the one immediately picked -w/o repetition- 
-                print(cond_t_list)
                 tmp = list(conds.values()) + cond_t_list
-                print(tmp)
                 all_considered_conds = list(set(tmp))
                 # Rebuild dictionary with id as key and condition name as value
                 conds = {k: v for k,v in conds_full.items() if v in all_considered_conds}
