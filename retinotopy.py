@@ -952,7 +952,12 @@ if __name__=="__main__":
     # Instance of the retinotopy session
     path_session = args.path_md.split('derivatives')[0]
 
-    retino_session = RetinoSession(path_session, args.path_md, args.green_name) 
+    retino_session = RetinoSession(path_session, 
+                                   args.path_md, 
+                                   args.green_name, 
+                                   conditions_id=args.conditions_id, 
+                                   single_stroke_label=args.single_stroke_label, 
+                                   multiple_stroke_label=args.multiple_stroke_label) 
     
     # conds, green_, mask, mean_blank, std_blank, ID_NAME, path_md_files, RETINO_POS_AM = set_retinotopy_session(args.path_md, args.green_name, args.single_stroke_label, args.conditions_id)
 
