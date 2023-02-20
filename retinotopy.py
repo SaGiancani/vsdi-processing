@@ -756,7 +756,7 @@ def get_conditions_correspondance(path):
     '''
     a = get_stimulus_metadata(path)
     # Build a dictionary with am conditions as keys and corresponding single stroke position as lists
-    return {i: j['condition'] for i, j in list(a[list(a.keys())[0]]['pos metadata'].items())}
+    return {i: j['conditions'] for i, j in list(a[list(a.keys())[0]]['pos metadata'].items())}
 
         
 def get_mask_on_trajectory(dims, xs, ys, radius = 2):
