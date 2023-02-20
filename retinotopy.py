@@ -300,7 +300,7 @@ class RetinoSession(md.Session):
                 # Store single stroke condition
                 dict_retino[name_cond] = retino_cond
                 # Extract visualization utility variables
-                indeces_colors = [list(self.cond_pos.values()).index(name_cond)]
+                indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
                 colrs = [dv.COLORS_7[indeces_colors]]
                 print(colrs)
                 g_centers = [retino_cond.retino_pos]
