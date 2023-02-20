@@ -359,9 +359,10 @@ class RetinoSession(md.Session):
             start_time = datetime.datetime.now().replace(microsecond=0)
 
             if str_type == 'multiple stroke':
-                space_step = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space']
-                starting_time = self.stimulus_metadata['pos metadata'][name_cond]['start'] #In frames
-                time_step = np.ceil((1/self.stimulus_metadata['speed'])*space_step*self.acquisition_frequency, int) # In frames                  
+                a = list(self.stimulus_metadata[list(self.stimulus_metadata.keys())[0]]['pos metadata'].items())
+                space_step = a['pos metadata'][name_cond]['inter stimulus space']
+                starting_time = a['pos metadata'][name_cond]['start'] #In frames
+                time_step = np.ceil((1/a['speed'])*space_step*self.acquisition_frequency, int) # In frames                  
                 print(f'The interstimulus space is {space_step}, for a starting time of {starting_time}\n')                                     
                 print(f'Frame step between the appearance of one stroke and the other: {time_step}')  
 
@@ -780,7 +781,6 @@ def get_conditions_correspondance(path):
     Reading metadata json file for conditions positions
     '''
     a = get_stimulus_metadata(path)
-    a = list(a.values())[0]
     # Build a dictionary with am conditions as keys and corresponding single stroke position as lists
     return {i: j['conditions'] for i, j in list(a[list(a.keys())[0]]['pos metadata'].items())}
 
