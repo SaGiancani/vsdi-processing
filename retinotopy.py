@@ -359,8 +359,7 @@ class RetinoSession(md.Session):
             start_time = datetime.datetime.now().replace(microsecond=0)
 
             if str_type == 'multiple stroke':
-                a = self.stimulus_metadata[list(self.stimulus_metadata.keys())[0]]['pos metadata']
-                print(a)
+                a = self.stimulus_metadata['pos metadata']
                 space_step = a[name_cond]['inter stimulus space']
                 starting_time = a[name_cond]['start'] #In frames
                 time_step = np.ceil((1/self.stimulus_metadata['speed'])*space_step*self.acquisition_frequency, int) # In frames                  
@@ -775,7 +774,7 @@ def get_stimulus_metadata(path):
         # returns JSON object as a dictionary
         data = json.load(f)
         a = json.loads(data)
-    return a
+    return  a[list(a.keys())[0]]
 
 def get_conditions_correspondance(path):
     '''
@@ -783,7 +782,7 @@ def get_conditions_correspondance(path):
     '''
     a = get_stimulus_metadata(path)
     # Build a dictionary with am conditions as keys and corresponding single stroke position as lists
-    return {i: j['conditions'] for i, j in list(a[list(a.keys())[0]]['pos metadata'].items())}
+    return {i: j['conditions'] for i, j in list(a['pos metadata'].items())}
 
         
 def get_mask_on_trajectory(dims, xs, ys, radius = 2):
