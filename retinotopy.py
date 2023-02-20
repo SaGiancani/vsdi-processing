@@ -64,9 +64,22 @@ class RetinoSession(md.Session):
                 self.log = utils.setup_custom_logger('myapp')
             else:
                 self.log = logger        
-
+    
             self.cond_names = None
             self.header = super().get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
+            # All blks names loaded
+            self.all_blks = super().get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
+            # A blk loaded for useful hyperparameters
+            blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
+                                self.header['spatial_bin'], 
+                                self.header['temporal_bin'])
+            self.header['n_frames'] = blk.header['nframesperstim']
+            self.header['original_height'] = blk.header['frameheight']
+            self.header['original_width'] = blk.header['framewidth']
+            if zero_frames is None:
+                self.header['zero_frames'] = int(round(self.header['n_frames']*0.1))
+            else:
+                self.header['zero_frames'] = zero_frames
             print(self.header)
             self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
 
