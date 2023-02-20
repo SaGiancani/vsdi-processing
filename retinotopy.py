@@ -248,6 +248,7 @@ class RetinoSession(md.Session):
             # Condition instance
             cd = md.Condition()
             # Loading or building the condition
+            print(self.header)
             try:
                 cd.load_cond(os.path.join(self.path_md, 'md_data_'+name_cond))
                 print('Condition ' + name_cond + ' loaded!\n')
@@ -747,7 +748,6 @@ def get_stimulus_metadata(path):
         # returns JSON object as a dictionary
         data = json.load(f)
         a = json.loads(data)
-    print(a)
     return a
 
 def get_conditions_correspondance(path):
