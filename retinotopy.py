@@ -97,7 +97,7 @@ class RetinoSession(md.Session):
             self.multiple_stroke_label = multiple_stroke_label
             print(self.single_stroke_label, self.multiple_stroke_label)
             self.path_session = path_session
-            self.path_md = os.join(path_md, 'md_data')
+            self.path_md = os.path.join(path_md, 'md_data')
 
             # Corresponding single stroke for each AM condition
             self.retino_pos_am = get_conditions_correspondance(self.path_session)
@@ -122,6 +122,10 @@ class RetinoSession(md.Session):
             self.stimulus_metadata = get_stimulus_metadata(self.path_session) 
 
             # Blank condition loading
+            # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
+            self.time_course_blank = None
+            self.f_f0_blank = None
+            self.stde_f_f0_blank = None           
             self.blank_condition = None            
             self.get_blank()
             self.mean_blank = self.blank_condition.averaged_df
