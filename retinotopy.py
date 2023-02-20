@@ -363,7 +363,7 @@ class RetinoSession(md.Session):
                 print(a)
                 space_step = a[name_cond]['inter stimulus space']
                 starting_time = a[name_cond]['start'] #In frames
-                time_step = np.ceil((1/a['speed'])*space_step*self.acquisition_frequency, int) # In frames                  
+                time_step = np.ceil((1/self.stimulus_metadata['speed'])*space_step*self.acquisition_frequency, int) # In frames                  
                 print(f'The interstimulus space is {space_step}, for a starting time of {starting_time}\n')                                     
                 print(f'Frame step between the appearance of one stroke and the other: {time_step}')  
 
