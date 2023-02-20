@@ -76,8 +76,15 @@ class RetinoSession(md.Session):
             self.header['n_frames'] = blk.header['nframesperstim']
             self.header['original_height'] = blk.header['frameheight']
             self.header['original_width'] = blk.header['framewidth']
+            # Setting key frames
+            # End
+            if end_frame is None:
+                self.header['ending_frame'] = int(round(self.header['n_frames']*0.9))
+            else:
+                self.header['ending_frame'] = end_frame
+            # Start
             if zero_frames is None:
-                self.header['zero_frames'] = int(round(self.header['n_frames']*0.1))
+                self.header['zero_frames'] = int(round(self.header['n_frames']*0.2))
             else:
                 self.header['zero_frames'] = zero_frames
             print(self.header)
@@ -106,9 +113,9 @@ class RetinoSession(md.Session):
             self.cond_dict = self.get_conditions_intersect()
             # Name condition extraction
             self.cond_names = list(self.cond_dict.values())
-            print(self.cond_dict)
-            print(f'Only picked conditions: {self.cond_dict}')
-            print(f'All session conditions: {self.cond_dict_all}')
+            print(self.cond_dict + '\n')
+            print(f'Only picked conditions: {self.cond_dict}\n')
+            print(f'All session conditions: {self.cond_dict_all}\n')
             self.acquisition_frequency = acquisition_fq
 
             # Metadata stimulus
