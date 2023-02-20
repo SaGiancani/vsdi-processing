@@ -287,7 +287,7 @@ class RetinoSession(md.Session):
                 id_cond = [k for k, v in self.cond_dict_all.items() if v == name_cond][0]
                 _ = self.get_signal(id_cond)
                 self.storage_switch = False
-                cd.load_cond(os.path.join(self.path_md, 'md_data_'+name_cond))
+                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
                 print('Condition ' + name_cond + ' loaded!\n')
             
             # Storing variable
