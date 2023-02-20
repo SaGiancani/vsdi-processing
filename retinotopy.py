@@ -113,6 +113,9 @@ class RetinoSession(md.Session):
             self.cond_dict = self.get_conditions_intersect()
             # Name condition extraction
             self.cond_names = list(self.cond_dict.values())
+            # Separated dictionaries, for AM and single pos conditions
+            self.cond_pos = self.get_conditions_pos()
+            self.cond_am = self.get_conditions_am()
             print(str(self.cond_dict) + '\n')
             print(f'Only picked conditions: {self.cond_dict}\n')
             print(f'All session conditions: {self.cond_dict_all}\n')
@@ -166,8 +169,8 @@ class RetinoSession(md.Session):
             conditions_id = self.header['conditions_id']
             print(f'The picked ID conditions are: {conditions_id}')
             # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
-            am_conds = self.get_conditions_am()
-            single_conds = self.get_conditions_pos()
+            am_conds = self.cond_am
+            single_conds = self.cond_pos
             conds_full = {**single_conds, **am_conds}
 
             # Intersect the set of all the conditions with the picked one in the parser
@@ -292,12 +295,12 @@ class RetinoSession(md.Session):
             dict_retino = dict()
 
             # Single stroke condition
-            if name_cond in list(self.get_conditions_pos().values()):
+            if name_cond in list(self.cond_pos.values()):
                 retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
                 # Store single stroke condition
                 dict_retino[name_cond] = retino_cond
                 # Extract visualization utility variables
-                indeces_colors = [y for y, kj in enumerate(self.cond_dict_all.values()) if kj==name_cond][0]
+                indeces_colors = [y for y, kj in enumerate() if kj==name_cond][0]
                 colrs = [dv.COLORS_7[indeces_colors]]
                 print(colrs)
                 g_centers = [retino_cond.retino_pos]
@@ -320,7 +323,7 @@ class RetinoSession(md.Session):
                     # Extract visualization utility variables
                     #indeces_colors =[list(dict_retino.keys()).index(k) for k in self.retino_pos_am[name_cond]]
                     #g_centers = [dict_retino[k] for k in self.retino_pos_am[name_cond]]
-                    indeces_colors =[list(self.cond_dict_all.values()).index(j)]
+                    indeces_colors =[list(self.cond_pos.values()).index(j)]
                     colrs = [dv.COLORS_7[indeces_colors]]
                     g_centers = [retino_cond.retino_pos]
                     # If true, store pictures
