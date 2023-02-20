@@ -109,13 +109,13 @@ class RetinoSession(md.Session):
             self.blank_id = super().get_blank_id(cond_id=condid)
             # Store all conditions
             self.cond_dict_all = self.cond_dict
+            # Separated dictionaries, for AM and single pos conditions
+            self.cond_pos = self.get_conditions_pos()
+            self.cond_am = self.get_conditions_am()
             # Pick only inserted conditions and corresponding single positions
             self.cond_dict = self.get_conditions_intersect()
             # Name condition extraction
             self.cond_names = list(self.cond_dict.values())
-            # Separated dictionaries, for AM and single pos conditions
-            self.cond_pos = self.get_conditions_pos()
-            self.cond_am = self.get_conditions_am()
             print(str(self.cond_dict) + '\n')
             print(f'Only picked conditions: {self.cond_dict}\n')
             print(f'All session conditions: {self.cond_dict_all}\n')
