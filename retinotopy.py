@@ -97,7 +97,7 @@ class RetinoSession(md.Session):
             self.multiple_stroke_label = multiple_stroke_label
             print(self.single_stroke_label, self.multiple_stroke_label)
             self.path_session = path_session
-            self.path_md = path_md
+            self.path_md = os.join(path_md, 'md_data')
 
             # Corresponding single stroke for each AM condition
             self.retino_pos_am = get_conditions_correspondance(self.path_session)
