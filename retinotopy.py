@@ -8,6 +8,8 @@ import process_vsdi as process
 
 from scipy.ndimage.filters import gaussian_filter
 
+COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal']
+
 NAME_RETINO_ANALYSIS = 'AMnbStrokes_Retinotopic_Analysis'
 
 class RetinoSession(md.Session):
@@ -268,7 +270,8 @@ class RetinoSession(md.Session):
         def get_retinotopy(self,
                            name_cond, 
                            time_limits, 
-                           retinotopic_path_folder):
+                           retinotopic_path_folder, 
+                           dict_retino):
             print('Start processing retinotopy analysis for condition ' + name_cond )
             start_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -291,9 +294,6 @@ class RetinoSession(md.Session):
                 cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
                 print('Condition ' + name_cond + ' loaded!\n')
             
-            # Storing variable
-            dict_retino = dict()
-
             # Single stroke condition
             if name_cond in list(self.cond_pos.values()):
                 retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
@@ -302,11 +302,10 @@ class RetinoSession(md.Session):
                 # Extract visualization utility variables
                 indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
                 colrs = [dv.COLORS_7[indeces_colors]]
-                print(colrs)
-                g_centers = [retino_cond.retino_pos]
+#                g_centers = [retino_cond.retino_pos]
                 # If true, store pictures
                 if self.visualization_switch:
-                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, g_centers, retino_cond)
+                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
                 # If true store variables
                 if self.storage_switch:
                     retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
@@ -315,6 +314,8 @@ class RetinoSession(md.Session):
             elif name_cond in list(self.cond_am.values()):
                 # Storing variable
                 dict_retino[name_cond] = dict()
+                #g_centers, colrs, blobs, maps = [], [], [], []
+
                 for i, j in enumerate(self.retino_pos_am[name_cond]):
                     print('The stroke ' +j+f' is the number {i}')
                     retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, str_type = 'multiple stroke')
@@ -323,16 +324,15 @@ class RetinoSession(md.Session):
                     # Extract visualization utility variables
                     #indeces_colors =[list(dict_retino.keys()).index(k) for k in self.retino_pos_am[name_cond]]
                     #g_centers = [dict_retino[k] for k in self.retino_pos_am[name_cond]]
-                    indeces_colors =[list(self.cond_pos.values()).index(j)]
-                    colrs = [dv.COLORS_7[indeces_colors]]
-                    g_centers = [retino_cond.retino_pos]
-                    # If true, store pictures
-                    if self.visualization_switch:
-                        self.plot_stuff(retinotopic_path_folder, name_cond, colrs, g_centers, retino_cond)
+                    indeces_colors =[list(self.cond_pos.values()).index(j)][0]
+                    colrs.append(dv.COLORS_7[indeces_colors])
+#                    g_centers.append(dict_retino[j].retino_pos)
                     # If true store variables
                     if self.storage_switch:
-                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
-
+                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond +'-'+j))
+                # If true, store pictures
+                if self.visualization_switch:
+                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
             print('End processing retinotopy analysis for condition ' + name_cond )
             print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')            
             return dict_retino
@@ -343,8 +343,10 @@ class RetinoSession(md.Session):
             # Create Retinotopic Analysis folder path
             retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(NAME_RETINO_ANALYSIS))
             print('Retino session for data session ' + self.id_name + ' start to process...\n')                                            
+            # Storing variable
+            dict_retino = dict()
             for cond_id, cond_name in self.cond_dict.items():
-                retino_conds = self.get_retinotopy(cond_name, None, retinotopic_path_folder)
+                dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
             print('Retino session elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')                                
             return
 
@@ -440,20 +442,34 @@ class RetinoSession(md.Session):
             r.distribution_positions = list(zip(*pos_centroids))
             return r
 
-        def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, g_centers, retino_object):
-            dv.whole_time_sequence(retino_object.signal, 
-                                   mask = retino_object.mask,
-                                   name='z_sequence_'+ name_cond + self.id_name, 
-                                   max=80, min=20, 
-                                   global_cntrds = g_centers,
-                                   colors_centr = colrs,
-                                   name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
-
-            # Parameters for heatmap plotting
-            min_bord = np.nanpercentile(retino_object.map, 15)
-            max_bord = np.nanpercentile(retino_object.map, 98)
-            # Averaged hetmap plot
-            dv.plot_averaged_map(name_cond, retino_object, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
+        def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino):
+            if name_cond in list(self.cond_pos.values()):
+                dv.whole_time_sequence(dict_retino[name_cond].signal, 
+                                    mask = dict_retino[name_cond].mask,
+                                    name='z_sequence_'+ name_cond + self.id_name, 
+                                    max=80, min=20, 
+                                    global_cntrds = dict_retino[name_cond].retino_pos,
+                                    colors_centr = colrs,
+                                    name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                # Parameters for heatmap plotting
+                min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
+                max_bord = np.nanpercentile(dict_retino[name_cond].map, 98)
+                # Averaged hetmap plot
+                dv.plot_averaged_map(name_cond, dict_retino[name_cond], dict_retino[name_cond].map, dict_retino[name_cond].retino_pos, dict_retino[name_cond].blob, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
+            elif name_cond in list(self.cond_am.values()):
+                dv.whole_time_sequence(dict_retino[name_cond].signal, 
+                                       mask = dict_retino[name_cond].mask,
+                                       name='z_sequence_'+ name_cond + self.id_name, 
+                                       max=80, min=20, 
+                                       global_cntrds = [dict_retino[name_cond][name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
+                                       colors_centr = colrs,
+                                       name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                for name_pos in list(self.cond_am.values()):
+                    # Parameters for heatmap plotting
+                    min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
+                    max_bord = np.nanpercentile(dict_retino[name_cond].map, 98)
+                    # Averaged hetmap plot
+                    dv.plot_averaged_map(name_cond+name_pos, dict_retino[name_cond][name_pos], dict_retino[name_pos].map, dict_retino[name_pos].retino_pos, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
             return
 
 
