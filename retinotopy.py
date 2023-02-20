@@ -269,6 +269,7 @@ class RetinoSession(md.Session):
             cd = md.Condition()
             # Loading or building the condition
             print(self.header)
+            print(self.path_md)
             try:
                 cd.load_cond(os.path.join(self.path_md, 'md_data_'+name_cond))
                 print('Condition ' + name_cond + ' loaded!\n')
