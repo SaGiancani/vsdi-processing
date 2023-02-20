@@ -113,7 +113,7 @@ class RetinoSession(md.Session):
             self.cond_dict = self.get_conditions_intersect()
             # Name condition extraction
             self.cond_names = list(self.cond_dict.values())
-            print(self.cond_dict + '\n')
+            print(str(self.cond_dict) + '\n')
             print(f'Only picked conditions: {self.cond_dict}\n')
             print(f'All session conditions: {self.cond_dict_all}\n')
             self.acquisition_frequency = acquisition_fq
