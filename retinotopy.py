@@ -435,12 +435,10 @@ class RetinoSession(md.Session):
             # Storing distribution of points
             pos_centroids = list(list(zip(*pos_single_trials_data))[0])
             r.distribution_positions = list(zip(*pos_centroids))
-            r.df_fz = df
             return r
 
         def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, g_centers, retino_object):
-            print(retino_object.df_fz.shape, retino_object.mask.shape)
-            dv.whole_time_sequence(retino_object.df_fz, 
+            dv.whole_time_sequence(retino_object.signal, 
                                    mask = retino_object.mask,
                                    name='z_sequence_'+ name_cond + self.id_name, 
                                    max=80, min=20, 
