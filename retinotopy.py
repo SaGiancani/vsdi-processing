@@ -359,7 +359,7 @@ class RetinoSession(md.Session):
             start_time = datetime.datetime.now().replace(microsecond=0)
 
             if str_type == 'multiple stroke':
-                a = list(self.stimulus_metadata[list(self.stimulus_metadata.keys())[0]]['pos metadata'].items())
+                a = list(self.stimulus_metadata[list(self.stimulus_metadata.keys())[0]]['pos metadata'].items())[0]
                 space_step = a['pos metadata'][name_cond]['inter stimulus space']
                 starting_time = a['pos metadata'][name_cond]['start'] #In frames
                 time_step = np.ceil((1/a['speed'])*space_step*self.acquisition_frequency, int) # In frames                  
