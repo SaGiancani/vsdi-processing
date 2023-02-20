@@ -439,6 +439,7 @@ class RetinoSession(md.Session):
             return r
 
         def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, g_centers, retino_object):
+            print(retino_object.df_fz.shape, mask = retino_object.mask.shape)
             dv.whole_time_sequence(retino_object.df_fz, 
                                    mask = retino_object.mask,
                                    name='z_sequence_'+ name_cond + self.id_name, 
