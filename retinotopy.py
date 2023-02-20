@@ -773,13 +773,14 @@ def get_stimulus_metadata(path):
         # returns JSON object as a dictionary
         data = json.load(f)
         a = json.loads(data)
-    return list(a.values())[0]
+    return a
 
 def get_conditions_correspondance(path):
     '''
     Reading metadata json file for conditions positions
     '''
     a = get_stimulus_metadata(path)
+    a = list(a.values())[0]
     # Build a dictionary with am conditions as keys and corresponding single stroke position as lists
     return {i: j['conditions'] for i, j in list(a[list(a.keys())[0]]['pos metadata'].items())}
 
