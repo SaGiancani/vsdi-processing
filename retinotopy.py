@@ -272,8 +272,6 @@ class RetinoSession(md.Session):
             # Condition instance
             cd = md.Condition()
             # Loading or building the condition
-            print(self.header)
-            print(self.path_md)
             try:
                 cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
                 print('Condition ' + name_cond + ' loaded!\n')
@@ -450,7 +448,7 @@ class RetinoSession(md.Session):
             min_bord = np.nanpercentile(retino_object.map, 15)
             max_bord = np.nanpercentile(retino_object.map, 98)
             # Averaged hetmap plot
-            dv.plot_averaged_map(name_cond, retino_object, min_bord, max_bord, colrs, self.id_name, name_analysis_ = 'RetinotopicPositions', store_path = retinotopic_path_folder)
+            dv.plot_averaged_map(name_cond, retino_object, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
             return
 
 
