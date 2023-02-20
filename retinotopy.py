@@ -297,7 +297,7 @@ class RetinoSession(md.Session):
                 # Store single stroke condition
                 dict_retino[name_cond] = retino_cond
                 # Extract visualization utility variables
-                indeces_colors = [y for y, kj in enumerate(dict_retino.keys()) if kj==name_cond][0]
+                indeces_colors = [y for y, kj in enumerate(self.cond_dict_all.values()) if kj==name_cond][0]
                 colrs = [dv.COLORS_7[indeces_colors]]
                 print(colrs)
                 g_centers = [retino_cond.retino_pos]
@@ -312,7 +312,7 @@ class RetinoSession(md.Session):
             elif name_cond in list(self.get_conditions_am().values()):
                 # Storing variable
                 dict_retino[name_cond] = dict()
-                for i, j in enumerate(self.cond_dict_all[name_cond]):
+                for i, j in enumerate(self.retino_pos_am[name_cond]):
                     print('The stroke ' +j+f' is the number {i}')
                     retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, str_type = 'multiple stroke')
                     # Store single stroke within AM
@@ -320,7 +320,7 @@ class RetinoSession(md.Session):
                     # Extract visualization utility variables
                     #indeces_colors =[list(dict_retino.keys()).index(k) for k in self.retino_pos_am[name_cond]]
                     #g_centers = [dict_retino[k] for k in self.retino_pos_am[name_cond]]
-                    indeces_colors =[list(dict_retino.keys()).index(j)]
+                    indeces_colors =[list(self.cond_dict_all.values()).index(j)]
                     colrs = [dv.COLORS_7[indeces_colors]]
                     g_centers = [retino_cond.retino_pos]
                     # If true, store pictures
