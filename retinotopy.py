@@ -773,7 +773,7 @@ def get_stimulus_metadata(path):
         # returns JSON object as a dictionary
         data = json.load(f)
         a = json.loads(data)
-    return a
+    return list(a.values())[0]
 
 def get_conditions_correspondance(path):
     '''
