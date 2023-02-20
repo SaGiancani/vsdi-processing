@@ -97,7 +97,7 @@ class RetinoSession(md.Session):
             self.multiple_stroke_label = multiple_stroke_label
             print(self.single_stroke_label, self.multiple_stroke_label)
             self.path_session = path_session
-            self.path_md = os.path.join(path_md, 'md_data')
+            self.path_md = path_md
 
             # Corresponding single stroke for each AM condition
             self.retino_pos_am = get_conditions_correspondance(self.path_session)
@@ -275,7 +275,7 @@ class RetinoSession(md.Session):
             print(self.header)
             print(self.path_md)
             try:
-                cd.load_cond(os.path.join(self.path_md, 'md_data_'+name_cond))
+                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
                 print('Condition ' + name_cond + ' loaded!\n')
 
             except:
