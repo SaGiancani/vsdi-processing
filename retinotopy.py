@@ -359,8 +359,8 @@ class RetinoSession(md.Session):
             start_time = datetime.datetime.now().replace(microsecond=0)
 
             if str_type == 'multiple stroke':
-                space_step = self.stimulus_metadata[name_cond]['inter stimulus space']
-                starting_time = self.stimulus_metadata[name_cond]['start'] #In frames
+                space_step = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space']
+                starting_time = self.stimulus_metadata['pos metadata'][name_cond]['start'] #In frames
                 time_step = np.ceil((1/self.stimulus_metadata['speed'])*space_step*self.acquisition_frequency, int) # In frames                  
                 print(f'The interstimulus space is {space_step}, for a starting time of {starting_time}\n')                                     
                 print(f'Frame step between the appearance of one stroke and the other: {time_step}')  
