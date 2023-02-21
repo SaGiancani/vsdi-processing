@@ -457,8 +457,8 @@ class RetinoSession(md.Session):
                 # Averaged hetmap plot
                 dv.plot_averaged_map(name_cond, dict_retino[name_cond], dict_retino[name_cond].map, dict_retino[name_cond].retino_pos, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
             elif name_cond in list(self.cond_am.values()):
-                dv.whole_time_sequence(dict_retino[name_cond].signal, 
-                                       mask = dict_retino[name_cond].mask,
+                dv.whole_time_sequence(dict_retino[name_cond][name_pos].signal, 
+                                       mask = dict_retino[name_cond][name_pos].mask,
                                        name='z_sequence_'+ name_cond + self.id_name, 
                                        max=80, min=20, 
                                        global_cntrds = [dict_retino[name_cond][name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
