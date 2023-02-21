@@ -333,7 +333,7 @@ class RetinoSession(md.Session):
 #                    g_centers.append(dict_retino[j].retino_pos)
                     # If true store variables
                     if self.storage_switch:
-                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond +'-'+j))
+                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j))
                 # If true, store pictures
                 if self.visualization_switch:
                     self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
