@@ -463,8 +463,8 @@ class RetinoSession(md.Session):
             elif name_cond in list(self.cond_am.values()):
                 for name_pos in list(self.cond_am.values()):
                     # Parameters for heatmap plotting
-                    min_bord = np.nanpercentile(dict_retino[name_pos].map, 15)
-                    max_bord = np.nanpercentile(dict_retino[name_pos].map, 98)
+                    min_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 15)
+                    max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
                     # Averaged hetmap plot
                     dv.plot_averaged_map(name_cond+name_pos, dict_retino[name_cond][name_pos], dict_retino[name_cond][name_pos].map, dict_retino[name_pos].retino_pos, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
                 # Zscore
