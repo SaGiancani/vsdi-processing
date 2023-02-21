@@ -296,26 +296,30 @@ class RetinoSession(md.Session):
             colrs = []
             # Single stroke condition
             if name_cond in list(self.cond_pos.values()):
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
-                # Store single stroke condition
-                dict_retino[name_cond] = retino_cond
-                # Extract visualization utility variables
-                indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
-                colrs.append(dv.COLORS_7[indeces_colors])
-#                g_centers = [retino_cond.retino_pos]
-                # If true, store pictures
-                if self.visualization_switch:
-                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
-                # If true store variables
-                if self.storage_switch:
-                    retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                # Try to check if retino_cond already exists
+                try:
+                    retino_cond = Retinotopy(self.path_session)
+                    retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))                    
+                # If does not, it build it
+                except:
+                    retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
+                    # Store single stroke condition
+                    dict_retino[name_cond] = retino_cond
+                    # Extract visualization utility variables
+                    indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
+                    colrs.append(dv.COLORS_7[indeces_colors])
+    #                g_centers = [retino_cond.retino_pos]
+                    # If true, store pictures
+                    if self.visualization_switch:
+                        self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
+                    # If true store variables
+                    if self.storage_switch:
+                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
             
             # Multiple stroke condition
             elif name_cond in list(self.cond_am.values()):
                 # Storing variable
                 dict_retino[name_cond] = dict()
-                #g_centers, colrs, blobs, , [], [], []
-
                 for i, j in enumerate(self.retino_pos_am[name_cond]):
                     print('The stroke ' +j+f' is the number {i}')
                     retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, str_type = 'multiple stroke')
