@@ -293,7 +293,7 @@ class RetinoSession(md.Session):
                 self.storage_switch = False
                 cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
                 print('Condition ' + name_cond + ' loaded!\n')
-            
+            colrs = []
             # Single stroke condition
             if name_cond in list(self.cond_pos.values()):
                 retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
@@ -301,7 +301,7 @@ class RetinoSession(md.Session):
                 dict_retino[name_cond] = retino_cond
                 # Extract visualization utility variables
                 indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
-                colrs = [dv.COLORS_7[indeces_colors]]
+                colrs.append(dv.COLORS_7[indeces_colors])
 #                g_centers = [retino_cond.retino_pos]
                 # If true, store pictures
                 if self.visualization_switch:
@@ -314,7 +314,7 @@ class RetinoSession(md.Session):
             elif name_cond in list(self.cond_am.values()):
                 # Storing variable
                 dict_retino[name_cond] = dict()
-                #g_centers, colrs, blobs, maps = [], [], [], []
+                #g_centers, colrs, blobs, , [], [], []
 
                 for i, j in enumerate(self.retino_pos_am[name_cond]):
                     print('The stroke ' +j+f' is the number {i}')
