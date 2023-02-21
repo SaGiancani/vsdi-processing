@@ -299,7 +299,7 @@ class RetinoSession(md.Session):
                 # Try to check if retino_cond already exists
                 try:
                     retino_cond = Retinotopy(self.path_session)
-                    retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))                    
+                    retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
                 # If does not, it build it
                 except:
                     retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
