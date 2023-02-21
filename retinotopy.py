@@ -457,6 +457,13 @@ class RetinoSession(md.Session):
                 # Averaged hetmap plot
                 dv.plot_averaged_map(name_cond, dict_retino[name_cond], dict_retino[name_cond].map, dict_retino[name_cond].retino_pos, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
             elif name_cond in list(self.cond_am.values()):
+                for name_pos in list(self.cond_am.values()):
+                    # Parameters for heatmap plotting
+                    min_bord = np.nanpercentile(dict_retino[name_pos].map, 15)
+                    max_bord = np.nanpercentile(dict_retino[name_pos].map, 98)
+                    # Averaged hetmap plot
+                    dv.plot_averaged_map(name_cond+name_pos, dict_retino[name_cond][name_pos], dict_retino[name_cond][name_pos].map, dict_retino[name_pos].retino_pos, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
+                # Zscore
                 dv.whole_time_sequence(dict_retino[name_cond][name_pos].signal, 
                                        mask = dict_retino[name_cond][name_pos].mask,
                                        name='z_sequence_'+ name_cond + self.id_name, 
@@ -464,13 +471,7 @@ class RetinoSession(md.Session):
                                        global_cntrds = [dict_retino[name_cond][name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
                                        colors_centr = colrs,
                                        name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
-                for name_pos in list(self.cond_am.values()):
-                    # Parameters for heatmap plotting
-                    min_bord = np.nanpercentile(dict_retino[name_pos].map, 15)
-                    max_bord = np.nanpercentile(dict_retino[name_pos].map, 98)
-                    # Averaged hetmap plot
-                    dv.plot_averaged_map(name_cond+name_pos, dict_retino[name_cond][name_pos], dict_retino[name_cond][name_pos].map, dict_retino[name_pos].retino_pos, min_bord, max_bord, colrs, self.id_name, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
-            return
+                return
 
 
 class Retinotopy:
