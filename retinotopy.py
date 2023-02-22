@@ -446,7 +446,7 @@ class RetinoSession(md.Session):
             r.distribution_positions = list(zip(*pos_centroids))
             return r
 
-        def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino, col_distr):
+        def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino):
             if name_cond in list(self.cond_pos.values()):
                 col_distr = colrs
                 dv.whole_time_sequence(dict_retino[name_cond].signal, 
