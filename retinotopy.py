@@ -477,7 +477,7 @@ class RetinoSession(md.Session):
                                        mask = dict_retino[name_cond][name_pos].mask,
                                        name='z_sequence_'+ name_cond + self.id_name, 
                                        max=80, min=20, 
-                                       global_cntrds = [dict_retino[name_cond][name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
+                                       global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
                                        colors_centr = colrs,
                                        name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
                 return
