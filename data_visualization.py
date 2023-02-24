@@ -337,10 +337,12 @@ def whole_time_sequence(data,
                         store_path = STORAGE_PATH,
                         handle_lims_blobs = ((99, 100)), 
                         name_analysis_ = 'RetinotopicPositions',
+                        significant_thresh = None,
                         max_bord = None,
                         min_bord = None,
                         ext= '.svg',
                         mappa = utils.PARULA_MAP):
+
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
@@ -352,6 +354,16 @@ def whole_time_sequence(data,
                     label_mode="L",
                     cbar_mode= None#'edge', 'each','single'
                     )
+
+    # Significant threshold for blob thresholding
+    if significant_thresh is None:
+        significant_thresh = np.nanpercentile(data, 80)
+        upper_limit = np.nanpercentile(data, 100)
+        ad_t = False
+    else:
+        significant_thresh = 80
+        upper_limit = 100
+        ad_t = True
     
     # One max-min value for all the colormap. If True, each colormap the values are recomputed
     if (not adaptive_vm) and ((max_bord is None) or (min_bord is None)):
@@ -366,7 +378,7 @@ def whole_time_sequence(data,
             min_bord = np.nanpercentile(l, min)
 
         if blur:
-            blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=1)
+            blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=np.nanmin(l), posinf=None, neginf=None), sigma=1)
         else:
             blurred = l
 
@@ -376,17 +388,32 @@ def whole_time_sequence(data,
         p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=mappa)
         ax.set_xticks([])
         ax.set_yticks([])
-        #ax.set_title(name)
-        #ax.set_xlabel(key, size=28)
-        #ax.set_ylabel(key, size=28)
 
         # If centroids and blobs are provided, it avoids this computation
         if (cntrds is None) and (blbs is None):
-            _, centroids, blobs = process.detection_blob(blurred, min_2_lim = handle_lims_blobs[0], max_2_lim = handle_lims_blobs[1])
+            _, centroids, blobs = process.detection_blob(blurred, 
+                                                         min_lim = significant_thresh, 
+                                                         max_lim= upper_limit,
+                                                         min_2_lim = handle_lims_blobs[0], 
+                                                         max_2_lim = handle_lims_blobs[1],
+                                                         adaptive_thresh = ad_t)
         else:
             centroids = [cntrds[i]]
             blobs = blbs[i]
 
+        # Centroids masking: discarding the ones out of masked region of interest
+        if (len(centroids)>0) and (mask is not None):
+            centrs = []
+            #blbs = []
+            for x,y, in centroids:
+            # Masking centroids out of the masked area of interest
+                if mask[y, x]:
+                    centrs.append((x,y))
+
+            centroids = centrs 
+
+        # Masking blobs before plotting them
+        blobs = blobs*mask                    
         ax.contour(blobs, 4, colors='k', linestyles = 'dotted')
         for j in centroids:
             ax.scatter(j[0],j[1],color='r', marker = 'X')
