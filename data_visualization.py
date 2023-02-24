@@ -361,7 +361,7 @@ def whole_time_sequence(data,
         upper_limit = np.nanpercentile(data, 100)
         ad_t = False
     else:
-        significant_thresh = 80
+        significant_thresh = significant_thresh
         upper_limit = 100
         ad_t = True
     
