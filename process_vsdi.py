@@ -47,11 +47,11 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     return df_fz
 
 def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, max_2_lim = 100, std = 15, adaptive_thresh = True):
-    averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
+    averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=np.nanmin(averaged_zscore), posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
     # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
     if adaptive_thresh:
-        min_thresh = np.percentile(averaged_zscore, min_lim)
-        max_thresh = np.percentile(averaged_zscore, max_lim)
+        min_thresh = np.nanpercentile(averaged_zscore, min_lim)
+        max_thresh = np.nanpercentile(averaged_zscore, max_lim)
     else:
         min_thresh = min_lim
         max_thresh = max_lim
@@ -62,13 +62,13 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, m
     # Median filter against salt&pepper noise
     blurred_median = median_filter(threshed, size=(3,3))
     # Gaussian filter for blob individuation
-    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=0.000001, posinf=None, neginf=None), sigma=std)# This could be an issue: using nanmin and divide the results by 10
+    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)# This could be an issue: using nanmin and divide the results by 10
     
     # Blob detection
     # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
 #    if adaptive_thresh:
-    min_thresh2 = np.percentile(blurred, min_2_lim)
-    max_thresh2 = np.percentile(blurred, max_2_lim)
+    min_thresh2 = np.nanpercentile(blurred, min_2_lim)
+    max_thresh2 = np.nanpercentile(blurred, max_2_lim)
 #    else:
 #        min_thresh2 = min_2_lim
 #        max_thresh2 = max_2_lim
@@ -166,7 +166,6 @@ def lognorm_fitting(array_to_fit, b= 50):
 def lognorm_thresholding(array_to_fit, switch = 'median'):
     array_to_fit = array_to_fit/np.max(array_to_fit)
     tmp, mu, sigma, xx = lognorm_fitting(array_to_fit, b= 50)
-
     if switch == 'median':
         thresh = np.exp(mu)
     elif switch == 'mean':
@@ -174,20 +173,6 @@ def lognorm_thresholding(array_to_fit, switch = 'median'):
     thresh_std = (thresh + 2*np.sqrt((np.exp(sigma*sigma)-1)*np.exp(mu+mu+sigma*sigma)))
     select_trials_id = np.where(((array_to_fit)<(thresh_std)))[0].tolist()
     return select_trials_id, (tmp, mu, sigma, xx), array_to_fit.tolist()
-
-def rotate_distribution(xs, ys, theta = None):
-    if theta is None:
-        theta = -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
-    print(theta)
-    # subtracting mean from original coordinates and saving result to X_new and Y_new 
-    X_new = xs - np.mean(xs)
-    Y_new = ys - np.mean(ys)
-
-    X_apu = [np.cos(theta)*i-np.sin(theta)*j for i, j in zip(X_new, Y_new) ]
-    Y_apu = [np.sin(theta)*i+np.cos(theta)*j for i, j in zip(X_new, Y_new) ]
-
-    # adding mean back to rotated coordinates
-    return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
     
 def sobel_filter(im, k, N):
     (nrows, ncols) = im.shape
@@ -203,7 +188,7 @@ def sobel_filter(im, k, N):
 
 
 def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 20):
-    eps = np.nanmin(sig_cond)
+    #eps = np.nanmin(sig_cond)
     # Security check
     if len(np.shape(sig_cond))<3 or len(np.shape(sig_cond))>4:
         print('The signal has to be 3 or 4 dimensional')
@@ -243,6 +228,11 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
     
     # Try to fix the zscore defected for Hip AM3Strokes second session.
     #zscore = np.nan_to_num(np.nan_to_num(mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)))
-    zscore = (mean_sign_overcond-mean_signblnk_overcond)/(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2))#+eps)
+    #print(mean_sign_overcond.shape, mean_signblnk_overcond.shape)
+    A = mean_sign_overcond-mean_signblnk_overcond
+    B = np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
+    #zscore = np.true_divide(A,  B, where = (A!=np.nan) | (B!=np.nan))#+eps)
+    #zscore = np.nan_to_num(zscore, copy=False, nan=-0.0000001, posinf=10e+07, neginf=-0.0000001)
+    zscore = A/B
     return zscore
 
