@@ -46,7 +46,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     #df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
     return df_fz
 
-def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, max_2_lim = 100, std = 15, adaptive_thresh = True):
+def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97.72, max_2_lim = 100, std = 15, adaptive_thresh = True):
     averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=np.nanmin(averaged_zscore), posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
     # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
     if adaptive_thresh:
