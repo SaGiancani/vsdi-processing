@@ -921,6 +921,12 @@ if __name__=="__main__":
                         type=int,
                         default = 19,
                         required=False)  
+    
+    parser.add_argument('--blank_id', 
+                        dest='condid',
+                        type=int,
+                        default = None,
+                        required=False) 
 
     parser.add_argument('--vis', 
                         dest='data_vis_switch', 
