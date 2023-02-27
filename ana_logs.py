@@ -161,10 +161,10 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     #Adding BLK Names columns to the dataframe
     print('csv cleaned by unproper chars')
     print(f'Number of raw files: {len(all_blks)}')
+    print(list(BaseReport.columns))
     #     print(BaseReport['Preceding Event IT'])
     len_ = len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect'])
     print(f'Number of trials registered in log file: { len_ }')
-    print(list(BaseReport.columns))
     if abs(len_ - len(all_blks)) > 1:
         BaseReport = sorting_from_first(BaseReport, all_blks)
         tris = None
