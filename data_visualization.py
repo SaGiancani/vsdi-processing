@@ -356,19 +356,42 @@ def whole_time_sequence(data,
                     )
 
     # Significant threshold for blob thresholding
-    if significant_thresh is None:
-        significant_thresh = np.nanpercentile(data, 80)
-        upper_limit = np.nanpercentile(data, 100)
-        ad_t = False
-    else:
-        significant_thresh = significant_thresh
-        upper_limit = 100
-        ad_t = True
+    bottom_limit = np.nanpercentile(data, 80)
+    upper_limit = np.nanpercentile(data, 100)
+    ad_t = False
     
     # One max-min value for all the colormap. If True, each colormap the values are recomputed
     if (not adaptive_vm) and ((max_bord is None) or (min_bord is None)):
         max_bord = np.nanpercentile(data, max)
         min_bord = np.nanpercentile(data, min)
+
+    # If centroids and blobs are provided, it avoids this computation
+    if (cntrds is None) and (blbs is None):
+        _, centroids, blobs = process.detection_blob(data,
+                                                     min_lim = bottom_limit,
+                                                     max_lim = upper_limit,
+                                                     min_2_lim = handle_lims_blobs[0], 
+                                                     max_2_lim = handle_lims_blobs[1],  
+                                                     adaptive_thresh = ad_t)
+        print(centroids)
+        if len(centroids)>0:
+            new_centroids = []
+
+            for c in centroids:
+                cntrds = []
+
+                if len(c)>0:
+                    for x,y, in c:
+                        if mask[y, x]:
+                            cntrds.append((x,y))
+
+                new_centroids.append(cntrds)
+            centroids = new_centroids
+    else:
+        centroids = cntrds
+        blobs = blbs
+    
+    print(centroids)
 
     #fig.suptitle(name, fontsize=16)
     for i, (ax, l) in enumerate(zip(grid, data)):
@@ -389,34 +412,12 @@ def whole_time_sequence(data,
         ax.set_xticks([])
         ax.set_yticks([])
 
-        # If centroids and blobs are provided, it avoids this computation
-        if (cntrds is None) and (blbs is None):
-            _, centroids, blobs = process.detection_blob(blurred, 
-                                                         min_lim = significant_thresh, 
-                                                         max_lim= upper_limit,
-                                                         min_2_lim = handle_lims_blobs[0], 
-                                                         max_2_lim = handle_lims_blobs[1],
-                                                         adaptive_thresh = ad_t)
-        else:
-            centroids = [cntrds[i]]
-            blobs = blbs[i]
+        blobs_ = blobs[i]*mask                    
+        ax.contour(blobs_, 4, colors='k', linestyles = 'dotted')
 
-        # Centroids masking: discarding the ones out of masked region of interest
-        if (len(centroids)>0) and (mask is not None):
-            centrs = []
-            #blbs = []
-            for x,y, in centroids:
-            # Masking centroids out of the masked area of interest
-                if mask[y, x]:
-                    centrs.append((x,y))
-
-            centroids = centrs 
-
-        # Masking blobs before plotting them
-        blobs = blobs*mask                    
-        ax.contour(blobs, 4, colors='k', linestyles = 'dotted')
-        for j in centroids:
-            ax.scatter(j[0],j[1],color='r', marker = 'X')
+        if len(centroids[i])>0:
+            for j in centroids[i]:
+                ax.scatter(j[0],j[1],color='r', marker = 'X')
 
         if global_cntrds is not None:
             for i, cc in zip(global_cntrds, colors_centr):
