@@ -13,20 +13,34 @@ class Condition:
     """
     Initializes attributes
     Default values for:
-    *session_header = all the .BLK files contained inside path_session/rawdata/. It is a list of strings
-    *cond_names = list of conditions' names.  
-    *header = a dictionary with the kwargs value. See get_session_header method for details
-    *session_blks = all the .BLK, per condition, considered for the processing. It is a subset of all_blks. It is a list of strings
-    *motion_indeces = unused
-    *time_course_signals = all the time courses of the considered BLKs. It is a numpy array of shape n_session_blk, n_frames, 1
-    *trials_name = the .BLKs' filename of each selected trial. It is a list of strings
-    *df_fz = deltaF/F0 for each selected trial. It is a numpy array of shape selected_trials, width, height
-    *auto_selected = list of integers: 0 for not selected trial, 1 for selected. 
-    *conditions = list of integers: the integer corresponds to the number of condition.
+    *session_header: dict. It contains some of the metainformation of the session: it's a subset of the initial args parser, 
+                     if the middle_process script is ran on terminal. See get_session_header method for details 
+    *session_name: str. Unique string identifier, obtained with subject name, experiment and session date
+    *cond_name: str. The name of the condition.
+    *cond_id: int. The condition id number.
+    *binned_data: numpy.array. The tensor with the raw binned data. It has shape: (Trials, Time, Y, X)  
+    *df_fz: numpy.array. The tensor with the preprocessed data: it is the deltaF/F0. It has shape (Trials, Time, Y, X)
+    *time_course: numpy.array. The matrix with the deltaF/F0 averaged over a circular ROI on the center of the frame. 
+                  It has shape (Trials, Time)
+    *averaged_df: numpy.array. The tensor with the average over trials of the deltaF/F0. It has shape (Time, X, Y)
+    *averaged_timecourse: numpy.array. The array with the average over trials of the timecourse computed averaging
+                          over a circular ROI on the center of the frame. It has shape (Time)
+    *autoselection: list. It is a list of ones and zeros: 1 at the corresponding index of selected good trials, and 0 
+                    for not selected ones. It is used for masking the trials.
+    *blk_names: list. List of strings, with the all the BLK filenames of the condition.
+    *trials: dict. It is a dict of ana_logs.Trial objects. The keys of the dictionary are the strings of blk_names, and the 
+             values are Trial objects: these represent wrappers of BaseReport and other log files metadata.  
+    *z_score: numpy.array. It is a tensor of the z_score for the condition, computed over the deltaF/F0 of the different
+              trials, respect the blank condition.
+
     Parameters
     ----------
-    filename : str
-        The path of the external file, containing the raw image
+    condition_name : str
+        The name of the condition. None as default
+    condition_numb: int
+        The id number for the condition. None as default
+    session_header: dict
+        The header of the corresponding session: it is useful for instancing important parameters.
     """
     def __init__(self, condition_name = None, condition_numb = None, session_header = None):
         self.session_header = session_header
@@ -48,11 +62,19 @@ class Condition:
         self.z_score = None
     
     def store_cond(self, t):
+        '''
+        Storing method. All the parameters are wrapped within a list.
+        Built-in storage folder md_data within derivatives. The pickle file takes the name md_data_cond_name
+        '''
         tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names, self.trials, self.z_score]
         utils.inputs_save(tp, os.path.join(t,'md_data','md_data_'+self.cond_name))
         return
     
     def load_cond(self, path):
+        '''
+        Loading method. All the parameters are unwrapped from a list.
+        It can be problematic from versioning.
+        '''
         tp = utils.inputs_load(path)
         self.session_header = tp[0]
         self.session_name = tp[1]
@@ -70,10 +92,17 @@ class Condition:
         return
     
     def get_behav_latency(self, blank_id):
+        '''
+        Behavioral latency time collection method. If the trial was with correct fixation and it is not belonging to
+        blank condition, than the behavioral latency is stored, for computing the mean and the standard error. 
+        '''
         tmp = [trial.behav_latency for trial in self.trials.values() if (trial.fix_correct and self.cond_id != blank_id)]
         return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
 
     def get_success_rate(self):
+        '''
+        The method computes the rate of success of the behavioral task: it returns mean and standard error of the rate.
+        '''
         tmp = [1 if trial.correct_behav else 0 for trial in self.trials.values()]
         return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
 
@@ -103,20 +132,83 @@ class Session:
         """
         Initializes attributes
         Default values for:
-        *all_blks = all the .BLK files contained inside path_session/rawdata/. It is a list of strings
-        *cond_names = list of conditions' names.  
-        *header = a dictionary with the kwargs value. See get_session_header method for details
-        *session_blks = all the .BLK, per condition, considered for the processing. It is a subset of all_blks. It is a list of strings
-        *motion_indeces = unused
-        *time_course_signals = all the time courses of the considered BLKs. It is a numpy array of shape n_session_blk, n_frames, 1
-        *trials_name = the .BLKs' filename of each selected trial. It is a list of strings
-        *df_fz = deltaF/F0 for each selected trial. It is a numpy array of shape selected_trials, width, height
-        *auto_selected = list of integers: 0 for not selected trial, 1 for selected. 
-        *conditions = list of integers: the integer corresponds to the number of condition.
+        *log: logging.Formatter. Logger for log file creation. Useful for background running. If it is not given as input,
+              it is instanciated.
+        *cond_names: list. List of strings with the condition names of the considered conditions. Check the method
+                     get_condition_name.
+        *header: dict. It contains some of the metainformation of the session: it's a subset of the initial args parser, 
+                 if the middle_process script is ran on terminal. See get_session_header method for details 
+        *all_blks: list. All the .BLK files contained inside path_session/rawdata/. It is a list of strings. See get_all_blks method
+                   See get_all_blks method for more details.
+        *cond_dict: dict. Dictionary of the conditions: it has condition id numbers as keys and condition names as values. 
+                    See get_condition_name for more details.
+        *blank_id: int. Integer value, representing the blank id number. If it is not given as input, it extracts automatically from the
+                   labelConds file the index corresponding to "blank" condition.
+        *session_blks: list. All the .BLK, per condition, considered for the processing, either selected and not selected. It is a subset 
+                       of all_blks. It is a list of strings
+        *trials_name: list. Only the selected .BLK files, per condition, considered for the processing. The selection is performed by an
+                      autoselection algorithm. Check get_selection_trials method for more hints.
+        *auto_selected: list. It is a list of ones and zeros: 1 at the corresponding index of selected good trials, and 0 
+                        for not selected ones. It is used for masking the trials.
+        *conditions: list. It is a list of integers: it is a control variable, it should contain a list of integers all the same, 
+                     corresponding to the condition id number. It should have the same length of session_blks.
+        *counter_blank: int. Security value for keeping track of the storage of blank signal.
+        *visualization_switch: bool. A boolean used as switch for figure storing processing. True for storing, False for not.
+        *storage_switch: bool. A boolean used as switch for Condition object storing. True for storing, false for not.
+        *avrgd_time_courses: numpy.array. An array which is the average over trials of the time courses obtained averaging over a circular 
+                             ROI on the center of the frame. It has shape (Conditions, Time)
+        *avrgd_df_fz: numpy.array. A tensor which is the average over trials, for each condition, of the deltaF/F0. It has shape 
+                      (Conditions, Time, Y, X)
+        *z_score: numpy.array. A tensor which is the zscore of the deltaF/F0, computed with the blank signal.
+        *base_report: pandas.DataFrame. The logfile BaseReport. It contains all the timing for each trial, stored and not. It performs a 
+                      safety polishing on not matching BLK filenames and trials, using the condition number presents on the filename and 
+                      on each row of the logfile. 
+        *piezo: list. List of lists. Each list is a trial.
+        *heart_beat: list. List of lists. Each list is a trial.
+        *time_course_blank: numpy.array. Same as avrgd_time_courses, but only for the blank condition. Used for deblanking conditions 
+                            different from blank. None by default. See get_signal with blank_id as input case, for more details. It has 
+                            shape (Time)
+        *f_f0_blank: numpy.array. Same as avrgd_df_fz, but only for blank condition. Used for deblanking. It has shape (Time, Y, X)
+        *stde_f_f0_blank: numpy.array. The standard error over blank condition trials. It has shape (Time, Y, X)
+
         Parameters
         ----------
-        filename : str
-            The path of the external file, containing the raw image
+        path_session: str
+            The path of the session. It has to be the folder containing rawdata, metadata, derivatives, source.
+        spatial_bin: int
+            The spatial binning value. 3 as default
+        temporal_bin: int
+            The temporal binning value. 1 as default
+        zero_frames: int
+            The number of frames considered as zero. Value used in deblanking and deltaF/F0 computing.
+        tolerance: int
+            DEPRECATED
+        mov_switch: bool
+            DEPRECATED
+        deblank_switch: bool
+            Switch for deblanking or not. False as default.
+        conditions_id: list
+            It is a list of considered conditions. None as default: if it's not, all the conditions are automatically considered.
+        chunks: int
+            Number of chunks, for chunk strategy in autoselection algorithm. 1 by default
+        strategy: str
+            Strategy used for autoselection analysis. mae by default: together with mse are the ones considering the number of chunks
+        logs_switch: bool
+            Switch for logfiles wrapping. False by default.
+        base_report_name: str
+            BaseReport name. BaseReport.csv by default. BaseReport_.csv also common
+        base_head_dim: int
+            Number of rows within the header is present: 19 by default.
+        logger: logging.Formatter
+            Logger for printing. None by default
+        condid: int
+            Blank id number. None by default and automatic extraction with method get_blank_id
+        store_switch: bool
+            Switch for Condition objects storing.
+        data_vis_switch: bool
+            Switch for storing of figures of processing and preprocessing.
+        end_frame: int
+            The index of the considered ending frame. None by defaults
         """
         if logger is None:
             self.log = utils.setup_custom_logger('myapp')
@@ -948,7 +1040,7 @@ if __name__=="__main__":
     start_time = datetime.datetime.now().replace(microsecond=0)
     session = Session(logger = logger, **vars(args))
     session.get_session()
-    logger.info('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+    logger.info('Time for BLK preprocessing pipeline: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     #utils.inputs_save(session, 'session_prova')
     #utils.inputs_save(session.session_blks, 'blk_names')
 
