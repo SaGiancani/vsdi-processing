@@ -373,7 +373,6 @@ def whole_time_sequence(data,
                                                      min_2_lim = handle_lims_blobs[0], 
                                                      max_2_lim = handle_lims_blobs[1],  
                                                      adaptive_thresh = ad_t)
-        print(centroids)
         if len(centroids)>0:
             new_centroids = []
 
