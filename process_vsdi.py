@@ -46,40 +46,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     #df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
     return df_fz
 
-def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97.72, max_2_lim = 100, std = 15, adaptive_thresh = True):
-    averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=np.nanmin(averaged_zscore), posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
-    # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
-    if adaptive_thresh:
-        min_thresh = np.nanpercentile(averaged_zscore, min_lim)
-        max_thresh = np.nanpercentile(averaged_zscore, max_lim)
-    else:
-        min_thresh = min_lim
-        max_thresh = max_lim
-    #print((min_thresh, max_thresh))
-    #print(( np.percentile(averaged_zscore, 80),  np.percentile(averaged_zscore, 100)))
-    # Thresholding of z_score
-    _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
-    # Median filter against salt&pepper noise
-    blurred_median = median_filter(threshed, size=(3,3))
-    # Gaussian filter for blob individuation
-    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)# This could be an issue: using nanmin and divide the results by 10
-    
-    # Blob detection
-    # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
-#    if adaptive_thresh:
-    min_thresh2 = np.nanpercentile(blurred, min_2_lim)
-    max_thresh2 = np.nanpercentile(blurred, max_2_lim)
-#    else:
-#        min_thresh2 = min_2_lim
-#        max_thresh2 = max_2_lim
-    #print((min_thresh2, max_thresh2))
-
-    _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
-    # Normalization and binarization
-    blobs = blobs/np.max(blobs)
-    blobs = blobs.astype(np.uint8)
-    # Contours and centroid detections
-    contours, _ = cv.findContours(blobs, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+def get_centroids(contours):
     # Centroids detection
     centroids = list()
     #conts = list()
@@ -90,8 +57,84 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97.72
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
             centroids.append((cx, cy))
-            #print((cx, cy))    
-    return contours, centroids, blobs
+    return centroids
+
+def get_blobs(blurred, min_thresh2, max_thresh2):
+    _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
+    # Normalization and binarization
+    blobs = blobs/np.max(blobs)
+    blobs = blobs.astype(np.uint8)
+    return blobs
+
+def get_significant_sign(blurred, min_thresh2, max_thresh2):
+    blobs = get_blobs(blurred, min_thresh2, max_thresh2)
+    # Contours and centroid detections
+    contours, _ = cv.findContours(blobs, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    centroids = get_centroids(contours)
+    return contours, centroids, blobs 
+
+def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
+    # Thresholding of z_score
+    _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
+    # Median filter against salt&pepper noise
+    blurred_median = median_filter(threshed, size=(3,3))
+    # Gaussian filter for blob individuation
+    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)# This could be an issue: using nanmin and divide the results by 10
+    return blurred
+
+def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, max_2_lim = 100, std = 15, adaptive_thresh = True):
+    #averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
+    # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
+    dim_data = len(averaged_zscore.shape)
+    if dim_data == 2:
+        # Adaptive threshold for signal profile extraction: if you keep this always same, and the max2 and min2 always at same percentile, it's gonna be fair.
+        if adaptive_thresh:
+            min_thresh = np.nanpercentile(averaged_zscore, min_lim)
+            max_thresh = np.nanpercentile(averaged_zscore, max_lim)
+        else:
+            min_thresh = min_lim
+            max_thresh = max_lim
+        
+        blurred = get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = std)
+
+        # Blob detection
+        min_thresh2 = np.nanpercentile(blurred, min_2_lim)
+        max_thresh2 = np.nanpercentile(blurred, max_2_lim)
+
+        contours, centroids, blobs = get_significant_sign(blurred, min_thresh2, max_thresh2)
+
+
+        return contours, centroids, blobs
+    
+    elif dim_data == 3:
+        # Adaptive threshold for signal profile extraction: if you keep this always same, and the max2 and min2 always at same percentile, it's gonna be fair.
+        if adaptive_thresh:
+            min_thresh = np.nanpercentile(averaged_zscore, min_lim)
+            max_thresh = np.nanpercentile(averaged_zscore, max_lim)
+        else:
+            min_thresh = min_lim
+            max_thresh = max_lim
+
+        # Signal profile extraction over frames
+        data = [get_signal_profile(i, min_thresh, max_thresh) for i in averaged_zscore]
+        data = np.asarray(data)
+        
+        min_thresh2 = np.nanpercentile(data, min_2_lim)        
+        max_thresh2 = np.nanpercentile(data, max_2_lim)
+        
+        print(min_thresh2, max_thresh2)
+        countours_ = list()
+        centroids_ = list()
+        blobs_ = list()
+        
+        for i in data:
+            # Thresholding and blobs detection
+            contours, centroids, blobs = get_significant_sign(i, min_thresh2, max_thresh2)
+            blobs_.append(blobs)
+            countours_.append(contours)
+            centroids_.append(centroids)
+            
+        return countours_, centroids_, blobs_
 
 def time_course_signal(df_fz, roi_mask):#, hand_made=False):
     """
