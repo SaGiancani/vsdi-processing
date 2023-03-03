@@ -253,7 +253,7 @@ class RetinoSession(md.Session):
                 #mean_blank = np.nanmean(cd_blank.averaged_df[:20, :,:], axis=0)
                 #std_blank = np.nanstd(cd_blank.averaged_df[:20, :,:], axis=0)/np.sqrt(np.shape(cd_blank.averaged_df)[0]) 
             except:
-                print('Blank condition not found at path: ' + path_md_files+ '\n')
+                print('Blank condition not found in ' + path_md_files+ '\n')
                 # In case of absence of the blank condition, it processes and stores it
                 self.storage_switch = True
                 self.visualization_switch = False
