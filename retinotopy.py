@@ -247,6 +247,7 @@ class RetinoSession(md.Session):
             # Blank condition loading
             cd_blank = md.Condition()
             try:
+                print(os.path.join(path_md_files, 'md_data_blank'))
                 cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
                 self.blank_condition = cd_blank
                 print('Blank condition loaded succesfully!\n')
