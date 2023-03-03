@@ -376,10 +376,11 @@ class RetinoSession(md.Session):
 
             # dF/F0 of only autoselected trials 
             df = md.get_selected(cd.df_fz, cd.autoselection)
+            avr_df = np.mean(df, axis = 0)
 
             # COUNTERCHECK THIS BLANK 
             mean_blank = np.nanmean(self.mean_blank, axis = 0)
-            z_s = process.zeta_score(cd.averaged_df, mean_blank, self.std_blank, full_seq = True)
+            z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
 
             # Instance retinotopy object: single stroke
             r = Retinotopy(self.path_session,
@@ -407,7 +408,7 @@ class RetinoSession(md.Session):
 
             print(f'Begin and end frames are: {(begin_time, end_time)}')
 
-            _, blurred, blobs, centroids, norm_centroids, z_s, _ = r.single_seq_retinotopy(cd.averaged_df, 
+            _, blurred, blobs, centroids, norm_centroids, z_s, _ = r.single_seq_retinotopy(avr_df, 
                                                                                            None, None,
                                                                                            begin_time,
                                                                                            end_time,
