@@ -79,10 +79,11 @@ def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
     # Median filter against salt&pepper noise
     blurred_median = median_filter(threshed, size=(3,3))
     # Gaussian filter for blob individuation
-    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)# This could be an issue: using nanmin and divide the results by 10
+    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)
+    print(np.nanmin(blurred), np.nanmax(blurred))
     return blurred
 
-def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, max_2_lim = 100, std = 15, adaptive_thresh = True):
+def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, max_2_lim = 100, std = 15, adaptive_thresh = True, kind = 'zscore'):#From 90 to 99 of min_2_lim
     #averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
     # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
     dim_data = len(averaged_zscore.shape)
@@ -94,12 +95,17 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, m
         else:
             min_thresh = min_lim
             max_thresh = max_lim
-        
+        print('get_signal_profile called')
+        averaged_zscore = np.nan_to_num(averaged_zscore, nan=np.nanmin(averaged_zscore), neginf=np.nanmin(averaged_zscore[np.where(averaged_zscore != -np.inf)]), posinf=np.nanmax(averaged_zscore[np.where(averaged_zscore != np.inf)]))
         blurred = get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = std)
 
-        # Blob detection
-        min_thresh2 = np.nanpercentile(blurred, min_2_lim)
-        max_thresh2 = np.nanpercentile(blurred, max_2_lim)
+        if kind == 'zscore':
+            # Blob detection
+            min_thresh2 = np.nanpercentile(blurred, min_2_lim)
+        elif kind == 'df':
+            min_thresh2 = 2*np.nanstd(blurred)
+
+        max_thresh2 = np.nanpercentile(blurred, max_2_lim)#100
 
         contours, centroids, blobs = get_significant_sign(blurred, min_thresh2, max_thresh2)
 
@@ -116,13 +122,22 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 99, m
             max_thresh = max_lim
 
         # Signal profile extraction over frames
+        print(min_thresh, max_thresh)
+        print('get_signal_profile called')
+        averaged_zscore = np.nan_to_num(averaged_zscore, nan=np.nanmin(averaged_zscore), neginf=np.nanmin(averaged_zscore[np.where(averaged_zscore != -np.inf)]), posinf=np.nanmax(averaged_zscore[np.where(averaged_zscore != np.inf)]))
         data = [get_signal_profile(i, min_thresh, max_thresh) for i in averaged_zscore]
         data = np.asarray(data)
         
-        min_thresh2 = np.nanpercentile(data, min_2_lim)        
+        if kind == 'zscore':
+            # Blob detection
+            min_thresh2 = np.nanpercentile(data, min_2_lim)
+            print(min_thresh2)
+            print(min_2_lim)
+        elif kind == 'df':
+            min_thresh2 = 2*np.nanstd(data)
+
         max_thresh2 = np.nanpercentile(data, max_2_lim)
-        
-        print(min_thresh2, max_thresh2)
+        print('Boundaries for get_significant_sign '+str(min_thresh2) + ' -- '+str(max_thresh2))
         countours_ = list()
         centroids_ = list()
         blobs_ = list()
@@ -266,8 +281,8 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
             stder_sign_overcond = 0
         else:        
             # Condition mean and stder computation
-            mean_sign_overcond = np.nanmean(sig_cond[:, :, :, :], axis = 0)
-            stder_sign_overcond = np.nanstd(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+            mean_sign_overcond = np.nanmean(sig_cond[ :, :, :], axis = 0)
+            stder_sign_overcond = np.nanstd(sig_cond[ :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
     
     # Try to fix the zscore defected for Hip AM3Strokes second session.
     #zscore = np.nan_to_num(np.nan_to_num(mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)))
@@ -277,5 +292,9 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
     #zscore = np.true_divide(A,  B, where = (A!=np.nan) | (B!=np.nan))#+eps)
     #zscore = np.nan_to_num(zscore, copy=False, nan=-0.0000001, posinf=10e+07, neginf=-0.0000001)
     zscore = A/B
+    #zscore = np.nan_to_num(zscore, copy=False, 
+    #                       nan=np.nanmin(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]),
+    #                       posinf=np.nanmax(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]), 
+    #                       neginf=np.nanmin(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]))
     return zscore
 
