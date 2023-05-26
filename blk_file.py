@@ -49,7 +49,7 @@ class BlkFile:
 	    Reads the data contained in the BLK file
 	"""
 
-	def __init__(self, filename, spatial_binning, temporal_binning, header = None, motion_switch = False):
+	def __init__(self, filename, spatial_binning, temporal_binning, header = None, motion_switch = False, filename_particle = 'vsd_C'):
 		"""Initializes attributes
 		Default values for:
 		* p : '1p'
@@ -83,7 +83,7 @@ class BlkFile:
 		self.spatial_binning = spatial_binning # Binning value for space (both x and y)
 		self.temporal_binning = temporal_binning # Binning value for time
 		self.binned_signal = self.bin_signal()#bin_image(interpolation_mode = cv.INTER_CUBIC) #default is INTER_LINEAR	
-		self.condition = int(self.filename.split('vsd_C')[1][0:2]) #Adding an extracting string directly from filename
+		self.condition = int(self.filename.split(filename_particle)[1][0:2]) #Adding an extracting string directly from filename
 		if motion_switch:
 			self.motion_ind, self.motion_ind_max = self.motion_index() # Motion index: float
 		#self.df_fz = process.deltaf_up_fzero(self.binned_image, self.zero_frames, deblank = dblnk, blank_sign = blank_signal)
