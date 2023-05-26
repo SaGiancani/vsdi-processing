@@ -414,7 +414,7 @@ class RetinoSession(md.Session):
                                                                                            end_time,
                                                                                            sig_blank = mean_blank,
                                                                                            std_blank = self.std_blank,
-                                                                                           lim_blob_detect = 75)
+                                                                                           lim_blob_detect = 70)
 
             r.blob = blobs
             r.retino_pos = centroids[0]
@@ -593,12 +593,13 @@ class Retinotopy:
             #return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
 
-    def get_retinotopic_features(self, FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True):
+    def get_retinotopic_features(self, FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):# MODIFIED HERE 22/03/23
         num_for_nan = np.nanmin(FOI)/10
         #num_for_nan = -33e-10
         print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
+        #averaged_df1 = np.nan_to_num(averaged_df1, nan=np.nanmin(averaged_df1), neginf=np.nanmin(averaged_df1[np.where(averaged_df1 != -np.inf)]), posinf=np.nanmax(averaged_df1[np.where(averaged_df1 != np.inf)]))
         blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
-        _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, adaptive_thresh=adaptive_thresh)
+        _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, min_2_lim = thresh_gaus, adaptive_thresh=adaptive_thresh)
         if mask_switch:
             circular_mask = utils.sector_mask(np.shape(blurred), (centroids[0][1], centroids[0][0]), circular_mask_dim, (0,360))
         else:
@@ -659,7 +660,9 @@ class Retinotopy:
                                 single_frame_analysis = False,
                                 time_window = 1,
                                 sig_blank = None,
-                                std_blank = None):
+                                std_blank = None,
+                                single_frame_thresh = 97,
+                                all_frame_thres = 97):
         '''
         The method gets as input:
         df_f0: 3 dimensional matrix
@@ -712,6 +715,8 @@ class Retinotopy:
                 df_confront = df_confront[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
                                 (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
             flag_adjust_centroid = True
+
+        # Full frame analysis, no crop
         else:
             check_seq = df_f0
             # Handling the case in which blank signal is provided or not
@@ -732,8 +737,9 @@ class Retinotopy:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
         
         # Thresholding values
-        lim_inf = np.nanpercentile(np.nanmean(ztmp, axis=0), lim_blob_detect)
-        lim_sup = np.nanpercentile(np.nanmean(ztmp, axis=0), 100)
+        mean_ztmp = np.nanmean(ztmp, axis=0)
+        lim_inf = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], lim_blob_detect)
+        lim_sup = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], 100)
         #print(lim_inf, lim_sup)
 
         # If want to store information from single frame
@@ -759,7 +765,7 @@ class Retinotopy:
                         except:
                             tmp_ = np.nanmean(ztmp[i-time_window//2:, :, :], axis=0)
                             #print(f'from {i-time_window//2} to {len(ztmp)}')
-                centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False)
+                centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False, thresh_gaus=single_frame_thresh)
                 coords_singl = np.array(list(zip(*centroids_singl)))
                 if (coords_singl is not None) and (len(coords_singl)>0) :
                     # Centroid at maximum response
@@ -780,7 +786,7 @@ class Retinotopy:
         else:
             single_centroids = []
 
-        centroids, blobs, _, blurred = self.get_retinotopic_features(np.nanmean(ztmp, axis=0), min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False)
+        centroids, blobs, _, blurred = self.get_retinotopic_features(np.nanmean(ztmp, axis=0), min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
         coords = np.array(list(zip(*centroids)))
         if (coords is not None) and (len(coords)>0) :
             (a,b), _ = centroid_max(coords[0], coords[1], blurred)
@@ -792,6 +798,13 @@ class Retinotopy:
         else:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
+
+def get_assess_centroid(centroids, mask):
+    '''
+    Assess position of the centroids: if within the mask, then it is considered
+    '''
+    return [i for i in centroids if mask[i[1],i[0]]]
+
 
 def get_stimulus_metadata(path):
     '''
@@ -851,6 +864,17 @@ def get_trajectory(xs, ys, limits):
     #ys_fitted = [int(round(np.interp(i, xs_to_fit, ys_to_fit))) for i in xs_fitted]
     return xs_to_fit, ys_to_fit
 
+def get_trajectory_mask(points_in_space, frame_dimension, extremities = (0,0)):
+    '''
+    points_in_space: list of tuples with coordinates (x,y).
+    frame_dimension: tuple with shape dimension
+    extremities: tuple with amount to subtract from the frame_dimension
+    '''
+    xs = list(list(zip(*points_in_space))[0])
+    ys = list(list(zip(*points_in_space))[1])
+    a, b = get_trajectory(xs, ys, (0 + extremities[0], frame_dimension[1]- extremities[1]))
+    traject_mask = get_mask_on_trajectory(frame_dimension, a, b, radius = 15)
+    return traject_mask
 
 def centroid_max(X, Y, data):
     '''
