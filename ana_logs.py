@@ -13,19 +13,19 @@ class Trial:
         if self.fix_correct and self.correct_behav and self.condition != blank_cond:
             self.behav_latency = int(report_series_trial['Onset Time_ Behav Correct']) -  int(report_series_trial['Onset Time_ Behav Stim']) - 500
         else:
-            self.behav_latency = None
+            self.behav_latency = 0
         self.id_trial = int(report_series_trial['Total Trial Number']) - 1
 
         if self.condition != blank_cond:
             if stimulus_fr is None:
                 # Total registration time (End registration (PNG flow + Post Stimulus time) - Start registration) - Starting Grey frames*temporal resolution - Ending Grey frames*temporal resolution + 25 ms latency 
-                stimulus_fr = round((report_series_trial['Onset Time_ End Stim'] - report_series_trial['Onset Time_ Stim'] - grey_end*time_res - grey_start*time_res + 25)/time_res)         
+                stimulus_fr = round((report_series_trial['Onset Time_ End Stim'] - report_series_trial['Onset Time_ Stim'] - (grey_end*time_res) - (grey_start*time_res) + 25)/time_res)         
             
             self.FOI = stimulus_fr
 
             if zero_fr is None:
                 #PreStimulus Time + nGreyFrames*10ms + 25ms Response Latency
-                zero_fr = round(((report_series_trial['Onset Time_ Stim'] - report_series_trial['Onset Time_ Pre Stim']) + 25 + grey_start*time_res)/time_res) 
+                zero_fr = round(((report_series_trial['Onset Time_ Stim'] - report_series_trial['Onset Time_ Pre Stim']) + 25 + (grey_start*time_res))/time_res) 
             
             self.zero_frames = zero_fr
 
@@ -33,8 +33,9 @@ class Trial:
             self.zero_frames = 20
             self.FOI = 35
         self.start_stim = float(separator_converter(report_series_trial['Onset Time_ Pre Stim']))
+        self.onset_stim = float(separator_converter(report_series_trial['Onset Time_ Stim']))
         self.end_trial = float(separator_converter(report_series_trial['Onset Time_ End Stim']))
-        print(self.end_trial - self.start_stim)
+        print(self.onset_stim - self.start_stim)
         self.heart_signal = heart
         self.piezo_signal = piezo
     
@@ -160,7 +161,8 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     #Adding BLK Names columns to the dataframe
     print('csv cleaned by unproper chars')
     print(f'Number of raw files: {len(all_blks)}')
-    #     print(BaseReport['Preceding Event IT'])
+    print(list(BaseReport.columns))
+    print(BaseReport['Preceding Event IT'])
     len_ = len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect'])
     print(f'Number of trials registered in log file: { len_ }')
     if abs(len_ - len(all_blks)) > 1:
@@ -275,7 +277,7 @@ def delete_chars(s, to_substitute = '"', substitute = ''):
         tmp = s
     return tmp
 
-def signal_cutter(analog_timestamp_array, signal_array, pre, end):
+def signal_cutter(analog_timestamp_array, signal_array, pre, end, safe_value = 100):
     '''
     analog_timestamp_array is the time array for each trial
     signal_array could be piezo or heart
@@ -283,7 +285,7 @@ def signal_cutter(analog_timestamp_array, signal_array, pre, end):
     end is the Time Go Input -end of the recording-
     '''
     start_trial = np.argmin(np.abs(analog_timestamp_array - pre))
-    end_trial = np.argmin(np.abs(analog_timestamp_array - (end + 100)))#   +1sec for safety -in trial timing-, 0.1 sec for safety in stimulus timing
+    end_trial = np.argmin(np.abs(analog_timestamp_array - (end + safe_value)))#   +1sec for safety -in trial timing-, 0.1 sec for safety in stimulus timing
     cut_signal = signal_array[start_trial:end_trial]
     return cut_signal
 

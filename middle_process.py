@@ -1,4 +1,5 @@
-import argparse, blk_file, datetime, process, utils
+import argparse, blk_file, datetime, utils
+import process_vsdi as process
 import data_visualization as dv
 import ana_logs as al
 import matplotlib.pyplot as plt
@@ -12,20 +13,34 @@ class Condition:
     """
     Initializes attributes
     Default values for:
-    *session_header = all the .BLK files contained inside path_session/rawdata/. It is a list of strings
-    *cond_names = list of conditions' names.  
-    *header = a dictionary with the kwargs value. See get_session_header method for details
-    *session_blks = all the .BLK, per condition, considered for the processing. It is a subset of all_blks. It is a list of strings
-    *motion_indeces = unused
-    *time_course_signals = all the time courses of the considered BLKs. It is a numpy array of shape n_session_blk, n_frames, 1
-    *trials_name = the .BLKs' filename of each selected trial. It is a list of strings
-    *df_fz = deltaF/F0 for each selected trial. It is a numpy array of shape selected_trials, width, height
-    *auto_selected = list of integers: 0 for not selected trial, 1 for selected. 
-    *conditions = list of integers: the integer corresponds to the number of condition.
+    *session_header: dict. It contains some of the metainformation of the session: it's a subset of the initial args parser, 
+                     if the middle_process script is ran on terminal. See get_session_header method for details 
+    *session_name: str. Unique string identifier, obtained with subject name, experiment and session date
+    *cond_name: str. The name of the condition.
+    *cond_id: int. The condition id number.
+    *binned_data: numpy.array. The tensor with the raw binned data. It has shape: (Trials, Time, Y, X)  
+    *df_fz: numpy.array. The tensor with the preprocessed data: it is the deltaF/F0. It has shape (Trials, Time, Y, X)
+    *time_course: numpy.array. The matrix with the deltaF/F0 averaged over a circular ROI on the center of the frame. 
+                  It has shape (Trials, Time)
+    *averaged_df: numpy.array. The tensor with the average over trials of the deltaF/F0. It has shape (Time, X, Y)
+    *averaged_timecourse: numpy.array. The array with the average over trials of the timecourse computed averaging
+                          over a circular ROI on the center of the frame. It has shape (Time)
+    *autoselection: list. It is a list of ones and zeros: 1 at the corresponding index of selected good trials, and 0 
+                    for not selected ones. It is used for masking the trials.
+    *blk_names: list. List of strings, with the all the BLK filenames of the condition.
+    *trials: dict. It is a dict of ana_logs.Trial objects. The keys of the dictionary are the strings of blk_names, and the 
+             values are Trial objects: these represent wrappers of BaseReport and other log files metadata.  
+    *z_score: numpy.array. It is a tensor of the z_score for the condition, computed over the deltaF/F0 of the different
+              trials, respect the blank condition.
+
     Parameters
     ----------
-    filename : str
-        The path of the external file, containing the raw image
+    condition_name : str
+        The name of the condition. None as default
+    condition_numb: int
+        The id number for the condition. None as default
+    session_header: dict
+        The header of the corresponding session: it is useful for instancing important parameters.
     """
     def __init__(self, condition_name = None, condition_numb = None, session_header = None):
         self.session_header = session_header
@@ -47,11 +62,19 @@ class Condition:
         self.z_score = None
     
     def store_cond(self, t):
+        '''
+        Storing method. All the parameters are wrapped within a list.
+        Built-in storage folder md_data within derivatives. The pickle file takes the name md_data_cond_name
+        '''
         tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names, self.trials, self.z_score]
         utils.inputs_save(tp, os.path.join(t,'md_data','md_data_'+self.cond_name))
         return
     
     def load_cond(self, path):
+        '''
+        Loading method. All the parameters are unwrapped from a list.
+        It can be problematic from versioning.
+        '''
         tp = utils.inputs_load(path)
         self.session_header = tp[0]
         self.session_name = tp[1]
@@ -69,10 +92,17 @@ class Condition:
         return
     
     def get_behav_latency(self, blank_id):
-        tmp = [trial.behav_latency for trial in self.trials.values() if (trial.correct_behav and trial.fix_correct and self.cond_id != blank_id)]
+        '''
+        Behavioral latency time collection method. If the trial was with correct fixation and it is not belonging to
+        blank condition, than the behavioral latency is stored, for computing the mean and the standard error. 
+        '''
+        tmp = [trial.behav_latency for trial in self.trials.values() if (trial.fix_correct and self.cond_id != blank_id)]
         return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
 
     def get_success_rate(self):
+        '''
+        The method computes the rate of success of the behavioral task: it returns mean and standard error of the rate.
+        '''
         tmp = [1 if trial.correct_behav else 0 for trial in self.trials.values()]
         return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
 
@@ -83,7 +113,7 @@ class Session:
                  path_session, 
                  spatial_bin = 3,
                  temporal_bin = 1,
-                 zero_frames = 20,
+                 zero_frames = None,
                  tolerance = 20,
                  mov_switch=False,
                  deblank_switch=False,
@@ -97,33 +127,98 @@ class Session:
                  condid = None, 
                  store_switch = False, 
                  data_vis_switch = True, 
-                 end_frame = 60, 
+                 end_frame = None, 
                  **kwargs):
         """
         Initializes attributes
         Default values for:
-        *all_blks = all the .BLK files contained inside path_session/rawdata/. It is a list of strings
-        *cond_names = list of conditions' names.  
-        *header = a dictionary with the kwargs value. See get_session_header method for details
-        *session_blks = all the .BLK, per condition, considered for the processing. It is a subset of all_blks. It is a list of strings
-        *motion_indeces = unused
-        *time_course_signals = all the time courses of the considered BLKs. It is a numpy array of shape n_session_blk, n_frames, 1
-        *trials_name = the .BLKs' filename of each selected trial. It is a list of strings
-        *df_fz = deltaF/F0 for each selected trial. It is a numpy array of shape selected_trials, width, height
-        *auto_selected = list of integers: 0 for not selected trial, 1 for selected. 
-        *conditions = list of integers: the integer corresponds to the number of condition.
+        *log: logging.Formatter. Logger for log file creation. Useful for background running. If it is not given as input,
+              it is instanciated.
+        *cond_names: list. List of strings with the condition names of the considered conditions. Check the method
+                     get_condition_name.
+        *header: dict. It contains some of the metainformation of the session: it's a subset of the initial args parser, 
+                 if the middle_process script is ran on terminal. See get_session_header method for details 
+        *all_blks: list. All the .BLK files contained inside path_session/rawdata/. It is a list of strings. See get_all_blks method
+                   See get_all_blks method for more details.
+        *cond_dict: dict. Dictionary of the conditions: it has condition id numbers as keys and condition names as values. 
+                    See get_condition_name for more details.
+        *blank_id: int. Integer value, representing the blank id number. If it is not given as input, it extracts automatically from the
+                   labelConds file the index corresponding to "blank" condition.
+        *session_blks: list. All the .BLK, per condition, considered for the processing, either selected and not selected. It is a subset 
+                       of all_blks. It is a list of strings
+        *trials_name: list. Only the selected .BLK files, per condition, considered for the processing. The selection is performed by an
+                      autoselection algorithm. Check get_selection_trials method for more hints.
+        *auto_selected: list. It is a list of ones and zeros: 1 at the corresponding index of selected good trials, and 0 
+                        for not selected ones. It is used for masking the trials.
+        *conditions: list. It is a list of integers: it is a control variable, it should contain a list of integers all the same, 
+                     corresponding to the condition id number. It should have the same length of session_blks.
+        *counter_blank: int. Security value for keeping track of the storage of blank signal.
+        *visualization_switch: bool. A boolean used as switch for figure storing processing. True for storing, False for not.
+        *storage_switch: bool. A boolean used as switch for Condition object storing. True for storing, false for not.
+        *avrgd_time_courses: numpy.array. An array which is the average over trials of the time courses obtained averaging over a circular 
+                             ROI on the center of the frame. It has shape (Conditions, Time)
+        *avrgd_df_fz: numpy.array. A tensor which is the average over trials, for each condition, of the deltaF/F0. It has shape 
+                      (Conditions, Time, Y, X)
+        *z_score: numpy.array. A tensor which is the zscore of the deltaF/F0, computed with the blank signal.
+        *base_report: pandas.DataFrame. The logfile BaseReport. It contains all the timing for each trial, stored and not. It performs a 
+                      safety polishing on not matching BLK filenames and trials, using the condition number presents on the filename and 
+                      on each row of the logfile. 
+        *piezo: list. List of lists. Each list is a trial.
+        *heart_beat: list. List of lists. Each list is a trial.
+        *time_course_blank: numpy.array. Same as avrgd_time_courses, but only for the blank condition. Used for deblanking conditions 
+                            different from blank. None by default. See get_signal with blank_id as input case, for more details. It has 
+                            shape (Time)
+        *f_f0_blank: numpy.array. Same as avrgd_df_fz, but only for blank condition. Used for deblanking. It has shape (Time, Y, X)
+        *stde_f_f0_blank: numpy.array. The standard error over blank condition trials. It has shape (Time, Y, X)
+
         Parameters
         ----------
-        filename : str
-            The path of the external file, containing the raw image
+        path_session: str
+            The path of the session. It has to be the folder containing rawdata, metadata, derivatives, source.
+        spatial_bin: int
+            The spatial binning value. 3 as default
+        temporal_bin: int
+            The temporal binning value. 1 as default
+        zero_frames: int
+            The number of frames considered as zero. Value used in deblanking and deltaF/F0 computing.
+        tolerance: int
+            DEPRECATED
+        mov_switch: bool
+            DEPRECATED
+        deblank_switch: bool
+            Switch for deblanking or not. False as default.
+        conditions_id: list
+            It is a list of considered conditions. None as default: if it's not, all the conditions are automatically considered.
+        chunks: int
+            Number of chunks, for chunk strategy in autoselection algorithm. 1 by default
+        strategy: str
+            Strategy used for autoselection analysis. mae by default: together with mse are the ones considering the number of chunks
+        logs_switch: bool
+            Switch for logfiles wrapping. False by default.
+        base_report_name: str
+            BaseReport name. BaseReport.csv by default. BaseReport_.csv also common
+        base_head_dim: int
+            Number of rows within the header is present: 19 by default.
+        logger: logging.Formatter
+            Logger for printing. None by default
+        condid: int
+            Blank id number. None by default and automatic extraction with method get_blank_id
+        store_switch: bool
+            Switch for Condition objects storing.
+        data_vis_switch: bool
+            Switch for storing of figures of processing and preprocessing.
+        end_frame: int
+            The index of the considered ending frame. None by defaults
         """
         if logger is None:
             self.log = utils.setup_custom_logger('myapp')
         else:
             self.log = logger              
         self.cond_names = None
-        self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
+        self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
+        if len(self.all_blks) == 0:
+            print('Check the path: no blks found')
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
         self.blank_id = self.get_blank_id(cond_id=condid)
@@ -133,12 +228,22 @@ class Session:
         # A blk loaded for useful hyperparameters
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
                             self.header['spatial_bin'], 
-                            self.header['temporal_bin'],
-                            self.header['zero_frames'])
+                            self.header['temporal_bin'])
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
-        self.header['ending_frame'] = end_frame
+        
+        # Setting key frames
+        if end_frame is None:
+            self.header['ending_frame'] = int(round(self.header['n_frames']*0.9))
+        else:
+            self.header['ending_frame'] = end_frame
+
+        if zero_frames is None:
+            self.header['zero_frames'] = int(round(self.header['n_frames']*0.1))
+        else:
+            self.header['zero_frames'] = zero_frames
+
         # If considered conditions are not explicitly indicated, then all the conditions are considered
         # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
         if self.header['conditions_id'] is None:
@@ -214,7 +319,6 @@ class Session:
             # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
             _ = self.get_signal(self.blank_id)
 
-
     def get_blank_id(self, cond_id = None):
         '''
         The method returns the index of blank condition.
@@ -225,7 +329,7 @@ class Session:
         '''
         if cond_id is None:
             try:
-                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][0]+1
+                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][-1]+1
                 self.log.info('Blank id: ' + str(tmp))
                 return tmp
             except IndexError:
@@ -257,8 +361,8 @@ class Session:
             indeces_select = np.where(self.auto_selected==1)
             indeces_select = indeces_select[0].tolist()      
             # In this order for deblank signal
-            tmp = np.mean(df_f0[indeces_select, :, :, :], axis=0)
-            tmp_std = np.std(df_f0[indeces_select, :, :, :], axis=0)
+            tmp = np.nanmean(df_f0[indeces_select, :, :, :], axis=0)
+            tmp_std = np.nanstd(df_f0[indeces_select, :, :, :], axis=0)
             self.f_f0_blank = tmp
             self.stde_f_f0_blank = tmp_std/np.sqrt(len(indeces_select))
             z = process.zeta_score(df_f0[indeces_select, :, :, :], self.f_f0_blank, self.stde_f_f0_blank)
@@ -267,9 +371,9 @@ class Session:
             self.z_score = np.reshape(z, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # Subtraction for 1 equivalent to deblanking (F0) -dF/F0-
             df_f0 = df_f0 - 1
-            self.avrgd_df_fz = np.reshape(np.mean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
+            self.avrgd_df_fz = np.reshape(np.nanmean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # Average time course over the condition
-            tmp_ = np.mean(sig[indeces_select, :], axis=0)
+            tmp_ = np.nanmean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.reshape(tmp_, (1, tmp.shape[0]))
             # It's important that 1 is not subtracted to this blank_df: it is the actual blank signal
             # employed for normalize the signal             
@@ -285,18 +389,21 @@ class Session:
             indeces_select = np.where(np.array(mask)==1)
             indeces_select = indeces_select[0].tolist()
             #df_f0 = df_f0.reshape(1, df_f0.shape[1], df_f0.shape[2], df_f0.shape[3] ) 
-            t =  np.mean(df_f0[indeces_select, :, :, :], axis=0)
+            t =  np.nanmean(df_f0[indeces_select, :, :, :], axis=0)
             self.avrgd_df_fz = np.concatenate((self.avrgd_df_fz, t.reshape(1, t.shape[0], t.shape[1], t.shape[2])), axis=0) 
             self.log.info(f'Shape averaged dF/F0: {np.shape(self.avrgd_df_fz )}')
-            t_ =  np.mean(sig[indeces_select, :], axis=0)
+            t_ =  np.nanmean(sig[indeces_select, :], axis=0)
             self.avrgd_time_courses = np.concatenate((self.avrgd_time_courses,  t_.reshape(1,  t_.shape[0])), axis=0) 
             self.log.info(f'Shape averaged tc: {np.shape(self.avrgd_time_courses )}')
             if self.base_report is not None:
-                zero_of_cond = int(np.mean([v.zero_frames for v in trials.values()]))
-                foi_of_cond = int(np.mean([v.FOI for v in trials.values()]))
+                zero_of_cond = int(np.nanmean([v.zero_frames for v in trials.values()]))
+                foi_of_cond = int(np.nanmean([v.FOI for v in trials.values()]))
+                print('Average Prestimulus time: ') 
+                print(np.nanmean([v.onset_stim - v.start_stim for v in trials.values()]))
                 end_of_cond = zero_of_cond + foi_of_cond
             temp_raw = raws[indeces_select, :, :, :]
             t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = True, blank_sign=None) for i in temp_raw])
+            #z = process.zeta_score(self.avrgd_df_fz[-1, :, :, :], None, None, full_seq = True)
             z = process.zeta_score(t_, self.f_f0_blank, self.stde_f_f0_blank)
              #def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
 
@@ -347,7 +454,12 @@ class Session:
         else:
             self.log.info('BLKs for conditions ' + str(self.header['conditions_id']) + 'sorted by time creation')
             tmp = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
-            return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+            try:
+                a = sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+            except:
+                self.log.info('Warning: sorting BLK filenames was not performed')
+                a = tmp
+            return a 
 
     def get_condition_ids(self):
         '''
@@ -382,12 +494,11 @@ class Session:
                     contents = f.readlines()
                 return  {j+1:i.split('\n')[0] for j, i in enumerate(contents) if len(i.split('\n')[0])>0}
 
-    def get_session_header(self, path_session, spatial_bin, temporal_bin, zero_frames, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch):
+    def get_session_header(self, path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch):
         header = {}
         header['path_session'] = path_session
         header['spatial_bin'] = spatial_bin
         header['temporal_bin'] = temporal_bin
-        header['zero_frames'] = zero_frames
         header['tolerance'] = tolerance
         header['mov_switch'] = mov_switch
         header['deblank_switch'] = deblank_switch
@@ -418,10 +529,10 @@ class Session:
             dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
             #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
             # Double deblanking: further blank subtraction here
-            dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.percentile(self.z_score, 15), np.percentile(self.z_score, 90)), log_ = self.log)
+            dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.nanpercentile(self.z_score, 15), np.nanpercentile(self.z_score, 90)), log_ = self.log)
 
         else:
-            self.log.info('Warning: Something weird in get_session')
+            self.log.info('No visualization charts.')
         return
 
     def get_selection_trials(self, condition, time_course):
@@ -547,12 +658,13 @@ class Session:
             os.makedirs(folder_path)
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
+#                    _, _, _, _, trials = md.signal_extraction(session.header, blks, None, None, session.base_report, blank_id, session.piezo, session.heart_beat, log = session.log, blks_load = False)
 
 def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True):
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
-
+    flag_remove = False
     if base_report is not None:
         trials_dict = dict()
         greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split('vsd_C')[1][0:2]))
@@ -576,60 +688,81 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                 if trial is None:
                     print('Empty Trial')
                     blks.remove(blk_name)
+                    flag_remove = True
                     if log is None:
                         print(f'{blk_name} was popped off')
                     else:
                         log.info(f'{blk_name} was popped off')
                 # Otherwise store it
                 elif trial is not None:
+                    flag_remove = False
                     trials_dict[blk_name] = trial   
                     zero = trial.zero_frames
             else:
                 zero = header['zero_frames']
             print(f'Employeed zero for normalization is {zero}')
-            
-            # Get BLK file
-            # If first BLK file, than the header is stored
-            if i == 0:
-                BLK = blk_file.BlkFile(
-                    os.path.join(path_rawdata, blk_name),
-                    header['spatial_bin'],
-                    header['temporal_bin'],
-                    zero,
-                    header = None)
+            # If the blk name is not popped off, the blk is loaded
+            if not flag_remove:    
+                # Get BLK file
+                # If first BLK file, than the header is stored
+                if i == 0:
+                    BLK = blk_file.BlkFile(
+                        os.path.join(path_rawdata, blk_name),
+                        header['spatial_bin'],
+                        header['temporal_bin'],
+                        header = None)
 
-                header_blk = BLK.header
-                raws = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                delta_f = np.zeros((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                sig = np.zeros((len(blks), header['n_frames']))
-                roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
-            else:
-                BLK = blk_file.BlkFile(
-                    os.path.join(path_rawdata, blk_name), 
-                    header['spatial_bin'], 
-                    header['temporal_bin'], 
-                    zero,
-                    header = header_blk)
-            
-            # Log prints
-            if log is None:
-                print(f'The blk file {blk_name} is loaded')
-            else:
-                log.info(f'The blk file {blk_name} is loaded')
+                    header_blk = BLK.header
+                    raws = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    delta_f = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    sig = np.empty((len(blks), header['n_frames']))
+                    roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
+                else:
+                    BLK = blk_file.BlkFile(
+                        os.path.join(path_rawdata, blk_name), 
+                        header['spatial_bin'], 
+                        header['temporal_bin'], 
+                        header = header_blk)
                 
-            #at the end something like (nblks, 70, 1)         
-            conditions.append(BLK.condition)
-            raws[i, :, :, :] =  BLK.binned_signal 
-            delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
-            sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
+                # Log prints
+                if log is None:
+                    print(f'The blk file {blk_name} is loaded')
+                else:
+                    log.info(f'The blk file {blk_name} is loaded')
+                    
+                #at the end something like (nblks, 70, 1)         
+                conditions.append(BLK.condition)
+                BLK.binned_signal[np.where(BLK.binned_signal==0)] = np.nan
+                raws[i, :, :, :] = BLK.binned_signal 
+                delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
+                sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
 
-            # Trial storing
-            start_time = datetime.datetime.now().replace(microsecond=0)
+                # Trial storing
+                start_time = datetime.datetime.now().replace(microsecond=0)
 
-            if log is None:
-                print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+                if log is None:
+                    print('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+                else:
+                    log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+            # If trials is discarded then parallel strategy of reshaping of output matrices
             else:
-                log.info('Trial n. '+str(i+1)+'/'+ str(len(blks))+' loaded in ' + str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+                if i == 0:
+                    BLK = blk_file.BlkFile(
+                        os.path.join(path_rawdata, blk_name),
+                        header['spatial_bin'],
+                        header['temporal_bin'],
+                        header = None)
+
+                    header_blk = BLK.header
+                    raws = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    delta_f = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
+                    sig = np.empty((len(blks-1), header['n_frames']))
+                    roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
+                else:
+                    # Discarding one element in the trial dimension, since the blk was deleted
+                    raws = raws[0:-2, :, :, :]
+                    delta_f = delta_f[0:-2, :, :, :]
+                    sig = sig[0:-2, :]
     else:
         for i, blk_name in enumerate(blks):
             start_time = datetime.datetime.now().replace(microsecond=0)
@@ -692,7 +825,6 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
 
                     tmp_m[n, :] = np.asarray(tmp)    
                 tmp_m_[m, :, :] = tmp_m
-                
             m = np.sum(tmp_m_, axis=1)
         else:
             # This check has to be done before running the script
@@ -768,10 +900,24 @@ def get_all_blks(path_session, sort = True):
     Sorted by time by default.
     '''
     tmp = [f.name for f in os.scandir(os.path.join(path_session,'rawdata')) if (f.is_file()) and (f.name.endswith(".BLK"))]
+    try: 
+        _ = datetime.datetime.strptime(tmp[0].split('_')[2] + tmp[0].split('_')[3], '%d%m%y%H%M%S')
+        if sort:
+            sort = True
+    except:
+        sort = False
     if sort:
         return sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
     else:
         return tmp
+
+def get_selected(matrix, autoselection):
+    indeces = np.where(autoselection == 1)[0]
+    if len(matrix.shape) == 4:
+        df = matrix[indeces, :, :, :]
+    elif len(matrix.shape) == 2:
+        df = matrix[indeces, :]
+    return df
 
 
 if __name__=="__main__":
@@ -795,13 +941,6 @@ if __name__=="__main__":
                         type=int,
                         required=False,
                         help='The time bin value')
-    
-    parser.add_argument('--zero',
-                        dest='zero_frames',
-                        type=int,
-                        default = 20,
-                        required=False,
-                        help='The first frames considered zero')    
 
     parser.add_argument('--tol', 
                         dest='tolerance',
@@ -874,6 +1013,12 @@ if __name__=="__main__":
                         type=int,
                         default = 19,
                         required=False)  
+    
+    parser.add_argument('--blank_id', 
+                        dest='condid',
+                        type=int,
+                        default = None,
+                        required=False) 
 
     parser.add_argument('--vis', 
                         dest='data_vis_switch', 
@@ -891,12 +1036,11 @@ if __name__=="__main__":
     # Check on quality of inserted data
     assert args.spatial_bin > 0, "Insert a value greater than 0"    
     assert args.temporal_bin > 0, "Insert a value greater than 0"    
-    assert args.zero_frames > 0, "Insert a value greater than 0"    
     assert args.strategy in ['mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'], "Insert a valid name strategy: 'mse', 'mae', 'roi', 'roi_signals', 'ROI', 'statistic', 'statistical', 'quartiles'"    
     start_time = datetime.datetime.now().replace(microsecond=0)
     session = Session(logger = logger, **vars(args))
     session.get_session()
-    logger.info('Time for blks autoselection: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+    logger.info('Time for BLK preprocessing pipeline: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     #utils.inputs_save(session, 'session_prova')
     #utils.inputs_save(session.session_blks, 'blk_names')
 

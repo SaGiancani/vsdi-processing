@@ -1,3 +1,4 @@
+import cv2 as cv
 import numpy as np
 import scipy.io as scio
 import datetime, fnmatch, logging, os, pickle, sys, struct
@@ -55,6 +56,70 @@ COLORS = colors_a = [  'forestgreen', 'purple', 'orange', 'blue',
                  'aqua', 'plum', 'tomato', 'lightslategray', 'orangered','gainsboro',
                  'yellowgreen', 'aliceblue', 'mediumvioletred', 'gold', 'sandybrown',
                  'aquamarine', 'black','lime', 'pink', 'limegreen', 'royalblue','yellow']
+
+def nonlinear_map():
+# nonlincolormap, colormap for displaying suppression/facilitation in a
+# matrix 
+# fredo 2011
+# Salvatore Giancani 2023
+    m = len(cm_data)
+    n = int(np.ceil(m/6))
+
+    u=np.linspace(0,n-1,n)/(n-1)
+
+    o=int(round(n/2))
+    v=u[(n-o+1):n]
+
+    J = np.zeros((m,3))
+    tmp = [0]*o + [0]*n + list(u) + [1]*n + [1]*n + list(np.flip(v))
+    J[:len(tmp),0] = tmp  #  %r
+    tmp = [0]*o + list(u) + [1]*n + [1]*n + list(np.flip(u)) + [0]*o  
+    J[:len(tmp),1] = tmp  #  %r
+    tmp = list(v) +[1]*n + [1]*n + list(np.flip(u)) + [0]*n + [0]*o   
+    J[:len(tmp),2] = tmp  
+    return J
+
+class DrawLineWidget(object):
+    def __init__(self, image):
+        self.drawing = False
+        self.original_image = image
+        self.clone = self.original_image.copy()
+        self.mask = np.zeros(np.shape(self.clone))
+
+        cv.namedWindow('image')
+        cv.setMouseCallback('image', self.extract_coordinates)
+
+        # List to store start/end points
+        self.image_coordinates = []
+
+    def extract_coordinates(self, event, x, y, flags, parameters):
+        # Record starting (x,y) coordinates on left mouse button click
+        if event == cv.EVENT_LBUTTONDOWN:
+            self.drawing=True
+            self.image_coordinates = [(x,y)]
+
+        elif event==cv.EVENT_MOUSEMOVE:
+            if self.drawing==True:
+                cv.line(self.clone, self.image_coordinates[-1] ,(x,y),color=(255,255,0),thickness=2)
+                cv.line(self.mask, self.image_coordinates[-1] ,(x,y),color=(255,0,255),thickness=3)
+                self.image_coordinates = [(x,y)]
+
+        # Record ending (x,y) coordintes on left mouse bottom release
+        elif event == cv.EVENT_LBUTTONUP:            
+            self.drawing=False
+            cv.line(self.clone, self.image_coordinates[-1],(x,y),color=(255,255,0),thickness=2) 
+            cv.line(self.mask, self.image_coordinates[-1],(x,y),color=(255,0,255),thickness=3) 
+            self.image_coordinates.append((x,y))
+            cv.imshow("image", self.clone) 
+
+        # Clear drawing boxes on right mouse button click
+        elif event == cv.EVENT_RBUTTONDOWN:
+            self.clone = self.original_image.copy()
+
+    def show_image(self):
+        return self.clone
+
+
 
 def detrending(signal):
     """
@@ -189,6 +254,7 @@ def sector_mask(shape,centre,radius,angle_range):
     From: https://stackoverflow.com/questions/18352973/mask-a-circular-sector-in-a-numpy-array
     Return a boolean mask for a circular sector. The start/stop angles in  
     `angle_range` should be given in clockwise order.
+    angle_range: tuple of integers: it has to give the angular coordinates of the cord of interest
     """
 
     x,y = np.ogrid[:shape[0],:shape[1]]

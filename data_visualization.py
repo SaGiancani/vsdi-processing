@@ -1,9 +1,20 @@
+import datetime, utils
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import AxesGrid
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+import matplotlib.font_manager as fm
+
 import numpy as np
 import os
-import datetime, process, utils
+import process_vsdi as process
+from scipy.ndimage.filters import gaussian_filter
+from scipy.stats import norm
 
 STORAGE_PATH = '/envau/work/neopto/USERS/GIANCANI/Analysis/'
+
+COLORS_7 = ['crimson', 'tomato', 'magenta', 'darkorange', 'burlywood', 'palevioletred', 'chocolate']
 
 def set_storage_folder(storage_path = STORAGE_PATH, name_analysis = 'prova'):    
     folder_path = os.path.join(storage_path, name_analysis)               
@@ -201,4 +212,363 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
         os.makedirs(os.path.join(tmp,'chunks_analysis'))
     plt.savefig(os.path.join(tmp,'chunks_analysis', session_name+'_chunks_0'+str(cd_i)+'.png'))
     plt.close('all')
+    return
+
+def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = 'svg', store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions', colors = ['royalblue', 'gold', 'crimson', 'darkorchid','lime', 'black'], lims = [-0.3, 0.3], axis_titles = None):#center):
+    fig, axScatter = plt.subplots(figsize=(10, 10))
+    if green is not None:
+        pc = axScatter.pcolormesh(green, cmap= 'gray')
+        axScatter.set_ylim(0, green.shape[0])
+        axScatter.set_xlim(0, green.shape[1])
+        axScatter.set_aspect(1.)
+        shap = green.shape
+
+    else:
+        axScatter.set_ylim(lims[0], lims[1])
+        axScatter.set_xlim(lims[0], lims[1])
+        axScatter.set_aspect(1.)
+        shap = (lims[0], lims[1])
+        
+    
+
+    for i, (x_, y_) in enumerate(zip(x,y)):
+        # the scatter plot:
+        axScatter.scatter(x_, y_, color = colors[i], label = titles[i], alpha=0.8)
+    
+    massx = np.nanmax([j for i in x for j in i])
+    massy = np.nanmax([j for i in y for j in i])
+    
+    if axis_titles is not None:
+        axScatter.set_xlabel(axis_titles[0])
+        axScatter.set_ylabel(axis_titles[1])
+    # create new axes on the right and on the top of the current axes
+    # The first argument of the new_vertical(new_horizontal) method is
+    # the height (width) of the axes to be created in inches.
+    divider = make_axes_locatable(axScatter)
+    axHistx = divider.append_axes("top", 1.5, pad=0.1, sharex=axScatter)
+    axHisty = divider.append_axes("right", 1.5, pad=0.1, sharey=axScatter)
+
+    # make some labels invisible
+    plt.setp(axHistx.get_xticklabels() + axHisty.get_yticklabels(),
+             visible=False)
+    print(len(x), len(y))
+    for i, (x_, y_) in enumerate(zip(x,y)):
+        # now determine nice limits by hand:
+        hist, bins, _ = axHistx.hist(x_, bins=40, color = colors[i], alpha=0.8)
+        # Plot the PDF.
+        #xmin, xmax = [0.5e-3, 1.5e-3] #plt.xlim()
+        mu_x = np.nanmean(x_)
+        std_x = np.nanstd(x_)
+        # changes here
+        p = norm.pdf(bins, mu_x, std_x)           
+        axHistx.plot(bins, p/p.sum() * hist.sum(), color='k', alpha=1, lw=1)
+        f = p/p.sum() * hist.sum()
+        indx = np.argmin(abs(bins-mu_x))
+        axHistx.plot(mu_x, f[indx], 'red', marker = 'x')
+        axHistx.spines['top'].set_visible(False)
+        axHistx.spines['right'].set_visible(False)
+        # mu value on the upper histogram distribution
+        #axHistx.vlines(mu_x, 0, np.max(hist)+1, color = colors[i], ls = '--', lw=1.5, label = title_center)
+
+        #ax.spines['bottom'].set_visible(False)
+        #ax.spines['left'].set_visible(False)
+        # Plot the histogram.
+        hist, bins, _ = axHisty.hist(y_, bins=40, orientation='horizontal', color = colors[i], alpha=0.8)
+        # Plot the PDF.
+        #xmin, xmax = [0.5e-3, 1.5e-3] #plt.xlim()
+        mu_y = np.nanmean(y_)
+        std_y = np.nanstd(y_)
+        # changes here
+        p = norm.pdf(bins, mu_y, std_y)           
+        #axHistx.vlines(center[0], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5, label = title_center)
+        # mu value on the right histogram distribution
+        #axHisty.hlines(mu_y, 0, np.max(hist)+1, color = colors[i], ls = '--', lw=1.5)
+        axHisty.plot(p/p.sum() * hist.sum(), bins , color='k', lw=1)
+        f = p/p.sum() * hist.sum()
+        indx = np.argmin(abs(f-mu_y))
+        axHisty.plot(f[indx], mu_y, 'red', marker = 'x')
+        #if i == len(x)-1:
+        #    axHistx.vlines(center[0], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5, label = title_center)
+        #    axHisty.hlines(center[1], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5, label = title_center)
+        #else:
+        #    axHistx.vlines(center[0], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5)
+        #    axHisty.hlines(center[1], 0, np.max([a[0]])+1, color = 'grey', ls = '--', lw=2.5)
+        axHisty.spines['top'].set_visible(False)
+        axHisty.spines['right'].set_visible(False)
+        # mu values for the distributions -on the green image-
+        axScatter.vlines(mu_x, mu_y, abs(shap[0]), color = colors[i], ls = '--', lw=1.5, alpha = 1)
+        axScatter.hlines(mu_y, mu_x,  abs(shap[1]), color = colors[i], ls = '--', lw=1.5, alpha = 1 )#
+        if i == len(x)-1:
+            lab = r'$\mu$ of distributions'
+        else:
+            lab= ''
+        axScatter.scatter(mu_x, mu_y, marker = '+', color = 'red', s=150, label = lab)
+
+
+    # the xaxis of axHistx and yaxis of axHisty are shared with axScatter,
+    # thus there is no need to manually adjust the xlim and ylim of these
+    # axis.
+    axScatter.legend(loc='lower left')
+    
+    #axHistx.axis["bottom"].major_ticklabels.set_visible(False)
+    for tl in axHistx.get_xticklabels():
+        tl.set_visible(False)
+    #axHistx.set_yticks([0, 3, 6])## TO MODIFY
+
+    #axHisty.axis["left"].major_ticklabels.set_visible(False)
+    for tl in axHisty.get_yticklabels():
+        tl.set_visible(False)
+    #axHisty.set_xticks([])## TO MODIFY
+    if name is not None:
+        tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
+        plt.savefig(os.path.join(tmp, name + '.png'), format = 'png', dpi =500)
+        plt.rc('figure', max_open_warning = 0)
+        plt.rcParams.update({'font.size': 12})
+        plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
+        #plt.savefig(os.path.join(tmp, 'Bretz_pos2inAM3_SingleTrial_distrib' + '.pdf'), format='pdf', dpi =500)
+        print(name + ext+ ' stored successfully!')
+    
+    plt.draw()
+    plt.show()
+    plt.close('all')
+    return
+
+def whole_time_sequence(data, 
+                        global_cntrds = None, 
+                        colors_centr = ['black', 'purple', 'aqua'], 
+                        cntrds = None, 
+                        blbs = None, 
+                        max=80, min=10, 
+                        mask = None, 
+                        name = None, 
+                        blur = True, 
+                        adaptive_vm = False, 
+                        n_columns = 10, 
+                        store_path = STORAGE_PATH,
+                        handle_lims_blobs = ((97.72, 100)), 
+                        name_analysis_ = 'RetinotopicPositions',
+                        max_bord = None,
+                        min_bord = None,
+                        ext= '.svg',
+                        mappa = utils.PARULA_MAP,
+                        titles = None,
+                        pixel_spacing = None,
+                        color_scale_bar = 'white'):
+
+    fig = plt.figure(figsize=(15,15), dpi=500)
+    fig.subplots_adjust(bottom=0.2)
+    #plt.viridis()
+    #fig.canvas.draw()
+
+    if titles is None:
+        titles = ['']*len(data)
+    
+    grid = AxesGrid(fig, 111,
+                    nrows_ncols=(int(np.ceil(np.shape(data)[0]/n_columns)), n_columns),
+                    axes_pad=0.3,
+                    share_all=True,
+                    label_mode="L",
+                    cbar_mode='single',
+                    cbar_location='right',
+                    cbar_pad=0.1
+                    )
+
+    
+    # One max-min value for all the colormap. If True, each colormap the values are recomputed
+    if (not adaptive_vm) and ((max_bord is None) or (min_bord is None)):
+        max_bord = np.nanpercentile(data, max)
+        min_bord = np.nanpercentile(data, min)
+
+    # If centroids and blobs are provided, it avoids this computation
+    if (cntrds is None) and (blbs is None):# and (mask is not None):
+        # Significant threshold for blob thresholding
+        bottom_limit = np.nanpercentile(data, 80)
+        upper_limit = np.nanpercentile(data, 100)
+        ad_t = False
+        _, centroids, blobs = process.detection_blob(data,
+                                                     min_lim = bottom_limit,
+                                                     max_lim = upper_limit,
+                                                     min_2_lim = handle_lims_blobs[0], 
+                                                     max_2_lim = handle_lims_blobs[1],  
+                                                     adaptive_thresh = ad_t)
+        if len(centroids)>0:
+            new_centroids = []
+
+            for c in centroids:
+                cntrds = []
+
+                if len(c)>0:
+                    for x,y, in c:
+                        if mask[y, x]:
+                            cntrds.append((x,y))
+
+                new_centroids.append(cntrds)
+            centroids = new_centroids
+    else:
+        centroids = cntrds
+        blobs = blbs
+    
+    #fig.suptitle(name, fontsize=16)
+    for i, (ax, l) in enumerate(zip(grid, data)):
+        
+        if adaptive_vm:
+            max_bord = np.nanpercentile(l, max)
+            min_bord = np.nanpercentile(l, min)
+
+        if blur:
+            blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=np.nanmin(l), posinf=None, neginf=None), sigma=1)
+        else:
+            blurred = l
+
+        if mask is not None:
+            blurred[~mask] = np.NAN
+        
+        p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=mappa)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.axis('off')
+        # Title for each frame
+        ax.set_title(titles[i])
+        
+        if blobs is not None:
+            if mask is not None:
+                blobs_ = blobs[i]*mask
+            else:
+                blobs_ = blobs[i]                    
+            ax.contour(blobs_, 4, colors='k', linestyles = 'dotted')
+            
+        if centroids is not None:
+            if len(centroids[i])>0:
+                for j in centroids[i]:
+                    print(j)
+                    ax.scatter(j[0],j[1],color='r', marker = 'X')
+
+        if global_cntrds is not None:
+            for i, cc in zip(global_cntrds, colors_centr):
+                ax.vlines(i[0], 0, blurred.shape[0], color = cc, lw= 1.5)
+
+    cbar = ax.cax.colorbar(p)
+    cbar = grid.cbar_axes[0].colorbar(p)
+    
+    if pixel_spacing is not None:
+        #fig, ax = plt.subplots()
+        fontprops = fm.FontProperties(size=14)
+        scalebar = AnchoredSizeBar(ax.transData,
+                                    round(2/pixel_spacing), '2mm', 'upper right', 
+                                    pad=0.1,
+                                    color=color_scale_bar,
+                                    frameon=False,
+                                    size_vertical=2,
+                                    fontproperties=fontprops)
+
+        ax.add_artist(scalebar)
+
+    #cbar.ax.set_yticks(np.arange(0, 1.1, 0.5))
+
+
+
+    #plt.show()
+    print(f'Limits values for heatmaps: {max_bord} - {min_bord}')   
+    if name is not None:
+        tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
+        #plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
+        plt.savefig(os.path.join(tmp, name + '.png'), format = 'png', dpi =500)
+        plt.rc('figure', max_open_warning = 0)
+        plt.rcParams.update({'font.size': 12})
+        plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
+        #plt.savefig(os.path.join(tmp, 'Bretz_pos2inAM3_SingleTrial_distrib' + '.pdf'), format='pdf', dpi =500)
+        print(name + ext+ ' stored successfully!')
+    #else:
+    #    plt.show()
+    plt.show()
+    plt.close('all')
+    return
+
+
+def plot_retinotopic_positions(dictionar, titles = ['Inferred centroids', 'Single stroke centroids'], distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, ext = '.svg'):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
+    # 
+    fig, axs = plt.subplots(1,len(list(dictionar.keys())), figsize=(10*len(list(dictionar.keys())),7))
+    if len(list(dictionar.keys()))>1:
+        for (ax, (k, v)) in zip(axs, dictionar.items()):
+            a = ax.contour(v[1], 4, colors='purple', linestyles = 'dotted')
+            #a.collections[0].set_label('Inferred pos2: AM12-pos1')
+            pc = ax.pcolormesh(v[3], vmin=v[0][0],vmax=v[0][1], cmap=utils.PARULA_MAP)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            plt.colorbar(pc, shrink=1, ax=ax)
+            if distribution_shown:
+                b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x', alpha = 0.5, label = titles[0])#, label = 'Single trial retinotopy')
+                #b.collections[0].set_label(labs[0])
+            for j in v[2]:
+                #if l == len(v[2])-1:
+                #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
+                #else:
+                c = ax.scatter(j[0],j[1],color='purple', marker = '+', s=150)
+            #c.collections[0].set_label(labs[1])
+            try:
+                a = ax.contour(v[10], 4, colors='k', linestyles = 'dotted')
+                #a.collections[0].set_label('Inferred pos2: AM12-pos1')
+                for i,  j in enumerate(v[9]):
+                    #if l == len(v[2])-1:
+                    #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
+                    #else:
+                    if i == len(v[9])-1:
+                        titolo = titles[1]
+                    else:
+                        titolo = None
+                    c = ax.scatter(j[0],j[1],color='k', marker = '+', s=150, label=titolo)
+
+            except:
+                pass
+
+            ax.set_title(k)
+            ax.legend()
+    else:
+        a = ax.contour(dictionar.values()[1], 4, colors='k', linestyles = 'dotted')
+        pc = ax.pcolormesh(dictionar.values()[3], vmin=dictionar.values()[0][0],vmax=dictionar.values()[0][1], cmap=utils.PARULA_MAP)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        plt.colorbar(pc, shrink=1, ax=ax)
+        if distribution_shown:
+            b = ax.scatter(list(v[4][0]), list(v[4][1]),color='purple', marker = 'x')#, label = 'Single trial retinotopy')
+            #b.collections[0].set_label(labs[0])
+        for j in dictionar.values()[2]:
+            #if l == len(v[2])-1:
+            #    ax.scatter(j[0],j[1],color='r', marker = '+', s=150, legend = 'Averaged retinotopy')
+            #else:
+            c = ax.scatter(j[0],j[1],color='r', marker = '+', s=150)
+        #c.collections[0].set_label(labs[1])
+        ax.set_title(k)
+        #ax.legend()
+
+    if name is not None:
+        tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
+        #plt.savefig(os.path.join(tmp, name + ext), dpi=1000)
+        plt.savefig(os.path.join(tmp, name + ext))
+        print(name + ext+ ' stored successfully!')
+        plt.close('all')
+    return
+
+def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, color, session_name, col_distr, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, store_pic = True):
+    # Plotting retinotopic positions over averaged maps
+    fig, ax = plt.subplots(1,1, figsize=(9,7), dpi=300)
+    ax.contour(retino_obj.blob, 4, colors='k', linestyles = 'dotted')
+    pc = ax.pcolormesh(map, vmin=min_bord,vmax=max_bord, cmap=utils.PARULA_MAP)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    fig.colorbar(pc, shrink=1, ax=ax)
+    ax.scatter(retino_obj.retino_pos[0],retino_obj.retino_pos[1],color='r', marker = '+', s=150)
+    ax.scatter(retino_obj.distribution_positions[0],retino_obj.distribution_positions[1], color=col_distr, marker = '.', s=150)
+    ax.vlines(center[0], 0, map.shape[0], color = color, lw= 3, ls='--', alpha=1)
+    ax.set_title(session_name + ' condition: ' + name_cond )
+
+    if store_pic:
+        # Storing picture
+        tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)#os.path.join(name_analysis_, ID_NAME, v))
+        plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.svg'))
+        print('averagedheatmap_' +name_cond+ '.svg'+ ' stored successfully!')
+        plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.png'))
+        plt.close('all')
+    else:
+        plt.show()
     return
