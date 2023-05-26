@@ -2,6 +2,10 @@ import datetime, utils
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+import matplotlib.font_manager as fm
+
 import numpy as np
 import os
 import process_vsdi as process
@@ -210,7 +214,7 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
     plt.close('all')
     return
 
-def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = '.svg', store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions', colors = ['royalblue', 'gold', 'crimson', 'darkorchid','lime', 'black']):#center):
+def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = 'svg', store_path = STORAGE_PATH, name_analysis_ = 'RetinotopicPositions', colors = ['royalblue', 'gold', 'crimson', 'darkorchid','lime', 'black'], lims = [-0.3, 0.3], axis_titles = None):#center):
     fig, axScatter = plt.subplots(figsize=(10, 10))
     if green is not None:
         pc = axScatter.pcolormesh(green, cmap= 'gray')
@@ -220,12 +224,13 @@ def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = 
         shap = green.shape
 
     else:
-        axScatter.set_ylim(-0.3, 0.3)
-        axScatter.set_xlim(-0.3, 0.3)
+        axScatter.set_ylim(lims[0], lims[1])
+        axScatter.set_xlim(lims[0], lims[1])
         axScatter.set_aspect(1.)
-        shap = (-0.3, 0.3)
+        shap = (lims[0], lims[1])
         
     
+
     for i, (x_, y_) in enumerate(zip(x,y)):
         # the scatter plot:
         axScatter.scatter(x_, y_, color = colors[i], label = titles[i], alpha=0.8)
@@ -233,7 +238,9 @@ def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = 
     massx = np.nanmax([j for i in x for j in i])
     massy = np.nanmax([j for i in y for j in i])
     
-
+    if axis_titles is not None:
+        axScatter.set_xlabel(axis_titles[0])
+        axScatter.set_ylabel(axis_titles[1])
     # create new axes on the right and on the top of the current axes
     # The first argument of the new_vertical(new_horizontal) method is
     # the height (width) of the axes to be created in inches.
@@ -314,13 +321,16 @@ def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = 
     #axHisty.set_xticks([])## TO MODIFY
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
-        #plt.savefig(os.path.join(tmp, name + ext), dpi=1000)
-        plt.savefig(os.path.join(tmp, name + '.png'))
+        plt.savefig(os.path.join(tmp, name + '.png'), format = 'png', dpi =500)
+        plt.rc('figure', max_open_warning = 0)
+        plt.rcParams.update({'font.size': 12})
+        plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
+        #plt.savefig(os.path.join(tmp, 'Bretz_pos2inAM3_SingleTrial_distrib' + '.pdf'), format='pdf', dpi =500)
         print(name + ext+ ' stored successfully!')
-        plt.close('all')
-    else:
-        plt.draw()
-        plt.show()
+    
+    plt.draw()
+    plt.show()
+    plt.close('all')
     return
 
 def whole_time_sequence(data, 
@@ -337,28 +347,32 @@ def whole_time_sequence(data,
                         store_path = STORAGE_PATH,
                         handle_lims_blobs = ((97.72, 100)), 
                         name_analysis_ = 'RetinotopicPositions',
-                        significant_thresh = None,
                         max_bord = None,
                         min_bord = None,
                         ext= '.svg',
-                        mappa = utils.PARULA_MAP):
+                        mappa = utils.PARULA_MAP,
+                        titles = None,
+                        pixel_spacing = None,
+                        color_scale_bar = 'white'):
 
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
     #plt.viridis()
+    #fig.canvas.draw()
+
+    if titles is None:
+        titles = ['']*len(data)
     
     grid = AxesGrid(fig, 111,
                     nrows_ncols=(int(np.ceil(np.shape(data)[0]/n_columns)), n_columns),
                     axes_pad=0.3,
                     share_all=True,
                     label_mode="L",
-                    cbar_mode= None#'edge', 'each','single'
+                    cbar_mode='single',
+                    cbar_location='right',
+                    cbar_pad=0.1
                     )
 
-    # Significant threshold for blob thresholding
-    bottom_limit = np.nanpercentile(data, 80)
-    upper_limit = np.nanpercentile(data, 100)
-    ad_t = False
     
     # One max-min value for all the colormap. If True, each colormap the values are recomputed
     if (not adaptive_vm) and ((max_bord is None) or (min_bord is None)):
@@ -366,7 +380,11 @@ def whole_time_sequence(data,
         min_bord = np.nanpercentile(data, min)
 
     # If centroids and blobs are provided, it avoids this computation
-    if (cntrds is None) and (blbs is None):
+    if (cntrds is None) and (blbs is None):# and (mask is not None):
+        # Significant threshold for blob thresholding
+        bottom_limit = np.nanpercentile(data, 80)
+        upper_limit = np.nanpercentile(data, 100)
+        ad_t = False
         _, centroids, blobs = process.detection_blob(data,
                                                      min_lim = bottom_limit,
                                                      max_lim = upper_limit,
@@ -390,8 +408,6 @@ def whole_time_sequence(data,
         centroids = cntrds
         blobs = blbs
     
-    print(centroids)
-
     #fig.suptitle(name, fontsize=16)
     for i, (ax, l) in enumerate(zip(grid, data)):
         
@@ -410,26 +426,61 @@ def whole_time_sequence(data,
         p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=mappa)
         ax.set_xticks([])
         ax.set_yticks([])
-
-        blobs_ = blobs[i]*mask                    
-        ax.contour(blobs_, 4, colors='k', linestyles = 'dotted')
-
-        if len(centroids[i])>0:
-            for j in centroids[i]:
-                ax.scatter(j[0],j[1],color='r', marker = 'X')
+        ax.axis('off')
+        # Title for each frame
+        ax.set_title(titles[i])
+        
+        if blobs is not None:
+            if mask is not None:
+                blobs_ = blobs[i]*mask
+            else:
+                blobs_ = blobs[i]                    
+            ax.contour(blobs_, 4, colors='k', linestyles = 'dotted')
+            
+        if centroids is not None:
+            if len(centroids[i])>0:
+                for j in centroids[i]:
+                    print(j)
+                    ax.scatter(j[0],j[1],color='r', marker = 'X')
 
         if global_cntrds is not None:
             for i, cc in zip(global_cntrds, colors_centr):
                 ax.vlines(i[0], 0, blurred.shape[0], color = cc, lw= 1.5)
 
+    cbar = ax.cax.colorbar(p)
+    cbar = grid.cbar_axes[0].colorbar(p)
+    
+    if pixel_spacing is not None:
+        #fig, ax = plt.subplots()
+        fontprops = fm.FontProperties(size=14)
+        scalebar = AnchoredSizeBar(ax.transData,
+                                    round(2/pixel_spacing), '2mm', 'upper right', 
+                                    pad=0.1,
+                                    color=color_scale_bar,
+                                    frameon=False,
+                                    size_vertical=2,
+                                    fontproperties=fontprops)
+
+        ax.add_artist(scalebar)
+
+    #cbar.ax.set_yticks(np.arange(0, 1.1, 0.5))
+
+
+
+    #plt.show()
     print(f'Limits values for heatmaps: {max_bord} - {min_bord}')   
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         #plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
-        plt.savefig(os.path.join(tmp, name + '.png'))
+        plt.savefig(os.path.join(tmp, name + '.png'), format = 'png', dpi =500)
+        plt.rc('figure', max_open_warning = 0)
+        plt.rcParams.update({'font.size': 12})
+        plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
+        #plt.savefig(os.path.join(tmp, 'Bretz_pos2inAM3_SingleTrial_distrib' + '.pdf'), format='pdf', dpi =500)
         print(name + ext+ ' stored successfully!')
-    else:
-        plt.show()
+    #else:
+    #    plt.show()
+    plt.show()
     plt.close('all')
     return
 
