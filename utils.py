@@ -57,6 +57,28 @@ COLORS = colors_a = [  'forestgreen', 'purple', 'orange', 'blue',
                  'yellowgreen', 'aliceblue', 'mediumvioletred', 'gold', 'sandybrown',
                  'aquamarine', 'black','lime', 'pink', 'limegreen', 'royalblue','yellow']
 
+def nonlinear_map():
+# nonlincolormap, colormap for displaying suppression/facilitation in a
+# matrix 
+# fredo 2011
+# Salvatore Giancani 2023
+    m = len(cm_data)
+    n = int(np.ceil(m/6))
+
+    u=np.linspace(0,n-1,n)/(n-1)
+
+    o=int(round(n/2))
+    v=u[(n-o+1):n]
+
+    J = np.zeros((m,3))
+    tmp = [0]*o + [0]*n + list(u) + [1]*n + [1]*n + list(np.flip(v))
+    J[:len(tmp),0] = tmp  #  %r
+    tmp = [0]*o + list(u) + [1]*n + [1]*n + list(np.flip(u)) + [0]*o  
+    J[:len(tmp),1] = tmp  #  %r
+    tmp = list(v) +[1]*n + [1]*n + list(np.flip(u)) + [0]*n + [0]*o   
+    J[:len(tmp),2] = tmp  
+    return J
+
 class DrawLineWidget(object):
     def __init__(self, image):
         self.drawing = False
@@ -232,6 +254,7 @@ def sector_mask(shape,centre,radius,angle_range):
     From: https://stackoverflow.com/questions/18352973/mask-a-circular-sector-in-a-numpy-array
     Return a boolean mask for a circular sector. The start/stop angles in  
     `angle_range` should be given in clockwise order.
+    angle_range: tuple of integers: it has to give the angular coordinates of the cord of interest
     """
 
     x,y = np.ogrid[:shape[0],:shape[1]]
