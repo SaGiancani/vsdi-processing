@@ -527,7 +527,7 @@ class BlkFile:
 				#tmp[i, :, :] = cv.resize(b[i, :, :], (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_CUBIC)
 			b = tmp
 		#print('binning time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
-		return b
+		return b.astype('float64')
 
 
 	def motion_index(self):
