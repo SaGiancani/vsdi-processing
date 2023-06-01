@@ -510,11 +510,11 @@ class BlkFile:
 			t_size_binned = int( np.ceil( float(t_size) / self.temporal_binning ) )
 			# print 't_size_binned if: ', t_size_binned
 			# b = np.zeros( [ t_size_binned, a.shape[1], a.shape[2] ] )
-			b = np.zeros((t_size_binned, y_size, x_size))
+			b = np.zeros((t_size_binned, y_size, x_size), dtype='float64')
 			for t in range(t_size_binned):
 				ind_min = t*self.temporal_binning
 				ind_max = min((t+1)*self.temporal_binning, t_size )
-				b[t,:,:] = self.image[ind_min:ind_max,:,:].mean(0).astype(float)
+				b[t,:,:] = self.image[ind_min:ind_max,:,:].mean(0).astype('float64')
 		else:
 			t_size_binned = t_size
 
