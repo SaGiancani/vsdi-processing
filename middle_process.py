@@ -127,7 +127,8 @@ class Session:
                  condid = None, 
                  store_switch = False, 
                  data_vis_switch = True, 
-                 end_frame = None, 
+                 end_frame = None,
+                 filename_particle = 'vsd_C', 
                  **kwargs):
         """
         Initializes attributes
@@ -222,13 +223,15 @@ class Session:
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
         self.blank_id = self.get_blank_id(cond_id=condid)
+        self.filename_particle = filename_particle
 
         # This can be automatized, with zero_frames, extracting parameters from BaseReport
         # Avoiding to load a BLK file
         # A blk loaded for useful hyperparameters
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
                             self.header['spatial_bin'], 
-                            self.header['temporal_bin'])
+                            self.header['temporal_bin'],
+                            filename_particle = self.filename_particle)
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
@@ -342,13 +345,13 @@ class Session:
 
     def get_signal(self, condition):
         # All the blank blks
-        blks = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])==condition)]
+        blks = [f for f in self.all_blks if (int(f.split(self.filename_particle)[1][0:2])==condition)]
         zero_of_cond = self.header['zero_frames']
         end_of_cond = self.header['ending_frame']
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat)
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, filename_particle = self.filename_particle)
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
@@ -381,7 +384,7 @@ class Session:
             self.log.info('Blank signal computed')
                         
         else:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat)
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, filename_particle = self.filename_particle)
             mask = self.get_selection_trials(condition, sig)
             self.conditions = self.conditions + conditions
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
@@ -453,7 +456,7 @@ class Session:
             return self.all_blks
         else:
             self.log.info('BLKs for conditions ' + str(self.header['conditions_id']) + 'sorted by time creation')
-            tmp = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+            tmp = [f for f in self.all_blks if (int(f.split(self.filename_particle)[1][0:2]) in self.header['conditions_id'])]
             try:
                 a = sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
             except:
@@ -465,7 +468,7 @@ class Session:
         '''
         The method returns a list of all the condition's ids, taken from the .BLK names.
         '''
-        return list(set([int(i.split('vsd_C')[1][0:2]) for i in self.all_blks]))
+        return list(set([int(i.split(self.filename_particle)[1][0:2]) for i in self.all_blks]))
         
     def get_condition_name(self):
         '''
@@ -660,14 +663,14 @@ class Session:
         return folder_path
 #                    _, _, _, _, trials = md.signal_extraction(session.header, blks, None, None, session.base_report, blank_id, session.piezo, session.heart_beat, log = session.log, blks_load = False)
 
-def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True):
+def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True, filename_particle = 'vsd_C'):
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
     flag_remove = False
     if base_report is not None:
         trials_dict = dict()
-        greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split('vsd_C')[1][0:2]))
+        greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split(filename_particle)[1][0:2]))
     else:
         trials_dict = None
         
@@ -710,7 +713,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         os.path.join(path_rawdata, blk_name),
                         header['spatial_bin'],
                         header['temporal_bin'],
-                        header = None)
+                        header = None, 
+                        filename_particle = filename_particle)
 
                     header_blk = BLK.header
                     raws = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
@@ -722,7 +726,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         os.path.join(path_rawdata, blk_name), 
                         header['spatial_bin'], 
                         header['temporal_bin'], 
-                        header = header_blk)
+                        header = header_blk, 
+                        filename_particle = filename_particle)
                 
                 # Log prints
                 if log is None:
@@ -751,7 +756,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         os.path.join(path_rawdata, blk_name),
                         header['spatial_bin'],
                         header['temporal_bin'],
-                        header = None)
+                        header = None, 
+                        filename_particle = filename_particle)
 
                     header_blk = BLK.header
                     raws = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
@@ -1026,7 +1032,13 @@ if __name__=="__main__":
     parser.add_argument('--no-vis', 
                         dest='data_vis_switch', 
                         action='store_false')
-    parser.set_defaults(data_vis_switch=False)  
+    parser.set_defaults(data_vis_switch=False) 
+
+    parser.add_argument('--particle', 
+                        dest='filename_particle',
+                        type=str,
+                        default = 'vsd_C',
+                        required=False)    
     
 
     logger = utils.setup_custom_logger('myapp')
