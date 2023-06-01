@@ -514,7 +514,7 @@ class BlkFile:
 			for t in range(t_size_binned):
 				ind_min = t*self.temporal_binning
 				ind_max = min((t+1)*self.temporal_binning, t_size )
-				b[t,:,:] = self.image[ind_min:ind_max,:,:].mean(0).astype(int)
+				b[t,:,:] = self.image[ind_min:ind_max,:,:].mean(0).astype(float)
 		else:
 			t_size_binned = t_size
 
