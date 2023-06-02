@@ -1040,6 +1040,12 @@ if __name__=="__main__":
                         default = 'vsd_C',
                         required=False)    
     
+    parser.add_argument('--zero', 
+                        dest='zero_frames',
+                        type=int,
+                        default = None,
+                        required=False) 
+    
 
     logger = utils.setup_custom_logger('myapp')
     logger.info('Start\n')
