@@ -474,6 +474,7 @@ class BlkFile:
 		#if detrend:
 		#	a = np.reshape(a, (t_size, z_size*y_size*x_size))
 		#	a =  signal.detrend(np.nan_to_num(a))# + np.mean(a, axis=0)
+		print(a.shape)
 		a = np.reshape(a,(t_size,z_size,y_size,x_size)) # Transformation of data linear bitstream to a regular image 2D + time data
 		a = np.reshape(a[:,0,:,:], (t_size, y_size,x_size))
 		#print('vsdi-signal extraction time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
