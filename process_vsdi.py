@@ -16,6 +16,10 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
 		df_fz : np.array, with shape nframes, width, height
     '''
     #mean_frames_zero = np.nanmean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
+    if len(vsdi_sign.shape) != 3:
+        print('Data input not a 3d matrix!')
+        return
+
     mean_frames_zero = np.nanmean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
     #mean_frames_zero[np.where(mean_frames_zero==0)] = np.min(mean_frames_zero)
     # The case for precalculating the blank signal or not deblank at all
@@ -263,7 +267,7 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
 
         # Condition mean and stder computation
         mean_sign_overcond = np.nanmean(sig_cond[:, :, :, :], axis = 0)
-        stder_sign_overcond = np.nanstd(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+        # stder_sign_overcond = np.nanstd(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
 
     # Case for single trial analysis: full time sequence analysis    
     elif len(np.shape(sig_cond))==3:
@@ -278,23 +282,18 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
         if full_seq:
             # Condition mean and stder computation
             mean_sign_overcond = sig_cond
-            stder_sign_overcond = 0
+            # stder_sign_overcond = 0
         else:        
             # Condition mean and stder computation
             mean_sign_overcond = np.nanmean(sig_cond[ :, :, :], axis = 0)
-            stder_sign_overcond = np.nanstd(sig_cond[ :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+            # stder_sign_overcond = np.nanstd(sig_cond[ :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
     
     # Try to fix the zscore defected for Hip AM3Strokes second session.
     #zscore = np.nan_to_num(np.nan_to_num(mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)))
     #print(mean_sign_overcond.shape, mean_signblnk_overcond.shape)
     A = mean_sign_overcond-mean_signblnk_overcond
-    B = np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
-    #zscore = np.true_divide(A,  B, where = (A!=np.nan) | (B!=np.nan))#+eps)
-    #zscore = np.nan_to_num(zscore, copy=False, nan=-0.0000001, posinf=10e+07, neginf=-0.0000001)
+    B = stder_signblnk_overcond
+    # B = np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
     zscore = A/B
-    #zscore = np.nan_to_num(zscore, copy=False, 
-    #                       nan=np.nanmin(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]),
-    #                       posinf=np.nanmax(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]), 
-    #                       neginf=np.nanmin(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]))
     return zscore
 
