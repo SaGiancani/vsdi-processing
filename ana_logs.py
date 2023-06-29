@@ -207,7 +207,6 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
     dict_['Export Log Files'] = bool(dict_['Export Log Files'])
     return dict_
 
-
 def get_analog_signal(session_path, BaseReport, name_report = 'SignalData.csv'):
     analog_sign_path = utils.find_thing(name_report, session_path, what = 'file')
     SignalData = pd.read_csv(analog_sign_path[0], sep=';', header=2)
@@ -235,6 +234,22 @@ def get_analog_signal(session_path, BaseReport, name_report = 'SignalData.csv'):
   
     return time, tracks_6, tracks_5
 
+def get_eye_signal(base_report, eyetrack):
+    only_blks = base_report.loc[base_report['Preceding Event IT'] == 'FixCorrect']['Total Trial Number'].tolist()
+    dict_tracks = dict()
+
+    for i in only_blks:
+        #eyetrack.loc[eyetrack['Trial'] == i]
+        # Getting the event list per trial i
+        events = eyetrack.loc[eyetrack['Trial'] == i]['Current Event'].tolist()
+        # Beginning of the stimulation
+        start_track = events.index('r>FixationTask>Trial>PreStim')
+        # End of the stimulation
+        end_track = events.index('r>FixationTask>EndTrial')
+        tmp = eyetrack.loc[eyetrack['Trial'] == i, ['Gaze CVX', 'Gaze CVY']].iloc[start_track:end_track].applymap(separator_converter)
+        dict_tracks[i] = (tmp['Gaze CVX'].tolist(), 
+                          tmp['Gaze CVY'].tolist())
+    return dict_tracks
 
 def get_grey_frames(png_files_path, cond_id):
     start_time = datetime.datetime.now().replace(microsecond=0)
@@ -255,7 +270,6 @@ def get_grey_frames(png_files_path, cond_id):
                 final_out.append(count+1)
     print('Time for png evaluation: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
     return out[0], final_out[0], a.shape[0]
-
 
 def separator_converter(s):
     '''
