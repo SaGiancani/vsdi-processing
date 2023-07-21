@@ -9,7 +9,7 @@ import matplotlib.font_manager as fm
 import numpy as np
 import os
 import process_vsdi as process
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage.filters import gaussian_filter, median_filter
 from scipy.stats import norm
 
 STORAGE_PATH = '/envau/work/neopto/USERS/GIANCANI/Analysis/'
@@ -349,10 +349,12 @@ def whole_time_sequence(data,
                         name_analysis_ = 'RetinotopicPositions',
                         max_bord = None,
                         min_bord = None,
-                        ext= '.svg',
+                        ext= 'svg',
                         mappa = utils.PARULA_MAP,
                         titles = None,
                         pixel_spacing = None,
+                        second_contour = None,
+                        kern_median = 5,
                         color_scale_bar = 'white'):
 
     fig = plt.figure(figsize=(15,15), dpi=500)
@@ -416,7 +418,8 @@ def whole_time_sequence(data,
             min_bord = np.nanpercentile(l, min)
 
         if blur:
-            blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=np.nanmin(l), posinf=None, neginf=None), sigma=1)
+            #blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=np.nanmin(l), posinf=None, neginf=None), sigma=1)
+            blurred = median_filter(np.nan_to_num(l, copy=False, nan=np.nanmin(l), posinf=None, neginf=None), (kern_median,kern_median))
         else:
             blurred = l
 
@@ -424,6 +427,10 @@ def whole_time_sequence(data,
             blurred[~mask] = np.NAN
         
         p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=mappa)
+
+        if second_contour is not None:
+            ax.contour(second_contour, 15, colors='white', linestyles = 'dotted')
+        
         ax.set_xticks([])
         ax.set_yticks([])
         ax.axis('off')
@@ -444,12 +451,19 @@ def whole_time_sequence(data,
                     ax.scatter(j[0],j[1],color='r', marker = 'X')
 
         if global_cntrds is not None:
-            for i, cc in zip(global_cntrds, colors_centr):
-                ax.vlines(i[0], 0, blurred.shape[0], color = cc, lw= 1.5)
+            for k, cc in zip(global_cntrds, colors_centr):
+                # ax.vlines(i[0], 0, blurred.shape[0], color = cc, lw= 1.5)
+                mask_single_dot = utils.sector_mask(l.shape, 
+                                                    (k[1], k[0]), 
+                                                    25, 
+                                                    (0,360))
+                ax.contour(mask_single_dot, 10, colors=cc)#, linestyles = 'dotted')
+
 
     cbar = ax.cax.colorbar(p)
     cbar = grid.cbar_axes[0].colorbar(p)
-    
+
+
     if pixel_spacing is not None:
         #fig, ax = plt.subplots()
         fontprops = fm.FontProperties(size=14)
