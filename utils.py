@@ -170,11 +170,11 @@ def find_thing(pattern, path, what ='file'):
 def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None, experiments = None):
     
     if sessions is not None:
-        sessions = [s.lower() for s in sessions]
+        sessions = [s.lower() for s in sessions if not (s.startswith("."))]
     elif subs is not None:
-        subs = [s.lower() for s in subs]
+        subs = [s.lower() for s in subs if not (s.startswith("."))]
     elif experiments is not None:
-        experiments = [s.lower() for s in experiments]
+        experiments = [s.lower() for s in experiments if not (s.startswith("."))]
 
     if (experiments is None) and (exp_type is not None):
         if 'VSDI' in exp_type and 'BEHAV' in exp_type:
@@ -205,9 +205,9 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
         subjs_list = list()
         for f in  os.scandir(path_exp):
             try:
-                if (subs is not None) and (f.name.split('sub-')[1].lower() in subs):
+                if (subs is not None) and (f.name.split('sub-')[1].lower() in subs) and (not (f.name.startswith("."))):
                     subjs_list.append(f.name)
-                elif (subs is None):
+                elif (subs is None) and (not (f.name.startswith("."))):
                     subjs_list.append(f.name)        #print(subjs_list)
             except:
                 pass
@@ -217,9 +217,9 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
             path_sub = os.path.join(path_exp, sub)
             sess_list = list()
             for f in  os.scandir(path_sub):
-                if (sessions is not None) and (f.name.split('sess-')[1].lower() in sessions):
+                if (sessions is not None) and (f.name.split('sess-')[1].lower() in sessions) and (not (f.name.startswith("."))):
                     sess_list.append(f.name)
-                elif (sessions is None):
+                elif (sessions is None) and (not (f.name.startswith("."))):
                     sess_list.append(f.name)
             #print(sess_list)
             paths = list()
