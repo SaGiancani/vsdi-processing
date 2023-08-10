@@ -198,6 +198,7 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
 
     exps = dict()
     for exp in exps_list:
+        print(exp)
         exps[exp.split('exp-')[1]] = dict()
         path_exp = os.path.join(path_storage, exp)
         #subjs_list = [f.name for f in os.scandir(path_exp) if (subs is not None) and (f.name.split('sub-')[1].lower() in subs)]
@@ -211,6 +212,7 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
             except:
                 pass
         for sub in subjs_list:
+            print(sub)
             #exps[exp.split('exp-')[1]][sub.split('sub-')[1]] = dict() 
             path_sub = os.path.join(path_exp, sub)
             sess_list = list()
@@ -222,8 +224,10 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
             #print(sess_list)
             paths = list()
             for sess in sess_list:  
+                print(sess)
                 path_sess = os.path.join(path_sub, sess)
                 paths.append(path_sess)
+            
             exps[exp.split('exp-')[1]][sub.split('sub-')[1]] = paths
 
     return exps
