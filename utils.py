@@ -227,7 +227,7 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
                 print(sess)
                 path_sess = os.path.join(path_sub, sess)
                 paths.append(path_sess)
-            
+            print(sub.split('sub-')) 
             exps[exp.split('exp-')[1]][sub.split('sub-')[1]] = paths
 
     return exps
