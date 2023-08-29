@@ -355,7 +355,8 @@ def whole_time_sequence(data,
                         pixel_spacing = None,
                         second_contour = None,
                         kern_median = 5,
-                        color_scale_bar = 'white'):
+                        color_scale_bar = 'white',
+                        manual_thresh = None):
 
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
@@ -386,13 +387,22 @@ def whole_time_sequence(data,
         # Significant threshold for blob thresholding
         bottom_limit = np.nanpercentile(data, 80)
         upper_limit = np.nanpercentile(data, 100)
+        # Significant threshold for blob thresholding
         ad_t = False
-        _, centroids, blobs = process.detection_blob(data,
-                                                     min_lim = bottom_limit,
-                                                     max_lim = upper_limit,
-                                                     min_2_lim = handle_lims_blobs[0], 
-                                                     max_2_lim = handle_lims_blobs[1],  
-                                                     adaptive_thresh = ad_t)
+
+        if manual_thresh is None:
+            manual_th = handle_lims_blobs[0]
+            _, centroids, blobs = process.detection_blob(data,
+                                                         min_lim = bottom_limit,
+                                                         max_lim = upper_limit,
+                                                         min_2_lim = manual_th, 
+                                                         max_2_lim = handle_lims_blobs[1],  
+                                                         adaptive_thresh = ad_t)
+        else:
+            a = [process.manual_thresholding(i, manual_thresh) for i in data]
+            centroids = list(zip(*a))[1]
+            blobs = list(zip(*a))[2]
+            
         if len(centroids)>0:
             new_centroids = []
 
@@ -429,7 +439,8 @@ def whole_time_sequence(data,
         p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=mappa)
 
         if second_contour is not None:
-            ax.contour(second_contour, 15, colors='white', linestyles = 'dotted')
+            second_contour = second_contour*mask
+            ax.contour(second_contour, 15, colors='white', ls = 'dotted', lw = .3)
         
         ax.set_xticks([])
         ax.set_yticks([])
@@ -447,7 +458,6 @@ def whole_time_sequence(data,
         if centroids is not None:
             if len(centroids[i])>0:
                 for j in centroids[i]:
-                    print(j)
                     ax.scatter(j[0],j[1],color='r', marker = 'X')
 
         if global_cntrds is not None:
@@ -457,7 +467,9 @@ def whole_time_sequence(data,
                                                     (k[1], k[0]), 
                                                     25, 
                                                     (0,360))
-                ax.contour(mask_single_dot, 10, colors=cc)#, linestyles = 'dotted')
+                ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=.3)
+    
+    # print(centroids)
 
 
     cbar = ax.cax.colorbar(p)
