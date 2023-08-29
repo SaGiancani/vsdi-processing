@@ -13,7 +13,8 @@ class Trial:
 
         # Behavioral outcome
         try:
-            self.orientation =  int(report_series_trial['Orientation Behav'])
+            self.orientation = int(report_series_trial['Orientation Behav'])
+            self.orientation_outcome = int(report_series_trial['IDrejected ROI'])
         except:
             pass
 
@@ -39,11 +40,11 @@ class Trial:
         else:
             self.zero_frames = 20
             self.FOI = 35
-            
+
         self.start_stim = float(separator_converter(report_series_trial['Onset Time_ Pre Stim']))
         self.onset_stim = float(separator_converter(report_series_trial['Onset Time_ Stim']))
         self.end_trial = float(separator_converter(report_series_trial['Onset Time_ End Stim']))
-        print(self.onset_stim - self.start_stim)
+        # print(self.onset_stim - self.start_stim)
         self.heart_signal = heart
         self.piezo_signal = piezo
     
