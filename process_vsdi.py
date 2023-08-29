@@ -3,14 +3,13 @@ import numpy as np
 from scipy.ndimage.filters import uniform_filter1d, gaussian_filter, median_filter
 from scipy import optimize
 
-def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
+def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None):
     '''F/F0 computation with -or without- demean of n_frames_zero and killing of outlier 
 		----------
 		vsdi_sign : np.array, with shape nframes, width, height
         n_frames_zero: int, the number of frames taken as zero, aka prestimulus
         demean: bool, switch for demeaning the signal: F-mean(F[0:n_frames_zero])/mean(F[0:n_frames_zero]) if True
                 F/mean(F[0:n_frames_zero]) if False 
-        outlier_tresh: int, 1000 by default, over this -absolute- threshold the pixel-value is put to 0  
 		Returns
 		-------
 		df_fz : np.array, with shape nframes, width, height
@@ -24,30 +23,14 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
     #mean_frames_zero[np.where(mean_frames_zero==0)] = np.min(mean_frames_zero)
     # The case for precalculating the blank signal or not deblank at all
     if (deblank and (blank_sign is None)):
-        #t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
-        #vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val) 
-        
         df_fz= (vsdi_sign/mean_frames_zero) 
     # The case for calculating the signal deblanked
     elif deblank and (blank_sign is not None):
-        #t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
-        #vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val)
-        
-        #t_val = np.nanmean(np.ma.masked_invalid(blank_sign))
-        #blank_sign = np.nan_to_num(blank_sign,nan= t_val, posinf = t_val, neginf= t_val)          
-        
         df_fz = ((vsdi_sign/mean_frames_zero)/(blank_sign)) - 1
     # The case without deblank
     elif (not deblank):
-        #t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
-        #vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val) 
-        
         df_fz = (vsdi_sign/mean_frames_zero) -1
-    # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
-    #df_fz = df_fz - df_fz[0, :, :] 
-    #t_val = np.nanmean(np.ma.masked_invalid(df_fz))
-    #df_fz = np.nan_to_num(df_fz,nan= t_val, posinf = t_val, neginf= t_val)
-    #df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
+
     return df_fz
 
 def get_centroids(contours):
@@ -63,10 +46,12 @@ def get_centroids(contours):
             centroids.append((cx, cy))
     return centroids
 
-def get_blobs(blurred, min_thresh2, max_thresh2):
+def get_blobs(blurred, min_thresh2, max_thresh2, smoother_kernel = 10):
     _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
+    # Smoother for salt and pepper noise at the edge from the previous filter
+    blobs = median_filter(blobs, (smoother_kernel,smoother_kernel))
     # Normalization and binarization
-    blobs = blobs/np.max(blobs)
+    blobs = blobs/np.nanmax(blobs)
     blobs = blobs.astype(np.uint8)
     return blobs
 
@@ -84,10 +69,14 @@ def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
     blurred_median = median_filter(threshed, size=(3,3))
     # Gaussian filter for blob individuation
     blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)
-    print(np.nanmin(blurred), np.nanmax(blurred))
+    # print(np.nanmin(blurred), np.nanmax(blurred))
     return blurred
 
 def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, max_2_lim = 100, std = 15, adaptive_thresh = True, kind = 'zscore'):#From 90 to 99 of min_2_lim
+    '''
+    Method for automatic detection of blobs, contours and their centroids.
+    '''
+
     #averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
     # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
     dim_data = len(averaged_zscore.shape)
@@ -99,7 +88,7 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
         else:
             min_thresh = min_lim
             max_thresh = max_lim
-        print('get_signal_profile called')
+        # print('get_signal_profile called')
         averaged_zscore = np.nan_to_num(averaged_zscore, nan=np.nanmin(averaged_zscore), neginf=np.nanmin(averaged_zscore[np.where(averaged_zscore != -np.inf)]), posinf=np.nanmax(averaged_zscore[np.where(averaged_zscore != np.inf)]))
         blurred = get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = std)
 
@@ -126,8 +115,8 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
             max_thresh = max_lim
 
         # Signal profile extraction over frames
-        print(min_thresh, max_thresh)
-        print('get_signal_profile called')
+        # print(min_thresh, max_thresh)
+        # print('get_signal_profile called')
         averaged_zscore = np.nan_to_num(averaged_zscore, nan=np.nanmin(averaged_zscore), neginf=np.nanmin(averaged_zscore[np.where(averaged_zscore != -np.inf)]), posinf=np.nanmax(averaged_zscore[np.where(averaged_zscore != np.inf)]))
         data = [get_signal_profile(i, min_thresh, max_thresh) for i in averaged_zscore]
         data = np.asarray(data)
@@ -135,13 +124,13 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
         if kind == 'zscore':
             # Blob detection
             min_thresh2 = np.nanpercentile(data, min_2_lim)
-            print(min_thresh2)
-            print(min_2_lim)
+            # print(min_thresh2)
+            # print(min_2_lim)
         elif kind == 'df':
             min_thresh2 = 2*np.nanstd(data)
 
         max_thresh2 = np.nanpercentile(data, max_2_lim)
-        print('Boundaries for get_significant_sign '+str(min_thresh2) + ' -- '+str(max_thresh2))
+        # print('Boundaries for get_significant_sign '+str(min_thresh2) + ' -- '+str(max_thresh2))
         countours_ = list()
         centroids_ = list()
         blobs_ = list()
@@ -154,6 +143,13 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
             centroids_.append(centroids)
             
         return countours_, centroids_, blobs_
+
+def manual_thresholding(data, threshold, filter_kernel = 30):
+    assert len(data.shape) == 2, 'The data matrix has to be 2D'
+    tmp = median_filter(data, (filter_kernel, filter_kernel))
+    max_thresh = np.nanpercentile(data, 99)
+    contours, centroids, blobs = get_significant_sign(tmp, threshold, max_thresh)
+    return contours, centroids, blobs 
 
 def time_course_signal(df_fz, roi_mask):#, hand_made=False):
     """
