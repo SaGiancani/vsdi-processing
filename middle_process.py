@@ -110,7 +110,7 @@ class Condition:
         '''
         The method stores the behavioral outcome for each trial of the condition.
         '''
-        return [trial.orientation for trial in self.trials.values()]
+        return (([trial.orientation for trial in self.trials.values()], [trial.orientation_outcome for trial in self.trials.values()]))
 
 
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
