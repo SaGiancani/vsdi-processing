@@ -105,6 +105,13 @@ class Condition:
         '''
         tmp = [1 if trial.correct_behav else 0 for trial in self.trials.values()]
         return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
+    
+    def get_orientation_behav(self):
+        '''
+        The method stores the behavioral outcome for each trial of the condition.
+        '''
+        return [trial.orientation for trial in self.trials.values()]
+
 
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
@@ -661,7 +668,35 @@ class Session:
             os.makedirs(folder_path)
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
-#                    _, _, _, _, trials = md.signal_extraction(session.header, blks, None, None, session.base_report, blank_id, session.piezo, session.heart_beat, log = session.log, blks_load = False)
+    
+    def split_behav_blks(self, autoselection = False): 
+        '''
+        The method gets as input a condition and returns two lists of tuples, each tuple contains an index and corresponding blk filename.
+        The two lists correspond one to correct behavior blks, and the second to uncorrect behavior.         
+        Input:
+            cond: Condition object.
+            autoselection: boolean flag. If True returns an intersection of the correct/uncorrect indeces with the autoselected in the session.
+        Output:
+            2 lists of tuples.
+        '''
+        correct_blks_p1, uncorrect_blks_p1 = list(), list()
+        indeces_correct, indeces_uncorrect = list(), list()
+        for k,v in self.trials.items():
+            if v.correct_behav:
+                correct_blks_p1.append(k)
+                indeces_correct.append(self.blk_names.index(k))
+            else:
+                uncorrect_blks_p1.append(k)
+                indeces_uncorrect.append(self.blk_names.index(k))
+        
+        if autoselection:
+            indeces_correct_ = list(set(indeces_correct).intersection(set(np.where(self.autoselection)[0])))
+            correct_blks_p1 = [self.blk_names[i] for i in indeces_correct_]
+            indeces_uncorrect_ = list(set(indeces_uncorrect).intersection(set(np.where(self.autoselection)[0]))) 
+            uncorrect_blks_p1 = [self.blk_names[i] for i in indeces_uncorrect_]
+            
+        return [(self.blk_names.index(i), i) for i in correct_blks_p1], [(self.blk_names.index(i), i) for i in uncorrect_blks_p1]
+
 
 def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True, filename_particle = 'vsd_C'):
     #motion_indeces, conditions = [], []
@@ -966,7 +1001,7 @@ if __name__=="__main__":
     parser.add_argument('--dblnk', 
                         dest='deblank_switch',
                         action='store_true')
-    parser.add_argument('--no-dblnk', 
+    parser.add_argument('--no-dblnk', # Bug 24/07/2023: AttributeError: 'Session' object has no attribute 'f_f0_blank'
                         dest='deblank_switch', 
                         action='store_false')
     parser.set_defaults(deblank_switch=False)
