@@ -15,6 +15,7 @@ class Trial:
         try:
             self.orientation = int(report_series_trial['Orientation Behav'])
             self.orientation_outcome = int(report_series_trial['IDrejected ROI'])
+            print(self.orientation_outcome)
         except:
             pass
 
