@@ -1,4 +1,4 @@
-import datetime, imageio, os, utils
+import datetime, os, utils
 import middle_process as mp
 import numpy as np
 import pandas as pd
@@ -10,8 +10,15 @@ class Trial:
         self.condition = int(report_series_trial['IDcondition'])
         self.fix_correct = report_series_trial['Preceding Event IT'] == 'FixCorrect'
         self.correct_behav = report_series_trial['behav Correct'] == 1
+
+        # Behavioral outcome
+        try:
+            self.orientation =  int(report_series_trial['Orientation Behav'])
+        except:
+            pass
+
         if self.fix_correct and self.correct_behav and self.condition != blank_cond:
-            self.behav_latency = int(report_series_trial['Onset Time_ Behav Correct']) -  int(report_series_trial['Onset Time_ Behav Stim']) - 500
+            self.behav_latency = int(report_series_trial['Onset Time_ Behav Correct']) -  int(report_series_trial['Onset Time_ Behav Stim'])# - 500
         else:
             self.behav_latency = 0
         self.id_trial = int(report_series_trial['Total Trial Number']) - 1
@@ -32,6 +39,7 @@ class Trial:
         else:
             self.zero_frames = 20
             self.FOI = 35
+            
         self.start_stim = float(separator_converter(report_series_trial['Onset Time_ Pre Stim']))
         self.onset_stim = float(separator_converter(report_series_trial['Onset Time_ Stim']))
         self.end_trial = float(separator_converter(report_series_trial['Onset Time_ End Stim']))
