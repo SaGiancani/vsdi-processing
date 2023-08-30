@@ -15,6 +15,7 @@ class Trial:
         try:
             self.orientation = int(report_series_trial['Orientation Behav'])
             self.orientation_outcome = int(report_series_trial['IDrejected ROI'])
+            self.get_orientation_outcome()
             print(self.orientation_outcome)
         except:
             pass
@@ -48,6 +49,34 @@ class Trial:
         # print(self.onset_stim - self.start_stim)
         self.heart_signal = heart
         self.piezo_signal = piezo
+    
+def get_orientation_outcome(self):
+    '''
+    The method based on the position encode given by EventIDE behavioral positions, store the corresponding angle.
+    8 possible positions, encoded by an integer from 1 to 8. Each of them corresponds to an angle multiple of 45°.
+    If orientation_outcome is 0, than the behavioral outcome was correct, then the orientation corresponding to the 
+    stimulus is stored. Otherwise, the actual angle is stored. 
+    ''' 
+    if self.orientation_outcome == 0:
+        self.orientation_outcome = self.orientation
+    elif self.orientation_outcome == 1:
+        self.orientation_outcome = 0
+    elif self.orientation_outcome == 2:
+        self.orientation_outcome = 45
+    elif self.orientation_outcome == 3:
+        self.orientation_outcome = 90
+    elif self.orientation_outcome == 4:
+        self.orientation_outcome = 135
+    elif self.orientation_outcome == 5:
+        self.orientation_outcome = 180
+    elif self.orientation_outcome == 6:
+        self.orientation_outcome = 225
+    elif self.orientation_outcome == 7:
+        self.orientation_outcome = 270
+    elif self.orientation_outcome == 8:
+        self.orientation_outcome = 315
+    return
+
     
 def get_trial(base_report, blk_name, time, heart, piezo, grey_end, grey_start, blank_id):
     try:
