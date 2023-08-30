@@ -97,14 +97,14 @@ class Condition:
         blank condition, than the behavioral latency is stored, for computing the mean and the standard error. 
         '''
         tmp = [trial.behav_latency for trial in self.trials.values() if (trial.fix_correct and self.cond_id != blank_id)]
-        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
+        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))), tmp
 
     def get_success_rate(self):
         '''
         The method computes the rate of success of the behavioral task: it returns mean and standard error of the rate.
         '''
         tmp = [1 if trial.correct_behav else 0 for trial in self.trials.values()]
-        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
+        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))), tmp
     
     def get_orientation_behav(self):
         '''
