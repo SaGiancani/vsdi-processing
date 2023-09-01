@@ -97,7 +97,8 @@ class Condition:
         blank condition, than the behavioral latency is stored, for computing the mean and the standard error. 
         '''
         tmp = [trial.behav_latency for trial in self.trials.values() if (trial.fix_correct and self.cond_id != blank_id)]
-        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))), tmp
+        tmp_ = [i for i in tmp if i>0]
+        return float(np.mean(tmp_)), float(np.std(tmp_)/np.sqrt(len(tmp_))), tmp
 
     def get_success_rate(self):
         '''
