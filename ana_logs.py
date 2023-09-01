@@ -20,11 +20,17 @@ class Trial:
         except:
             pass
 
-        if self.fix_correct and self.correct_behav and self.condition != blank_cond:
+        # Probable bug in behav Correct variable in some session: all the delays -even if broken- are stored
+        try:
             self.behav_latency = int(report_series_trial['Onset Time_ Behav Correct']) -  int(report_series_trial['Onset Time_ Behav Stim'])# - 500
-        else:
-            self.behav_latency = 0
+        except:
+            self.behav_latency = 0        
+
         self.id_trial = int(report_series_trial['Total Trial Number']) - 1
+        # if self.fix_correct and self.correct_behav and self.condition != blank_cond:
+        #     self.behav_latency = int(report_series_trial['Onset Time_ Behav Correct']) -  int(report_series_trial['Onset Time_ Behav Stim'])# - 500
+        # else:
+        #     self.behav_latency = 0
 
         if self.condition != blank_cond:
             if stimulus_fr is None:
