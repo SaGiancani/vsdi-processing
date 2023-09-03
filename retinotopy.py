@@ -136,7 +136,7 @@ class RetinoSession(md.Session):
             self.mean_blank = self.blank_condition.averaged_df
             self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
-            self.id_name = self.get_session_id_name()
+            self.id_name = get_session_id_name(self.path_session)
             print('Session ID name: ' + self.id_name)
             self.green = self.get_green(green_name)
             self.mask = self.get_mask()
@@ -210,14 +210,6 @@ class RetinoSession(md.Session):
                 print('No mask present in derivatives folder for session ' + self.id_name)
                 mask = None
             return mask
-
-
-        def get_session_id_name(self):                
-            # Session names extraction
-            sub_name, experiment_name, session_name = get_session_metainfo(self.path_session)
-            id_name = sub_name + experiment_name + session_name
-            return id_name
-
 
         def get_green(self, green_name):
             try:
@@ -488,7 +480,6 @@ class RetinoSession(md.Session):
                                        name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
                 return
 
-
 class Retinotopy:
     def __init__(self, 
                  session_path,
@@ -594,7 +585,7 @@ class Retinotopy:
 
 
     def get_retinotopic_features(self, FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):# MODIFIED HERE 22/03/23
-        num_for_nan = np.nanmin(FOI)/10
+        num_for_nan = np.nanpercentile(FOI, 20)
         #num_for_nan = -33e-10
         print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
         #averaged_df1 = np.nan_to_num(averaged_df1, nan=np.nanmin(averaged_df1), neginf=np.nanmin(averaged_df1[np.where(averaged_df1 != -np.inf)]), posinf=np.nanmax(averaged_df1[np.where(averaged_df1 != np.inf)]))
@@ -739,7 +730,7 @@ class Retinotopy:
         # Thresholding values
         mean_ztmp = np.nanmean(ztmp, axis=0)
         lim_inf = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], lim_blob_detect)
-        lim_sup = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], 100)
+        lim_sup = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], 99)
         #print(lim_inf, lim_sup)
 
         # If want to store information from single frame
@@ -799,6 +790,12 @@ class Retinotopy:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
 
+def get_session_id_name(self):                
+    # Session names extraction
+    sub_name, experiment_name, session_name = get_session_metainfo(self.path_session)
+    id_name = sub_name + experiment_name + session_name
+    return id_name
+
 def get_assess_centroid(centroids, mask):
     '''
     Assess position of the centroids: if within the mask, then it is considered
@@ -841,10 +838,37 @@ def get_mask_on_trajectory(dims, xs, ys, radius = 2):
     small_mask[np.where(small_mask>1)] = 1
     return small_mask
 
+def get_angle_distribution(points_distribution, dim_frame):
+    '''
+    Input:
+    points_distribution: list of tuple, each of which contains x and y for each point.
+    dim_frame: tuple of two elements, respectively, y and x dimension.
+    Output:
+    theta_h: np.array of one element: degree in rad
+    '''
+    # Linearization of x and y coords for each point
+    xs = list(list(zip(*points_distribution))[0])
+    ys = list(list(zip(*points_distribution))[1])
+    # It performs a fitting
+    a, b = get_trajectory(xs, ys, (0, dim_frame[1]))
+    # Then extraction of slope of the fitting
+    theta = get_rad(a, b)
+    # Return the detected angle of the distribution -in rad-
+    return theta
+
+def get_rad(xs, ys):
+    '''
+    Given two sets of coordinates, -x and y-, it finds the angle of the distribution.
+    It returns an np.array with a float value. It works better with fitted distributions
+    or set of points.
+    '''
+    return -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
+
+
 
 def rotate_distribution(xs, ys, theta = None):
     if theta is None:
-        theta = -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
+        theta = get_rad(xs, ys)
     print(theta)
     # subtracting mean from original coordinates and saving result to X_new and Y_new 
     X_new = xs - np.mean(xs)
@@ -1035,7 +1059,34 @@ def subtraction_among_conditions(path_session,
 
     return params, pos_inferred_averaged 
 
+def distribution_coords_normalize(points_distribution, unity, center, rotation_theta):
+    '''
+    The method rotates, normalizes and recenters a distribution of points.
+    Input:
+        points_distribution: a list of two tuples, first x coordinates and second y coordinates of a distribution
+        of points. 
+        unity: float, itrepresents the unite against which normalize. 
+        center: tuple of two elements, respectively x and y coordinates of a point. 
+                It is used for recentering the distribution.
+        rotation theta: np.array with a float element inside, the corrective orientation to apply to the points.
+    Output:
+        x_dva_rotated, y_dva_rotated: list of float. The coordinates for the distribution of points, normalized and
+                                      recentered. 
+    Example of usage: 
+        x_test, y_test = distance_converter_pixel2dva(distribution_positions, x[0]-x[1], (x[-1], y[-1]), theta_h)
+    '''
+    # Linearize coordinates
+    xs = points_distribution[0]
+    ys = points_distribution[1]
 
+    # Rotate distribution according the rotation_theta provided
+    x_to_normalize, y_to_normalize, _ = rotate_distribution(xs, ys, theta = rotation_theta)
+
+    # Normalization of the coordinates for their center and the picked unity
+    x_dva_rotated = [(i-center[0])/unity for i in x_to_normalize]
+    y_dva_rotated = [(i-center[1])/unity for i in y_to_normalize]    
+    
+    return x_dva_rotated, y_dva_rotated
                 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')

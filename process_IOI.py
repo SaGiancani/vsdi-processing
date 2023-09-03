@@ -34,7 +34,8 @@ class Retino_IOI:
                  filename_particle = 'int_C',
                  **kwargs):
         
-        self.name_session = retinotopy.get_session_id_name(self.path_session)#'Ganja_Retinotopie_IOI_20230824',
+        self.name_session = retinotopy.get_session_id_name(self.path_session)
+        print(self.name_session)
         self.path_files = path_md
         self.path_session = get_session_path_from_md(path_md)
         self.filename_particle = filename_particle
