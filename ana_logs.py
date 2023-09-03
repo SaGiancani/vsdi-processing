@@ -96,8 +96,8 @@ def get_trial(base_report, blk_name, time, heart, piezo, grey_end, grey_start, b
             #cut_piezo = signal_cutter(time[trial.id_trial-1], piezo[trial.id_trial-1], trial.start_stim, trial.end_trial)
             trial.heart_signal = heart[trial.id_trial-1]
             trial.piezo_signal = piezo[trial.id_trial-1]
-            print(len(trial.piezo_signal))
-            print(len(trial.heart_signal))
+            # print(len(trial.piezo_signal))
+            # print(len(trial.heart_signal))
         return trial
     except:
         if len(trial_df) == 0:
@@ -207,7 +207,7 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     print('csv cleaned by unproper chars')
     print(f'Number of raw files: {len(all_blks)}')
     print(list(BaseReport.columns))
-    print(BaseReport['Preceding Event IT'])
+    # print(BaseReport['Preceding Event IT'])
     len_ = len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect'])
     print(f'Number of trials registered in log file: { len_ }')
     if abs(len_ - len(all_blks)) > 1:
@@ -227,7 +227,7 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
     for i in range(0,header_dimension-1):
         tmp = f.readline()
         tmp = tmp.split('\n')[0].split(';')
-
+        print(tmp[0])
         if '*' not in tmp[0]:
             #print(tmp)
             try:
@@ -247,8 +247,13 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
                     asda = str(tmp[3]).split(',')[0]
                 else:
                     asda = str(tmp[3])
-
-                dict_['Date'] = datetime.datetime.strptime( asda + ':00', '%H:%M:%S').replace(year=dict_['Date'].year,month=dict_['Date'].month,day=dict_['Date'].day)
+                try:
+                    dict_['Date'] = datetime.datetime.strptime( asda + ':00', '%H:%M:%S').replace(year=dict_['Date'].year,month=dict_['Date'].month,day=dict_['Date'].day)
+                except:
+                    pass
+        if 'Stim_temp' in tmp[0]:
+            dict_[tmp[0]] = float(tmp[1].replace(',', '.'))
+                
     dict_['Export Log Files'] = bool(dict_['Export Log Files'])
     return dict_
 
@@ -352,7 +357,6 @@ def sorting_from_first(BaseReport, blks): #, start_session):
     all_datetimes = [datetime.datetime.strptime(i.split('_')[2] + i.split('_')[3], '%d%m%y%H%M%S') for i in blks]
     first = datetime.datetime.strptime(blks[0].split('_')[2] + blks[0].split('_')[3], '%d%m%y%H%M%S')
     #tmp =  - head['Date']
-    print(first)
     temporary = (((BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect', ['Onset Time_ End Stim']].iloc[:].applymap(separator_converter)))/1000)*datetime.timedelta(seconds=1)
     temporary = temporary - temporary.iloc[0]
     estimated_dates = temporary + first  # adding a row
@@ -365,7 +369,6 @@ def sorting_from_first(BaseReport, blks): #, start_session):
         tmp_.append(np.abs(dt_object - i))
         tmp.append(np.argmin(np.abs(dt_object - i)))
     tmp = np.array(tmp)
-    #print(tmp_)
     a = ['Missing'] * len(BaseReport.loc[BaseReport['Preceding Event IT'] == 'FixCorrect'])
     for n, i in enumerate(tmp):
         a[i] = blks[n]
