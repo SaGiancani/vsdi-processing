@@ -790,9 +790,9 @@ class Retinotopy:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
 
-def get_session_id_name(self):                
+def get_session_id_name(path_session):                
     # Session names extraction
-    sub_name, experiment_name, session_name = get_session_metainfo(self.path_session)
+    sub_name, experiment_name, session_name = get_session_metainfo(path_session)
     id_name = sub_name + experiment_name + session_name
     return id_name
 
