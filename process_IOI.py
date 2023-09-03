@@ -35,7 +35,8 @@ class Retino_IOI:
                  **kwargs):
         
         self.path_files = path_md
-        self.path_session = get_session_path_from_md(path_md)
+        self.path_session = get_session_path_from_md(self.path_files)
+        print(self.path_session)
         self.name_session = retinotopy.get_session_id_name(self.path_session)
         print(self.name_session)
         self.filename_particle = filename_particle
