@@ -230,7 +230,7 @@ class Session:
             print('Check the path: no blks found')
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
-        self.blank_id = self.get_blank_id(cond_id=condid)
+        self.blank_id = get_blank_id(self.cond_names, cond_id=condid)
         self.filename_particle = filename_particle
 
         # This can be automatized, with zero_frames, extracting parameters from BaseReport
@@ -258,7 +258,7 @@ class Session:
         # If considered conditions are not explicitly indicated, then all the conditions are considered
         # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
         if self.header['conditions_id'] is None:
-            self.header['conditions_id'] = self.get_condition_ids()
+            self.header['conditions_id'] = get_condition_ids(self.all_blks, filename_particle = self.filename_particle)
         else:
             self.header['conditions_id'] = list(set(self.header['conditions_id']+[self.blank_id]))
         # only the used blks for the selection
@@ -330,26 +330,6 @@ class Session:
             # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
             _ = self.get_signal(self.blank_id)
 
-    def get_blank_id(self, cond_id = None):
-        '''
-        The method returns the index of blank condition.
-        Some session require a specific condition index: cond_id variable designed for manual setting.
-        If it is None -by default-, the method checks among the condition names: if labelConds.txt
-        file exists, than the position of "blank" label is picked. Otherwise the position of last condition 
-        is picked.
-        '''
-        if cond_id is None:
-            try:
-                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][-1]+1
-                self.log.info('Blank id: ' + str(tmp))
-                return tmp
-            except IndexError:
-                self.log.info('No clear blank condition was identified: the last condition has picked')
-                tmp = len(self.cond_names)
-                self.log.info('Blank id: ' + str(tmp))
-                return tmp
-        else:
-            return cond_id
 
     def get_signal(self, condition):
         # All the blank blks
@@ -471,12 +451,6 @@ class Session:
                 self.log.info('Warning: sorting BLK filenames was not performed')
                 a = tmp
             return a 
-
-    def get_condition_ids(self):
-        '''
-        The method returns a list of all the condition's ids, taken from the .BLK names.
-        '''
-        return list(set([int(i.split(self.filename_particle)[1][0:2]) for i in self.all_blks]))
         
     def get_condition_name(self):
         '''
@@ -497,7 +471,7 @@ class Session:
             # If also with find_thing there is no labelConds.txt file, than loaded as name Condition n#
             if len(tmp) == 0:
                 self.log.info('Check the labelConds.txt presence inside the session folder and subfolders')
-                cds = self.get_condition_ids()
+                cds = get_condition_ids(self.all_blks, filename_particle = self.filename_particle)
                 return {j+1:'Condition ' + str(c) for j, c in enumerate(cds)}
             # else, load the labelConds from the alternative path
             else :
@@ -698,6 +672,32 @@ class Session:
             
         return [(self.blk_names.index(i), i) for i in correct_blks_p1], [(self.blk_names.index(i), i) for i in uncorrect_blks_p1]
 
+def get_condition_ids(all_blks, filename_particle = 'vsd_C'):
+    '''
+    The method returns a list of all the condition's ids, taken from the .BLK names.
+    '''
+    return list(set([int(i.split(filename_particle)[1][0:2]) for i in all_blks]))
+
+def get_blank_id(cond_names, cond_id = None):
+    '''
+    The method returns the index of blank condition.
+    Some session require a specific condition index: cond_id variable designed for manual setting.
+    If it is None -by default-, the method checks among the condition names: if labelConds.txt
+    file exists, than the position of "blank" label is picked. Otherwise the position of last condition 
+    is picked.
+    '''
+    if cond_id is None:
+        try:
+            tmp = [idx for idx, s in enumerate(cond_names) if 'blank' in s][-1]+1
+            print('Blank id: ' + str(tmp))
+            return tmp
+        except IndexError:
+            print('No clear blank condition was identified: the last condition has picked')
+            tmp = len(cond_names)
+            print('Blank id: ' + str(tmp))
+            return tmp
+    else:
+        return cond_id
 
 def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True, filename_particle = 'vsd_C'):
     #motion_indeces, conditions = [], []
