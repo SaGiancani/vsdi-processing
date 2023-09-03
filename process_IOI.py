@@ -34,10 +34,10 @@ class Retino_IOI:
                  filename_particle = 'int_C',
                  **kwargs):
         
-        self.name_session = retinotopy.get_session_id_name(self.path_session)
-        print(self.name_session)
         self.path_files = path_md
         self.path_session = get_session_path_from_md(path_md)
+        self.name_session = retinotopy.get_session_id_name(self.path_session)
+        print(self.name_session)
         self.filename_particle = filename_particle
         self.zero_frames = zero_frames
         self.all_blks = md.get_all_blks(self.path_session, sort = True)
