@@ -191,7 +191,7 @@ def get_load_cond(path_md, dict_cond, blank_id, blank_name, selection = False, c
     del raw_blank, df_blank
 
     # Then the other conditions
-    counter = 1
+    counter = 0
     for k,v in dict_cond.items():
         print('\n'+v )
         if k!= blank_id:
