@@ -250,7 +250,10 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
 
         # Loop for averaging every n_considered_conds
         indeces = np.arange(0, len(coords)+1, n_considered_conds)
-        output_matrix_cocktail = np.array([np.nanmean(tmp_data[indeces[i-1]:indeces[i], start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = (0, 1)) for i in range(1, len(indeces))])
+        tmp_l = list()
+        for i in range(1, len(indeces)):
+            tmp_l.append(np.nanmean(tmp_data[indeces[i-1]:indeces[i], start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = (0, 1)))
+        output_matrix_cocktail = np.array(tmp_l)
         cocktail_dict = {(str(a) + '/' +str(i)): b/j for a,b in zip(coords, output_matrix_cocktail) for i, j in zip(coords, output_matrix_cocktail)}
         data_dict = cocktail_dict
         print('Cocktail normalization computed!')
