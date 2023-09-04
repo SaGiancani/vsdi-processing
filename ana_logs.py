@@ -190,7 +190,6 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
     Load the BaseReport
     '''
     BaseReport_path = utils.find_thing(name_report, session_path, what = 'file')
-    print(BaseReport_path)
     # Discarding duplicate for bugged sessions
     if len(BaseReport_path)>1:
         print(f'{len(BaseReport_path)} BaseReport are found')
@@ -227,9 +226,7 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
     for i in range(0,header_dimension-1):
         tmp = f.readline()
         tmp = tmp.split('\n')[0].split(';')
-        print(tmp[0])
         if '*' not in tmp[0]:
-            #print(tmp)
             try:
                 if ',' in tmp[1]:
                     a = tmp[1].split(',')

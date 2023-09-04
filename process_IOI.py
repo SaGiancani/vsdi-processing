@@ -241,7 +241,7 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
     tmp_blank = maps[0, :, :, :]
     
     if (type == 'cocktail') or (type == 'both'):
-        coords, x, y = get_relative_coordinates(sorted_cds_dictionary.values())
+        coords, x, y = get_relative_coordinates(list(sorted_cds_dictionary.values()))
         if coordinate == 'x':
             n_considered_conds = len(coords)/len(x)
 
