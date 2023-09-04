@@ -43,8 +43,8 @@ class RFWorkspace:
                  store_switch = True, 
                  selection_per_condition = None,
                  filename_particle = 'int_C',
-                 starting_time = 3500, 
-                 stop_time = 4500,
+                 start_time = 3500, 
+                 end_time = 4500,
                  frame_time_extension = 30,
                  sampling_rate = 100,
                  **kwargs):
@@ -75,8 +75,8 @@ class RFWorkspace:
         # Instance receptive field
         self.rf = ReceptiveField(self.path_session, self.cond_names, base_report_name, base_head_dim)
         # Timing for extracting map
-        self.start_time = starting_time
-        self.end_time = stop_time
+        self.start_time = start_time
+        self.end_time = end_time
         self.frame_time_extension = frame_time_extension
         self.sampling_rate = sampling_rate
 
@@ -105,7 +105,8 @@ class RFWorkspace:
                                                     self.cond_dict[self.blank_id], 
                                                     selection=self.selection_switch, 
                                                     cond_selection=self.selection_per_condition)
-       
+
+        print(f'Shape of outcome matrix: {averaged_dfs.shape}')
         dict_output =  operation_among_conditions(averaged_dfs, 
                                                   sorted_cond_dict, 
                                                   self.start_time, 
@@ -113,7 +114,6 @@ class RFWorkspace:
                                                   self.frame_time_extension, 
                                                   type = self.operation_flag, 
                                                   coordinate = self.dimension_to_analyze)
-
     
         if self.store_switch:
             tmp = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(PROTOCOL + '_IOI', self.name_session))
@@ -251,7 +251,10 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
         # Loop for averaging every n_considered_conds
         indeces = np.arange(0, len(coords)+1, n_considered_conds)
         tmp_l = list()
+        print(indeces)
         for i in range(1, len(indeces)):
+            print(indeces[i-1], indeces[i])
+            print(start_time//frame_time_ext, stop_time//frame_time_ext)
             tmp_l.append(np.nanmean(tmp_data[indeces[i-1]:indeces[i], start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = (0, 1)))
         output_matrix_cocktail = np.array(tmp_l)
         cocktail_dict = {(str(a) + '/' +str(i)): b/j for a,b in zip(coords, output_matrix_cocktail) for i, j in zip(coords, output_matrix_cocktail)}
@@ -289,7 +292,7 @@ if __name__=="__main__":
                         help='Time course window dimension -pixels radius-') 
 
     parser.add_argument('--start_time', 
-                        dest='starting_time',
+                        dest='start_time',
                         type=int,
                         default = 3500,
                         required=False,
@@ -310,7 +313,7 @@ if __name__=="__main__":
                         help='Dimension of operation: choose between x or y')  
 
     parser.add_argument('--end_time', 
-                        dest='stop_time',
+                        dest='end_time',
                         type=int,
                         default = 4500,
                         required=False,
