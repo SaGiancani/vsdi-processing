@@ -130,9 +130,7 @@ def get_absolute_coordinates(session_path, name_report = 'BaseReport.csv', hd_di
     if len(basereport_path)>1:
         print(f'{len(basereport_path)} BaseReport are found')
         basereport_path = [i for i in basereport_path if 'bug' not in i.lower()]
-    print(basereport_path)
     header_br = al.get_basereport_header(basereport_path[0], header_dimension=hd_dim) 
-    print(header_br) 
     x = header_br['C V X Stim_temp']
     y = header_br['C V Y Stim_temp']
     return (x, y)
@@ -179,24 +177,23 @@ def get_load_cond(path_md, dict_cond, blank_id, blank_name, selection = False, c
     # dict_data = dict()
 
     # Load the blank first
+    print('\n'+blank_name )
     raw_blank, df_blank = get_cond(path_md, blank_name, blank_id, selection = selection, cond_selection = c_b_sel)
     average_blank_raw = np.nanmean(raw_blank, axis = 0)
     average_blank_df = np.nanmean(df_blank, axis = 0)
     # dict_data[dict_cond[blank_id]] = [average_blank_raw, average_blank_df]
 
     # Instance output matrix  
-    output_data_matrix_df = np.empty((len(dict_cond.keys()), average_blank_df.shape[0], average_blank_df.shape[1], average_blank_df.shape[2]))
+    number_conds = len([i for i in dict_cond.values() if 'blank' not in i])
+    output_data_matrix_df = np.empty((number_conds, average_blank_df.shape[0], average_blank_df.shape[1], average_blank_df.shape[2]))
     output_data_matrix_df[:] = np.nan
     output_data_matrix_raw = np.copy(output_data_matrix_df)
-    # Storing blank
-    output_data_matrix_df[0, :, :, :] = average_blank_df
-    output_data_matrix_raw[0, :, :, :] = average_blank_raw
     del raw_blank, df_blank
 
     # Then the other conditions
     counter = 1
     for k,v in dict_cond.items():
-        print(v + '\n')
+        print('\n'+v )
         if k!= blank_id:
             raw_cd, df_cd = get_cond(path_md, dict_cond[k], k, selection = selection, cond_selection = c_o_sel)
             average_dfs = np.nanmean(df_cd, axis = 0)
@@ -207,6 +204,10 @@ def get_load_cond(path_md, dict_cond, blank_id, blank_name, selection = False, c
             counter +=1
     
         del raw_cd, df_cd
+    
+    # Concatenating blank and actual conditions together
+    output_data_matrix_df = np.concatenate((average_blank_df.reshape(1, average_blank_df.shape[0], average_blank_df.shape[1], average_blank_df.shape[2]), output_data_matrix_df), axis=0) 
+    output_data_matrix_raw = np.concatenate((average_blank_raw.reshape(1, average_blank_raw.shape[0], average_blank_raw.shape[1], average_blank_raw.shape[2]), output_data_matrix_raw), axis=0) 
 
     return output_data_matrix_df, output_data_matrix_raw
 
