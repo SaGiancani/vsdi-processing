@@ -185,7 +185,7 @@ def get_load_cond(path_md, dict_cond, blank_id, blank_name, selection = False, c
     # dict_data[dict_cond[blank_id]] = [average_blank_raw, average_blank_df]
 
     # Instance output matrix  
-    output_data_matrix_df = np.empty(len(dict_cond.keys()), average_blank_df.shape[0], average_blank_df.shape[1], average_blank_df.shape[2])
+    output_data_matrix_df = np.empty((len(dict_cond.keys()), average_blank_df.shape[0], average_blank_df.shape[1], average_blank_df.shape[2]))
     output_data_matrix_df[:] = np.nan
     output_data_matrix_raw = np.copy(output_data_matrix_df)
     # Storing blank
