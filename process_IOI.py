@@ -16,27 +16,41 @@ import datetime
 
 PROTOCOL = 'Retinotopy'
 
+class ReceptiveField:
+    def __init__(self,
+                 path_session,
+                 condition_names,
+                 base_report_name,
+                 base_report_header):
+        
+        # Stimulus coordinates: relative and absolute
+        self.relative_stimulus_coordinates , self.xs, self.ys = get_relative_coordinates(condition_names)
+        self.center_render_stimulus = get_absolute_coordinates(path_session, name_report = base_report_name, hd_dim = base_report_header)
 
-class Retino_IOI:
+class RFWorkspace:
     def __init__(self,
                  path_md, 
                  zero_frames = None,
                  deblank_switch=False,
                  conditions_id =None,
-                 logs_switch =False,  
                  base_report_name= 'BaseReport.csv',
                  base_head_dim = 20, 
                  condid = None, 
                  selection_switch = False, 
                  data_vis_switch = True, 
-                 end_frame = None,
+                 operation_maps = 'both',
+                 dimension_to_analyze = 'x',
+                 store_switch = True, 
                  selection_per_condition = None,
                  filename_particle = 'int_C',
+                 starting_time = 3500, 
+                 stop_time = 4500,
+                 frame_time_extension = 30,
+                 sampling_rate = 100,
                  **kwargs):
         
         self.path_files = path_md
         self.path_session = get_session_path_from_md(self.path_files)
-        print(self.path_session)
         self.name_session = retinotopy.get_session_id_name(self.path_session)
         print(self.name_session)
         self.filename_particle = filename_particle
@@ -45,15 +59,26 @@ class Retino_IOI:
         self.cond_dict = self.get_cond_names()
         self.cond_names = list(self.cond_dict.values())
 
-        self.relative_stimulus_coordinates , _, _ = get_relative_coordinates(self.cond_names)
         self.blank_id = md.get_blank_id(self.cond_names, cond_id=condid)
         if conditions_id is None:
             self.cond_ids = md.get_condition_ids(self.all_blks, filename_particle = self.filename_particle)
         else:
             self.cond_ids= list(set(self.cond_ids+[self.blank_id]))
-        self.center_render_stimulus = get_absolute_coordinates(self.path_session, name_report = base_report_name, hd_dim = base_head_dim)
-        self.selection_switch = selection_switch
         self.selection_per_condition = selection_per_condition
+
+        # Switches
+        self.selection_switch = selection_switch
+        self.store_switch = store_switch
+        self.operation_flag = operation_maps
+        self.dimension_to_analyze = dimension_to_analyze
+
+        # Instance receptive field
+        self.rf = ReceptiveField(self.path_session, self.cond_names, base_report_name, base_head_dim)
+        # Timing for extracting map
+        self.start_time = starting_time
+        self.end_time = stop_time
+        self.frame_time_extension = frame_time_extension
+        self.sampling_rate = sampling_rate
 
     def get_cond_names(self):
         tmp = utils.find_thing('labelConds.txt', self.path_session)
@@ -68,10 +93,33 @@ class Retino_IOI:
                 contents = f.readlines()
             return  {j+1:i.split('\n')[0] for j, i in enumerate(contents) if len(i.split('\n')[0])>0}      
 
-    def run_ioi_retinotopic_analysis(self):
-        dict_data = get_load_cond(self.path_files, self.cond_dict, self.blank_id, selection=self.selection_switch, cond_selection=self.selection_per_condition)
-        tmp = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(PROTOCOL + '_IOI', self.name_session))
-        utils.inputs_save(dict_data, os.path.join(tmp, f'data_session_{self.name_session}'))
+    def run_ioi_rf_analysis(self):
+        if (self.operation_flag == 'cocktail') or (self.operation_flag == 'both'):
+            sorted_cond_dict = set_cond_dict_per_coordinates(self.dimension_to_analyze, self.cond_dict)
+        else:
+            sorted_cond_dict = self.cond_dict
+
+        averaged_dfs, averaged_raws = get_load_cond(self.path_files, 
+                                                    sorted_cond_dict, 
+                                                    self.blank_id,
+                                                    self.cond_dict[self.blank_id], 
+                                                    selection=self.selection_switch, 
+                                                    cond_selection=self.selection_per_condition)
+       
+        dict_output =  operation_among_conditions(averaged_dfs, 
+                                                  sorted_cond_dict, 
+                                                  self.start_time, 
+                                                  self.end_time, 
+                                                  self.frame_time_extension, 
+                                                  type = self.operation_flag, 
+                                                  coordinate = self.dimension_to_analyze)
+
+    
+        if self.store_switch:
+            tmp = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(PROTOCOL + '_IOI', self.name_session))
+            np.save(os.path.join(tmp, f'data_session_df_{self.name_session}'), averaged_dfs)
+            np.save(os.path.join(tmp, f'data_session_raw_{self.name_session}'), averaged_raws)
+            utils.inputs_save(dict_output, os.path.join(tmp, f'data_session_raw_{self.name_session}'))
         return
     
 def get_session_path_from_md(path_md):
@@ -117,7 +165,7 @@ def get_cond(path_md, cond_name, cd_id, zero_frame = 10, selection = False, cond
     del cd
     return all_raw, dfs
 
-def get_load_cond(path_md, dict_cond, blank_id, selection = False, cond_selection = None):
+def get_load_cond(path_md, dict_cond, blank_id, blank_name, selection = False, cond_selection = None):
 
     # In case of existence of a matrix of selection for all the conditions then:
     if cond_selection is not None:
@@ -128,23 +176,39 @@ def get_load_cond(path_md, dict_cond, blank_id, selection = False, cond_selectio
         c_b_sel = None
         c_o_sel = None
 
-    dict_data = dict()
+    # dict_data = dict()
 
     # Load the blank first
-    raw_blank, df_blank = get_cond(path_md, dict_cond[blank_id], blank_id, selection = selection, cond_selection = c_b_sel)
-    dict_data[dict_cond[blank_id]] = [np.nanmean(raw_blank, axis = 0), np.nanmean(df_blank, axis = 0)]  
+    raw_blank, df_blank = get_cond(path_md, blank_name, blank_id, selection = selection, cond_selection = c_b_sel)
+    average_blank_raw = np.nanmean(raw_blank, axis = 0)
+    average_blank_df = np.nanmean(df_blank, axis = 0)
+    # dict_data[dict_cond[blank_id]] = [average_blank_raw, average_blank_df]
+
+    # Instance output matrix  
+    output_data_matrix_df = np.empty(len(dict_cond.keys()), average_blank_df.shape[0], average_blank_df.shape[1], average_blank_df.shape[2])
+    output_data_matrix_df[:] = np.nan
+    output_data_matrix_raw = np.copy(output_data_matrix_df)
+    # Storing blank
+    output_data_matrix_df[0, :, :, :] = average_blank_df
+    output_data_matrix_raw[0, :, :, :] = average_blank_raw
+    del raw_blank, df_blank
 
     # Then the other conditions
+    counter = 1
     for k,v in dict_cond.items():
+        print(v + '\n')
         if k!= blank_id:
             raw_cd, df_cd = get_cond(path_md, dict_cond[k], k, selection = selection, cond_selection = c_o_sel)
             average_dfs = np.nanmean(df_cd, axis = 0)
             average_raws = np.nanmean(raw_cd, axis = 0)
-            dict_data[v] = [average_raws, average_dfs]  
+            # dict_data[v] = [average_raws, average_dfs]
+            output_data_matrix_df[counter, :, :, :] = average_dfs
+            output_data_matrix_raw[counter, :, :, :] = average_raws
+            counter +=1
     
-    del raw_cd, df_cd
+        del raw_cd, df_cd
 
-    return dict_data
+    return output_data_matrix_df, output_data_matrix_raw
 
 def set_cond_dict_per_coordinates(choosen_coord, cond_dict):
     '''
@@ -164,6 +228,43 @@ def set_cond_dict_per_coordinates(choosen_coord, cond_dict):
         new_cond_dict = {k:v for j in y for k,v in tmp_dict.items() if ((float(v.split('posY')[1][0:].replace(',', '.')) == j))}
 
     return new_cond_dict
+
+def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_time, frame_time_ext, type = 'cocktail', coordinate = 'x'):
+    '''
+    type: str, it can be 'cocktail', 'regular', 'both'. 
+          'cocktail' for division against other conditions, 'regular' for blank condition.
+          'both' it permorfs both
+    coordinate: str, it can be 'x', 'y' or None. It is active only if type = 'cocktail'
+    '''
+    tmp_data = maps[1:, :, :, :]
+    tmp_blank = maps[0, :, :, :]
+    
+    if (type == 'cocktail') or (type == 'both'):
+        coords, x, y = get_relative_coordinates(sorted_cds_dictionary.values())
+        if coordinate == 'x':
+            n_considered_conds = len(coords)/len(x)
+
+        elif coordinate == 'y':
+            n_considered_conds = len(coords)/len(y)
+
+        # Loop for averaging every n_considered_conds
+        indeces = np.arange(0, len(coords)+1, n_considered_conds)
+        output_matrix_cocktail = np.array([np.nanmean(tmp_data[indeces[i-1]:indeces[i], start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = (0, 1)) for i in range(1, len(indeces))])
+        cocktail_dict = {(str(a) + '/' +str(i)): b/j for a,b in zip(coords, output_matrix_cocktail) for i, j in zip(coords, output_matrix_cocktail)}
+        data_dict = cocktail_dict
+        print('Cocktail normalization computed!')
+
+    elif (type == 'regular') or (type == 'both'):
+        blnk = np.nanmean(tmp_blank[start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = 0) 
+        output_matrix_regular = np.array([np.nanmean(i[start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = 0)/blnk for i in tmp_data])
+        regular_dict = {(str(a)): b for a,b in zip(coords, output_matrix_regular)}
+        data_dict = regular_dict
+        print('Blank normalization computed!')
+
+    elif (type == 'both'):
+        data_dict = {**cocktail_dict, **regular_dict}
+        
+    return data_dict
 
 
 if __name__=="__main__":
@@ -189,6 +290,20 @@ if __name__=="__main__":
                         default = 3500,
                         required=False,
                         help='Starting time: start stimulus response in cortex') 
+    
+    parser.add_argument('--operation_maps', 
+                        dest='operation_maps',
+                        type=str,
+                        default = 'both',
+                        required=False,
+                        help='Operations between maps: choose between cocktail, regular, both') 
+    
+    parser.add_argument('--dimension_to_analyze', 
+                        dest='dimension_to_analyze',
+                        type=str,
+                        default = 'x',
+                        required=False,
+                        help='Dimension of operation: choose between x or y')  
 
     parser.add_argument('--end_time', 
                         dest='stop_time',
@@ -205,7 +320,7 @@ if __name__=="__main__":
                         help='Sampling rate in acquisition') 
 
     parser.add_argument('--frame_extension', 
-                        dest='frame_time_ext',
+                        dest='frame_time_extension',
                         type=int,
                         default = 30,
                         required=False,
@@ -232,5 +347,5 @@ if __name__=="__main__":
 
     print(args)
 
-    workspace_retino = Retino_IOI(args.path_md)
-    workspace_retino.run_ioi_retinotopic_analysis()
+    workspace_rf = RFWorkspace(**vars(args))
+    workspace_rf.run_ioi_rf_analysis()
