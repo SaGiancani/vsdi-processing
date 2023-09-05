@@ -112,14 +112,15 @@ class RFWorkspace:
                                                   self.start_time, 
                                                   self.end_time, 
                                                   self.frame_time_extension, 
+                                                  self.rf.center_render_stimulus,
                                                   type = self.operation_flag, 
                                                   coordinate = self.dimension_to_analyze)
     
         if self.store_switch:
             tmp = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(PROTOCOL + '_IOI', self.name_session))
-            np.save(os.path.join(tmp, f'data_session_df_{self.name_session}'), averaged_dfs)
-            np.save(os.path.join(tmp, f'data_session_raw_{self.name_session}'), averaged_raws)
-            utils.inputs_save(dict_output, os.path.join(tmp, f'data_session_dict_{self.name_session}'))
+            np.save(os.path.join(tmp, f'data_session_df_{self.dimension_to_analyze}_{self.name_session}'), averaged_dfs)
+            np.save(os.path.join(tmp, f'data_session_raw_{self.dimension_to_analyze}_{self.name_session}'), averaged_raws)
+            utils.inputs_save(dict_output, os.path.join(tmp, f'data_session_dict_{self.dimension_to_analyze}_{self.name_session}'))
         return
     
 def get_session_path_from_md(path_md):
@@ -230,7 +231,7 @@ def set_cond_dict_per_coordinates(choosen_coord, cond_dict):
 
     return new_cond_dict
 
-def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_time, frame_time_ext, type = 'cocktail', coordinate = 'x'):
+def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_time, frame_time_ext, absolute_center, type = 'cocktail', coordinate = 'x'):
     '''
     type: str, it can be 'cocktail', 'regular', 'both'. 
           'cocktail' for division against other conditions, 'regular' for blank condition.
@@ -244,12 +245,12 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
         coords, x, y = get_relative_coordinates(list(sorted_cds_dictionary.values()))
         if coordinate == 'x':
             n_considered_conds = len(coords)/len(x)
-            picked_cord = x
+            picked_cord = np.array(x) + absolute_center[0]
             print_todo = 'columns'
 
         elif coordinate == 'y':
             n_considered_conds = len(coords)/len(y)
-            picked_cord = y
+            picked_cord = np.array(y) + absolute_center[1]
             print_todo = 'rows'
 
         # Loop for averaging every n_considered_conds
@@ -261,6 +262,8 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
         print(f'Normalization between {print_todo} computed!')
 
     if (type == 'regular') or (type == 'both'):
+        # Adjustment for absolute center
+        coords = list(zip(np.array(list(zip(*coords))[0]) + absolute_center[0], np.array(list(zip(*coords))[1]) + absolute_center[1]))
         blnk = np.nanmean(tmp_blank[start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = 0) 
         output_matrix_regular = np.array([np.nanmean(i[start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = 0)/blnk for i in tmp_data])
         print(f'Shape of blank normalization output matrix: {output_matrix_regular.shape}')
