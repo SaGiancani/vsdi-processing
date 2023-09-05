@@ -238,6 +238,7 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
           'both' it permorfs both
     coordinate: str, it can be 'x', 'y' or None. It is active only if type = 'cocktail'
     '''
+    print(f'The center of the stimulation is at {absolute_center}dva ')
     tmp_data = maps[1:, :, :, :]
     tmp_blank = maps[0, :, :, :]
     
