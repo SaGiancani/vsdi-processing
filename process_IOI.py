@@ -26,6 +26,7 @@ class ReceptiveField:
         # Stimulus coordinates: relative and absolute
         self.relative_stimulus_coordinates , self.xs, self.ys = get_relative_coordinates(condition_names)
         self.center_render_stimulus = get_absolute_coordinates(path_session, name_report = base_report_name, hd_dim = base_report_header)
+        print(f'Center of stimulus: {self.center_render_stimulus}')
 
 class RFWorkspace:
     def __init__(self,
@@ -133,7 +134,7 @@ def get_absolute_coordinates(session_path, name_report = 'BaseReport.csv', hd_di
         basereport_path = [i for i in basereport_path if 'bug' not in i.lower()]
     header_br = al.get_basereport_header(basereport_path[0], header_dimension=hd_dim) 
     x = header_br['C V X Stim_temp']
-    y = header_br['C V Y Stim_temp']
+    y = -header_br['C V Y Stim_temp']
     return (x, y)
  
 def get_relative_coordinates(cond_names):
