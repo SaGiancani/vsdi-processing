@@ -119,7 +119,7 @@ class RFWorkspace:
             tmp = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(PROTOCOL + '_IOI', self.name_session))
             np.save(os.path.join(tmp, f'data_session_df_{self.name_session}'), averaged_dfs)
             np.save(os.path.join(tmp, f'data_session_raw_{self.name_session}'), averaged_raws)
-            utils.inputs_save(dict_output, os.path.join(tmp, f'data_session_raw_{self.name_session}'))
+            utils.inputs_save(dict_output, os.path.join(tmp, f'data_session_dict_{self.name_session}'))
         return
     
 def get_session_path_from_md(path_md):
@@ -244,25 +244,31 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
         coords, x, y = get_relative_coordinates(list(sorted_cds_dictionary.values()))
         if coordinate == 'x':
             n_considered_conds = len(coords)/len(x)
+            picked_cord = x
+            print_todo = 'columns'
 
         elif coordinate == 'y':
             n_considered_conds = len(coords)/len(y)
+            picked_cord = y
+            print_todo = 'rows'
 
         # Loop for averaging every n_considered_conds
         indeces = np.arange(0, len(coords)+1, n_considered_conds, dtype = int)
         output_matrix_cocktail = np.array([np.nanmean(tmp_data[indeces[i-1]:indeces[i], start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = (0, 1)) for i in range (1, len(indeces))])
-        cocktail_dict = {(str(a) + '/' +str(i)): b/j for a,b in zip(coords, output_matrix_cocktail) for i, j in zip(coords, output_matrix_cocktail)}
+        print(f'Shape of {print_todo} normalization output matrix: {output_matrix_cocktail.shape}')
+        cocktail_dict = {f'{coordinate}: {a}/{i}': b/j for a,b in zip(picked_cord, output_matrix_cocktail) for i, j in zip(picked_cord, output_matrix_cocktail)}
         data_dict = cocktail_dict
-        print('Cocktail normalization computed!')
+        print(f'Normalization between {print_todo} computed!')
 
-    elif (type == 'regular') or (type == 'both'):
+    if (type == 'regular') or (type == 'both'):
         blnk = np.nanmean(tmp_blank[start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = 0) 
         output_matrix_regular = np.array([np.nanmean(i[start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = 0)/blnk for i in tmp_data])
+        print(f'Shape of blank normalization output matrix: {output_matrix_regular.shape}')
         regular_dict = {(str(a)): b for a,b in zip(coords, output_matrix_regular)}
         data_dict = regular_dict
         print('Blank normalization computed!')
 
-    elif (type == 'both'):
+    if (type == 'both'):
         data_dict = {**cocktail_dict, **regular_dict}
         
     return data_dict
