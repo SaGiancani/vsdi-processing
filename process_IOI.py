@@ -72,6 +72,7 @@ class RFWorkspace:
         self.store_switch = store_switch
         self.operation_flag = operation_maps
         self.dimension_to_analyze = dimension_to_analyze
+        self.visualization_switch = data_vis_switch
 
         # Instance receptive field
         self.rf = ReceptiveField(self.path_session, self.cond_names, base_report_name, base_head_dim)
@@ -119,9 +120,20 @@ class RFWorkspace:
     
         if self.store_switch:
             tmp = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(PROTOCOL + '_IOI', self.name_session))
-            np.save(os.path.join(tmp, f'data_session_df_{self.dimension_to_analyze}_{self.name_session}'), averaged_dfs)
-            np.save(os.path.join(tmp, f'data_session_raw_{self.dimension_to_analyze}_{self.name_session}'), averaged_raws)
-            utils.inputs_save(dict_output, os.path.join(tmp, f'data_session_dict_{self.dimension_to_analyze}_{self.name_session}'))
+            np.save(os.path.join(tmp, f'data_session_df_{self.dimension_to_analyze}_{self.start_time}_{self.end_time}ms_{self.name_session}'), averaged_dfs)
+            np.save(os.path.join(tmp, f'data_session_raw_{self.dimension_to_analyze}_{self.start_time}_{self.end_time}ms_{self.name_session}'), averaged_raws)
+            utils.inputs_save(dict_output, os.path.join(tmp, f'data_session_dict_{self.dimension_to_analyze}_{self.start_time}_{self.end_time}ms_{self.name_session}'))
+        
+        if self.visualization_switch:
+            titles = list(dict_output.keys())
+            data = np.array(list(dict_output.values()))
+            dv.whole_time_sequence(data, mask = np.ones((data.shape[1], data.shape[2]), dtype = bool),
+                                   blbs = [np.empty((data.shape[1], data.shape[2]))]*60, 
+                                   n_columns = 4, titles = titles, mappa = 'gray', 
+                                   max_bord=1.005, min_bord=.998,
+                                   store_path=dv.STORAGE_PATH, 
+                                   name_analysis_= os.path.join(PROTOCOL + '_IOI', self.name_session),
+                                   name = f'Maps {self.dimension_to_analyze} dimension _ {self.start_time}_{self.end_time}ms_{self.name_session}', ext='pdf')            
         return
     
 def get_session_path_from_md(path_md):
@@ -354,6 +366,15 @@ if __name__=="__main__":
                         dest='store_switch', 
                         action='store_false')
     parser.set_defaults(store_switch=True)   
+
+    parser.add_argument('--vis', 
+                        dest='data_vis_switch', 
+                        action='store_true')
+    parser.add_argument('--no-vis', 
+                        dest='data_vis_switch', 
+                        action='store_false')
+    parser.set_defaults(data_vis_switch=False) 
+
 
     start_process_time = datetime.datetime.now().replace(microsecond=0)
     args = parser.parse_args()
