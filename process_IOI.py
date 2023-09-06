@@ -135,7 +135,7 @@ class RFWorkspace:
                                    max_bord=1.005, min_bord=.998,
                                    store_path=dv.STORAGE_PATH, 
                                    name_analysis_= os.path.join(PROTOCOL + '_IOI', self.name_session),
-                                   name = f'Maps {self.dimension_to_analyze} dimension _ {self.start_time}_{self.end_time}ms_{self.name_session}', ext='pdf')            
+                                   name = f'Maps {self.dimension_to_analyze} dimension _ {self.start_time}_{self.end_time}ms_{self.name_session}', ext='png')            
         return
     
 def get_session_path_from_md(path_md):
