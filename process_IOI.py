@@ -120,8 +120,8 @@ class RFWorkspace:
     
         if self.store_switch:
             tmp = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(PROTOCOL + '_IOI', self.name_session))
-            np.save(os.path.join(tmp, f'data_session_df_{self.dimension_to_analyze}_{self.start_time}_{self.end_time}ms_{self.name_session}'), averaged_dfs)
-            np.save(os.path.join(tmp, f'data_session_raw_{self.dimension_to_analyze}_{self.start_time}_{self.end_time}ms_{self.name_session}'), averaged_raws)
+            np.save(os.path.join(tmp, f'data_session_df_{self.selection_switch}selection_{self.name_session}'), averaged_dfs)
+            np.save(os.path.join(tmp, f'data_session_raw_{self.selection_switch}selection_{self.name_session}'), averaged_raws)
             utils.inputs_save(dict_output, os.path.join(tmp, f'data_session_dict_{self.dimension_to_analyze}_{self.start_time}_{self.end_time}ms_{self.name_session}'))
         
         if self.visualization_switch:
