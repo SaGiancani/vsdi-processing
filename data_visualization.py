@@ -356,7 +356,8 @@ def whole_time_sequence(data,
                         second_contour = None,
                         kern_median = 5,
                         color_scale_bar = 'white',
-                        manual_thresh = None):
+                        manual_thresh = None,
+                        render_flag = False):
 
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
@@ -506,7 +507,8 @@ def whole_time_sequence(data,
         print(name + ext+ ' stored successfully!')
     #else:
     #    plt.show()
-    plt.show()
+    if render_flag:
+        plt.show()
     plt.close('all')
     return
 
