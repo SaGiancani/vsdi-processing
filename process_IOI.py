@@ -127,8 +127,10 @@ class RFWorkspace:
         if self.visualization_switch:
             titles = list(dict_output.keys())
             data = np.array(list(dict_output.values()))
+            tmp_blb = np.array([np.empty((data.shape[1], data.shape[2]))]*60)
+            tmp_blb[:] = np.nan
             dv.whole_time_sequence(data, mask = np.ones((data.shape[1], data.shape[2]), dtype = bool),
-                                   blbs = [np.empty((data.shape[1], data.shape[2]))]*60, 
+                                   blbs = tmp_blb, 
                                    n_columns = 4, titles = titles, mappa = 'gray', 
                                    max_bord=1.005, min_bord=.998,
                                    store_path=dv.STORAGE_PATH, 
