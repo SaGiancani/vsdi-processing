@@ -295,6 +295,7 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
         
     return data_dict
 
+# Example of command line for running the script: python process_IOI.py --path_md /envau/work/neopto/DATA_AnDO/exp-Retinotopie_IOI/sub-Ganja/sess-20230824/derivatives/spcbin2_timebin1_zerofrms5_strategymae_n_chunk1_movFalse_deblankTrue/md_data --dimension_to_analyze x --vis --start_time 2500 --end_time 3500
 
 if __name__=="__main__":
 
