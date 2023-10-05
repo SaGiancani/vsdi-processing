@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-from scipy.ndimage.filters import uniform_filter1d, gaussian_filter, median_filter
+from scipy.ndimage.filters import convolve, gaussian_filter, median_filter, uniform_filter1d
 from scipy import optimize
 
 def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None):
@@ -168,6 +168,25 @@ def time_course_signal(df_fz, roi_mask):#, hand_made=False):
         to_app = np.nanmean(np.ma.masked_array(i, mask = roi_mask))
         roi_sign.append(to_app)
     return np.array(roi_sign)
+
+def gaussian3d(data , size = 3, std = .65):
+    # Define the standard deviations for each dimension (t, y, x)
+    sigma_t = std
+    sigma_y = std
+    sigma_x = std
+
+    # Create a 3D Gaussian kernel
+    kernel_size = (size, size, size)  # Adjust the size as needed
+    t_kernel = np.linspace(-size/2, size/2, kernel_size[0])
+    y_kernel = np.linspace(-size/2, size/2, kernel_size[1])
+    x_kernel = np.linspace(-size/2, size/2, kernel_size[2])
+    t, y, x = np.meshgrid(t_kernel, y_kernel, x_kernel)
+    kernel = np.exp(-(t ** 2 / (2 * sigma_t ** 2) + y ** 2 / (2 * sigma_y ** 2) + x ** 2 / (2 * sigma_x ** 2)))
+    kernel /= kernel.sum()  # Normalize the kernel
+
+    # Apply the kernel to your 3D data
+    smoothed_data = convolve(data, kernel, mode='reflect')
+    return smoothed_data
 
 def gauss_1d(x, a, mean, stddev):
     return a*np.exp((-(x-mean)**2)/(2*stddev**2))
