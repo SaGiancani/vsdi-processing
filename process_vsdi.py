@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+from numba import jit
 from scipy.ndimage.filters import convolve, gaussian_filter, median_filter, uniform_filter1d
 from scipy import optimize
 
@@ -32,45 +33,6 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
         df_fz = (vsdi_sign/mean_frames_zero) -1
 
     return df_fz
-
-def get_centroids(contours):
-    # Centroids detection
-    centroids = list()
-    #conts = list()
-    for i in contours:
-        #conts.append(np.squeeze(i))
-        M = cv.moments(i)
-        if M['m00'] != 0:
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
-            centroids.append((cx, cy))
-    return centroids
-
-def get_blobs(blurred, min_thresh2, max_thresh2, smoother_kernel = 10):
-    _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
-    # Smoother for salt and pepper noise at the edge from the previous filter
-    blobs = median_filter(blobs, (smoother_kernel,smoother_kernel))
-    # Normalization and binarization
-    blobs = blobs/np.nanmax(blobs)
-    blobs = blobs.astype(np.uint8)
-    return blobs
-
-def get_significant_sign(blurred, min_thresh2, max_thresh2):
-    blobs = get_blobs(blurred, min_thresh2, max_thresh2)
-    # Contours and centroid detections
-    contours, _ = cv.findContours(blobs, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    centroids = get_centroids(contours)
-    return contours, centroids, blobs 
-
-def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
-    # Thresholding of z_score
-    _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
-    # Median filter against salt&pepper noise
-    blurred_median = median_filter(threshed, size=(3,3))
-    # Gaussian filter for blob individuation
-    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)
-    # print(np.nanmin(blurred), np.nanmax(blurred))
-    return blurred
 
 def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, max_2_lim = 100, std = 15, adaptive_thresh = True, kind = 'zscore'):#From 90 to 99 of min_2_lim
     '''
@@ -143,6 +105,86 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
             centroids_.append(centroids)
             
         return countours_, centroids_, blobs_
+    
+
+# @jit(nopython=True)
+def find_highest_sum_area(matrix, window_size):
+    '''
+    Description:
+    The find_highest_sum_area method is designed to identify the area within a 2D matrix with 
+    the highest sum of elements. It employs a sliding window approach to calculate the sum of 
+    elements within local regions of the matrix and identifies the central position of the area
+    with the maximum sum.
+
+    Parameters:
+    matrix (numpy.ndarray): A 2D matrix (numpy array) containing numeric values.
+    window_size (int): The size of the moving window or mask used to calculate the sum of elements
+    within local regions.
+
+    Return Value:
+    max_position (tuple): A tuple containing the coordinates (row, column) of the central position
+    within the area with the highest sum of elements.
+
+    '''
+    rows, cols = matrix.shape
+    max_sum = -np.inf
+    max_position = (0, 0)
+
+    matrix_ = np.copy(matrix)
+    matrix_ = np.nan_to_num(matrix_, nan=-1e3)
+
+    for i in range(rows - window_size + 1):
+        for j in range(cols - window_size + 1):
+            current_sum = 0
+            for x in range(i, i + window_size):
+                for y in range(j, j + window_size):
+                    current_sum += matrix[x, y]
+
+            if current_sum > max_sum:
+                max_sum = current_sum
+                max_position = (i + window_size // 2, j + window_size // 2)
+
+    return max_position
+
+
+def get_centroids(contours):
+    # Centroids detection
+    centroids = list()
+    #conts = list()
+    for i in contours:
+        #conts.append(np.squeeze(i))
+        M = cv.moments(i)
+        if M['m00'] != 0:
+            cx = int(M['m10']/M['m00'])
+            cy = int(M['m01']/M['m00'])
+            centroids.append((cx, cy))
+    return centroids
+
+def get_blobs(blurred, min_thresh2, max_thresh2, smoother_kernel = 10):
+    _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
+    # Smoother for salt and pepper noise at the edge from the previous filter
+    blobs = median_filter(blobs, (smoother_kernel,smoother_kernel))
+    # Normalization and binarization
+    blobs = blobs/np.nanmax(blobs)
+    blobs = blobs.astype(np.uint8)
+    return blobs
+
+def get_significant_sign(blurred, min_thresh2, max_thresh2):
+    blobs = get_blobs(blurred, min_thresh2, max_thresh2)
+    # Contours and centroid detections
+    contours, _ = cv.findContours(blobs, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    centroids = get_centroids(contours)
+    return contours, centroids, blobs 
+
+def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
+    # Thresholding of z_score
+    _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
+    # Median filter against salt&pepper noise
+    blurred_median = median_filter(threshed, size=(3,3))
+    # Gaussian filter for blob individuation
+    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)
+    # print(np.nanmin(blurred), np.nanmax(blurred))
+    return blurred
 
 def manual_thresholding(data, threshold, filter_kernel = 30):
     assert len(data.shape) == 2, 'The data matrix has to be 2D'
