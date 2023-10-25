@@ -332,6 +332,29 @@ class Session:
 
 
     def get_signal(self, condition):
+        '''
+        Parameters:
+            self: This parameter refers to the instance of the class Session. 
+            It is used to access instance variables and methods within Session class.
+            condition: An integer representing the condition for which the signal is being extracted.
+
+        Method Description:
+            This method is responsible for extracting signals and related data for a specific condition.
+            It starts by filtering a list of "blks" that match the provided condition.
+            It defines "zero_of_cond" and "end_of_cond" based on attributes in the Session header.
+            Depending on whether the condition is the "blank_id" (the blank condition), it follows different logic paths.
+            If the condition is the "blank_id":
+                It extracts signals, data frames, conditions, and other information using the signal_extraction function.
+                It processes and stores various data, including the signal, normalized signal, and z-scores.
+                Visualization and other operations are performed if specified.
+                If storage is enabled, a "Condition" object is instantiated and stored.
+            If the condition is not the "blank_id":
+                Similar signal extraction and processing are performed as in the "blank_id" case, but some data is 
+                appended to existing class attributes. Visualization and storage are handled in the same way.
+            Various data and variables are deleted from memory to free up resources.
+            The method returns a binary mask based on a selection criterion for trials.
+            
+        '''
         # All the blank blks
         blks = [f for f in self.all_blks if (int(f.split(self.filename_particle)[1][0:2])==condition)]
         zero_of_cond = self.header['zero_frames']
@@ -494,7 +517,26 @@ class Session:
         return header
     
     def get_session(self):
+        '''
+        Parameters:
+            self: This parameter represents the instance of the class Session and is used to access instance 
+            variables and methods.
 
+        Method Description:
+            This method is part of a data processing workflow for an experimental VSDI session, handling 
+            multiple experimental conditions.
+            If there are multiple conditions defined (as indicated by the length of 'conditions_id' in the class header), 
+            the method iterates through each condition (denoted as 'cd').
+            For each condition, it logs the start of the loading procedure and the condition name.
+            It then calls the get_signal method for the current condition, which is responsible for signal 
+            extraction and related processing. 
+            After processing, it logs the number of trials selected for the condition.
+            The method keeps track of the total number of trials selected across all conditions.
+            It also constructs an array of trial names based on the selected trials.
+            If the visualization_switch is enabled (a boolean attribute), it generates time sequence visualizations
+            for the data. This includes visualizations of averaged conditions and z-scores.
+            The method returns without any explicit return value.        
+        '''
         if len(self.header['conditions_id']) > 1:
             for cd in self.header['conditions_id']:
                 c_name = self.cond_dict[cd]
@@ -521,6 +563,28 @@ class Session:
         return
 
     def get_selection_trials(self, condition, time_course):
+        '''
+        Parameters:
+            self: This parameter represents the instance of the class Session and is used to access instance variables and methods.
+            condition: An integer representing the condition for which selection trials are being determined.
+            time_course: numpy.array 3d matrix representing the time courses for a specific condition.
+
+        Method Description:
+            This method is responsible for automatically selecting trials based on a specified strategy.
+            It first retrieves various parameters from the class instance, such as the strategy, the number of frames, and other attributes.
+            It logs the start of the autoselection process for the given condition.
+            The selection strategy depends on the value of the strategy attribute in the class header. The following strategies are supported:
+                + 'mse' or 'mae' (Mean Squared Error or Mean Absolute Error): In this case, the data is divided into chunks, and overlap strategy
+                   is used to select trials. The number of chunks can be determined based on the number of frames -all the chunks of same number of frames- 
+                   and the 'chunks' attribute in the class header.
+                + 'roi', 'roi_signals', or 'ROI': This strategy is based on selecting trials using region of interest (ROI) information, with 
+                  specified tolerance and zero frames.
+                + 'statistic', 'statistical', or 'quartiles': A statistical strategy based on statistical measures is used 
+                   to select trials.
+            The selected trials are stored in the tmp variable.
+            The method logs the time it took for the autoselection process for the given condition.
+            It returns the selected trials (tmp) as the result of the method.        
+        '''
         strategy = self.header['strategy']
         n_frames = self.header['n_frames']
 
@@ -700,6 +764,36 @@ def get_blank_id(cond_names, cond_id = None):
         return cond_id
 
 def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True, filename_particle = 'vsd_C'):
+    '''
+    Parameters:
+        header: the Session header. A dictionary containing various parameters and metadata.
+        blks: A list of trial (BLK) filenames to process.
+        blank_s: The blank signal, aka a reference signal.
+        blnk_switch: A switch that determines whether blank subtraction is applied.
+        base_report: A report containing information about trials (could be None if not available).
+        blank_id: The ID of the blank condition.
+        time: Time information.
+        piezo: Piezo data.
+        heart: Heart data.
+        log: A logging object for recording information (could be None).
+        blks_load: A flag indicating whether to load BLK files.
+        filename_particle: a string particle for distinguish between VSDI or IOI recordings.
+
+    Function Description:
+        The function begins by initializing some variables and parameters, including trials_dict, path_rawdata, and flag_remove.
+        It determines the type of strategy for processing the trials, such as 'mse', 'mae', 'roi', 'statistic', and more, based 
+        on the strategy attribute in the header.
+        If blks_load is True, it loads the trial data. For each trial in blks, it does the following:
+            Loads the trial data using the blk_file.BlkFile class and stores it in variables such as raws, delta_f, and sig.
+            The specific processing applied to the data depends on the chosen strategy. For example, if the strategy is 'mse' or 
+            'mae', the data is divided into chunks.
+            The trial information, including condition, is stored in the conditions list.
+            The function logs information about the loading process.
+            If a trial is empty, it is removed from the list of trials.
+        If blks_load is False, it doesn't load the trial data and only constructs the trials_dict.
+        The function returns the extracted and processed data: sig (time course), delta_f (delta F/F0), conditions (conditions of 
+        the trials), raws (raw data), and trials_dict (trial information).    
+    '''
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
@@ -848,6 +942,33 @@ def roi_strategy(matrix, tolerance, zero_frames):
     return mask_array
 
 def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators = None, n_chunks = 1, loss = 'mae', threshold = 'median'):
+    '''
+    Parameters:
+        matrix: A data matrix that you want to process.
+        cd_i: The condition ID for which this strategy is being applied.
+        path: The path to a directory where visualization results may be saved.
+        header: A dictionary containing various parameters and metadata: namely, the Session header.
+        switch_vis: A boolean flag that determines whether to create visualizations (default is False).
+        separators: A list of indices that can be used to manually specify chunk boundaries (default is None).
+        n_chunks: The number of chunks to divide the data into.
+        loss: The loss metric used for selecting regions (e.g., 'mae' or 'mse').
+        threshold: A thresholding method for region selection (default is 'median').
+
+    Function Description:
+        If separators is not provided, the function divides the data into n_chunks chunks -equally dimensioned chunks-
+        and computes the loss metric for each pair of chunks using a selected loss metric (loss).
+        The loss metric could be Mean Absolute Error ('mae') or Mean Squared Error ('mse').
+        The function computes the pairwise loss metrics between chunks and creates a matrix (tmp_m_) representing 
+        the loss between different pairs of chunks.
+        The m matrix stores the sum of loss values for each chunk.
+        The function applies a thresholding method (threshold) to the m matrix to select specific regions of interest 
+        within the chunks.
+        The selected regions are stored in the autoselect list.
+        The mask_array is a binary array that indicates the selected regions within the matrix.
+        If switch_vis is True, the function generates visualizations based on the selected regions.
+        The function returns the autoselect list, mask_array, coordinates of selected regions, distribution information, 
+        and normalized loss values.
+    '''
     if separators is None:
         if  matrix.shape[1] % n_chunks == 0:
             matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
