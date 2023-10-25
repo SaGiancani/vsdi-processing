@@ -336,6 +336,7 @@ def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = 
 def whole_time_sequence(data, 
                         global_cntrds = None, 
                         colors_centr = ['black', 'purple', 'aqua'], 
+                        centroids_labeling = 'dotted circles',
                         cntrds = None, 
                         blbs = None, 
                         max=80, min=10, 
@@ -355,9 +356,14 @@ def whole_time_sequence(data,
                         pixel_spacing = None,
                         second_contour = None,
                         kern_median = 5,
-                        color_scale_bar = 'white',
+                        color_text = 'white',
                         manual_thresh = None,
-                        render_flag = False):
+                        flag_simple_thres = False,
+                        render_flag = False,
+                        padding_axes = .05,
+                        y_title = 1,
+                        x_title = 1,
+                        font_size = 20):
 
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
@@ -369,7 +375,7 @@ def whole_time_sequence(data,
     
     grid = AxesGrid(fig, 111,
                     nrows_ncols=(int(np.ceil(np.shape(data)[0]/n_columns)), n_columns),
-                    axes_pad=0.3,
+                    axes_pad=padding_axes,
                     share_all=True,
                     label_mode="L",
                     cbar_mode='single',
@@ -399,10 +405,15 @@ def whole_time_sequence(data,
                                                          min_2_lim = manual_th, 
                                                          max_2_lim = handle_lims_blobs[1],  
                                                          adaptive_thresh = ad_t)
-        else:
+            
+        elif (manual_thresh is not None) and (not flag_simple_thres):
             a = [process.manual_thresholding(i, manual_thresh) for i in data]
             centroids = list(zip(*a))[1]
             blobs = list(zip(*a))[2]
+
+        elif (manual_thresh is not None) and (flag_simple_thres):
+            centroids = []
+            blobs = None    
             
         if len(centroids)>0:
             new_centroids = []
@@ -417,6 +428,7 @@ def whole_time_sequence(data,
 
                 new_centroids.append(cntrds)
             centroids = new_centroids
+            
     else:
         centroids = cntrds
         blobs = blbs
@@ -447,15 +459,28 @@ def whole_time_sequence(data,
         ax.set_yticks([])
         ax.axis('off')
         # Title for each frame
-        ax.set_title(titles[i])
-        
-        if blobs is not None:
+        ax.annotate(titles[i], xy=(0.5, 1), xytext=(x_title, y_title), 
+                    textcoords='offset points', ha='center', 
+                    fontsize=font_size, color=color_text)
+        ax.set_title("")  # Remove the default title
+
+        if (manual_thresh is not None) and (flag_simple_thres) and (blobs is None):
+            blobs_ = np.zeros(blurred.shape, dtype = bool)
+            blobs_[np.where(blurred>manual_thresh)] = 1
+            if np.nansum(blobs_)>0:
+                (x_, y_) = process.find_highest_sum_area(blurred, 20)
+                centroids.append([(y_, x_)])
+            else:
+                centroids.append([])
+
+        elif blobs is not None:
             if mask is not None:
                 blobs_ = blobs[i]*mask
             else:
                 blobs_ = blobs[i]                    
-            ax.contour(blobs_, 4, colors='k', linestyles = 'dotted')
-            
+                
+        ax.contour(blobs_, 4, colors='k', linestyles = 'dotted')
+
         if centroids is not None:
             if len(centroids[i])>0:
                 for j in centroids[i]:
@@ -464,11 +489,15 @@ def whole_time_sequence(data,
         if global_cntrds is not None:
             for k, cc in zip(global_cntrds, colors_centr):
                 # ax.vlines(i[0], 0, blurred.shape[0], color = cc, lw= 1.5)
-                mask_single_dot = utils.sector_mask(l.shape, 
-                                                    (k[1], k[0]), 
-                                                    25, 
-                                                    (0,360))
-                ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=.3)
+                if centroids_labeling == 'dotted circles':
+                    mask_single_dot = utils.sector_mask(l.shape, 
+                                                        (k[1], k[0]), 
+                                                        25, 
+                                                        (0,360))
+                    ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=.3)
+                elif centroids_labeling == 'vlines':
+                    ax.vlines(k[0], 0, blurred.shape[0], color = cc, lw= 1.5)
+
     
     # print(centroids)
 
@@ -483,7 +512,7 @@ def whole_time_sequence(data,
         scalebar = AnchoredSizeBar(ax.transData,
                                     round(2/pixel_spacing), '2mm', 'upper right', 
                                     pad=0.1,
-                                    color=color_scale_bar,
+                                    color='crimson',
                                     frameon=False,
                                     size_vertical=2,
                                     fontproperties=fontprops)
