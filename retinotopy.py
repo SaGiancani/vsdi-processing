@@ -882,7 +882,17 @@ def rotate_distribution(xs, ys, theta = None):
  
 
 def get_trajectory(xs, ys, limits):
-    print(limits[0], limits[1])
+    """
+    Get a trajectory by fitting a line to data points and resampling it.
+
+    Args:
+    xs (array-like): X-coordinates of the data points.
+    ys (array-like): Y-coordinates of the data points.
+    limits (tuple): A tuple containing the start and end limits for resampling.
+
+    Returns:
+    tuple: A tuple containing the resampled X and Y coordinates of the fitted trajectory.
+    """
     xs_to_fit =  np.round(np.linspace(limits[0], limits[1]-1, limits[1]-limits[0])) 
     ys_to_fit = np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs_to_fit))
     #ys_fitted = [int(round(np.interp(i, xs_to_fit, ys_to_fit))) for i in xs_fitted]
