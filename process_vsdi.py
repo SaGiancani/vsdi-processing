@@ -1,6 +1,5 @@
 import cv2 as cv
 import numpy as np
-from numba import jit
 from scipy.ndimage.filters import convolve, gaussian_filter, median_filter, uniform_filter1d
 from scipy import optimize
 
