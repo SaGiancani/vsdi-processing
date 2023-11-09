@@ -29,7 +29,7 @@ def linear_extrapolation(signal, stop, start = 0):
             for j in range(space_x):
                 tmp = retino.get_trajectory(np.arange(start, stop, 1), signal[start:stop, i, j], (0, time))
                 fitted_cube[:, i, j] = tmp[1]
-    elif len(signal) == 1:
+    elif (len(signal) == 1) or ((len(signal) >10)):
         data_bins = signal.shape[0]
         fitted_cube = np.empty((data_bins))
         tmp = retino.get_trajectory(np.arange(start, stop, 1), signal[start:stop], (0, data_bins))
