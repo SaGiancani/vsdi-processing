@@ -53,7 +53,7 @@ def correction_windowframe(signal3d_, start, end):
     Returns:
     ndarray: The corrected signal with extrapolated data subtracted along the time axis.
     """
-    if len(signal3d_.shape) == 3:
+    if (len(signal3d_.shape) == 3) or (len(signal3d_.shape) == 1):
         signal3d = linear_extrapolation(signal3d_, end, start)
         outcome  = (signal3d_ - signal3d)+np.nanmean(signal3d) # Safety shift up of the subtraction
 
