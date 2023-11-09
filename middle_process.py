@@ -123,8 +123,9 @@ class Session:
                  temporal_bin = 1,
                  zero_frames = None,
                  tolerance = 20,
-                 mov_switch=False,
-                 deblank_switch=False,
+                 mov_switch = False,
+                 deblank_switch = False,
+                 detrend_switch = False,
                  conditions_id =None,
                  chunks = 1,
                  strategy = 'mae',
@@ -222,7 +223,8 @@ class Session:
         if logger is None:
             self.log = utils.setup_custom_logger('myapp')
         else:
-            self.log = logger              
+            self.log = logger
+        self.detrend_switch = detrend_switch              
         self.cond_names = None
         self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
@@ -237,9 +239,10 @@ class Session:
         # Avoiding to load a BLK file
         # A blk loaded for useful hyperparameters
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
-                            self.header['spatial_bin'], 
-                            self.header['temporal_bin'],
-                            filename_particle = self.filename_particle)
+                               self.header['spatial_bin'], 
+                               self.header['temporal_bin'],
+                               detrend_switch    = self.detrend_switch,
+                               filename_particle = self.filename_particle)
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
@@ -362,7 +365,7 @@ class Session:
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, filename_particle = self.filename_particle)
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, detrend = self.detrend_switch, filename_particle = self.filename_particle)
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
@@ -395,7 +398,7 @@ class Session:
             self.log.info('Blank signal computed')
                         
         else:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, filename_particle = self.filename_particle)
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, detrend= self.detrend_switch, filename_particle = self.filename_particle)
             mask = self.get_selection_trials(condition, sig)
             self.conditions = self.conditions + conditions
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
@@ -510,6 +513,7 @@ class Session:
         header['tolerance'] = tolerance
         header['mov_switch'] = mov_switch
         header['deblank_switch'] = deblank_switch
+        header['detrend_switch'] = self.detrend_switch
         header['conditions_id'] = conditions_id
         header['chunks'] = chunks
         header['strategy'] = strategy
@@ -699,6 +703,7 @@ class Session:
             + '_zerofrms' + str(self.header['zero_frames']) \
             + strat_depend\
             + '_mov' + str(self.header['mov_switch'])\
+            + '_dtrend' + str(self.detrend_switch)\
             + '_deblank' + str(self.header['deblank_switch'])
         
         folder_path = os.path.join(session_path, 'derivatives/',folder_name)               
@@ -763,7 +768,7 @@ def get_blank_id(cond_names, cond_id = None):
     else:
         return cond_id
 
-def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True, filename_particle = 'vsd_C'):
+def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, detrend = False, log = None, blks_load = True, filename_particle = 'vsd_C'):
     '''
     Parameters:
         header: the Session header. A dictionary containing various parameters and metadata.
@@ -844,6 +849,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         header['spatial_bin'],
                         header['temporal_bin'],
                         header = None, 
+                        detrend_switch    = detrend,
                         filename_particle = filename_particle)
 
                     header_blk = BLK.header
@@ -856,7 +862,8 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         os.path.join(path_rawdata, blk_name), 
                         header['spatial_bin'], 
                         header['temporal_bin'], 
-                        header = header_blk, 
+                        header = header_blk,
+                        detrend_switch    = detrend, 
                         filename_particle = filename_particle)
                 
                 # Log prints
@@ -887,6 +894,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         header['spatial_bin'],
                         header['temporal_bin'],
                         header = None, 
+                        detrend_switch    = detrend,
                         filename_particle = filename_particle)
 
                     header_blk = BLK.header
@@ -1125,6 +1133,14 @@ if __name__=="__main__":
                         action='store_true')
     parser.add_argument('--no-dblnk', # Bug 24/07/2023: AttributeError: 'Session' object has no attribute 'f_f0_blank'
                         dest='deblank_switch', 
+                        action='store_false')
+    parser.set_defaults(deblank_switch=False)
+
+    parser.add_argument('--dtrend', 
+                        dest='detrend_switch',
+                        action='store_true')
+    parser.add_argument('--no-dtrend', 
+                        dest='detrend_switch', 
                         action='store_false')
     parser.set_defaults(deblank_switch=False)
 

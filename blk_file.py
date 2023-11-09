@@ -5,6 +5,7 @@
 # Modified by Isabelle Racicot <racicot.isabelle@gmail.com> on 12/2019 
 # Python3 portability by Salvatore Giancani <sa.giancani@gmail.com>
 import cv2 as cv
+import denoise
 import itertools as it
 import io
 import numpy as np
@@ -49,7 +50,7 @@ class BlkFile:
 	    Reads the data contained in the BLK file
 	"""
 
-	def __init__(self, filename, spatial_binning, temporal_binning, header = None, motion_switch = False, filename_particle = 'vsd_C'):
+	def __init__(self, filename, spatial_binning, temporal_binning, header = None, motion_switch = False, detrend_switch = False, filename_particle = 'vsd_C'):
 		"""Initializes attributes
 		Default values for:
 		* p : '1p'
@@ -72,6 +73,7 @@ class BlkFile:
 		self.f = self.sizeofunity(4,'f')
 		self.l = self.sizeofunity(8,'l')
 		self.L = self.sizeofunity(8,'L')
+		self.detrend_switch = detrend_switch
 		self.filename=filename # String of filename
 		if header is None:
 			self.header=self.get_head() # Dictionary for metadata
@@ -471,12 +473,10 @@ class BlkFile:
 			t_size = t_size_header
 		a = self.data
 		# Detrending
-		#if detrend:
-		#	a = np.reshape(a, (t_size, z_size*y_size*x_size))
-		#	a =  signal.detrend(np.nan_to_num(a))# + np.mean(a, axis=0)
+		if self.detrend_switch:
+			a = denoise.correction_windowframe(a, 0, t_size)
 		a = np.reshape(a,(t_size,z_size,y_size,x_size)) # Transformation of data linear bitstream to a regular image 2D + time data
 		a = np.reshape(a[:,0,:,:], (t_size, y_size,x_size))
-		#print('vsdi-signal extraction time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
 		return a
         
 
