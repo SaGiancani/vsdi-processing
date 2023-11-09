@@ -21,13 +21,19 @@ def linear_extrapolation(signal, stop, start = 0):
     Returns:
     ndarray: The extrapolated 3D data cube with the same shape as the input.
     """
-    assert len(signal) != 3, 'Datacube required'
-    time, space_y, space_x = signal.shape
-    fitted_cube = np.empty((time, space_y, space_x))
-    for i in range(space_y):
-        for j in range(space_x):
-            tmp = retino.get_trajectory(np.arange(start, stop, 1), signal[start:stop, i, j], (0, time))
-            fitted_cube[:, i, j] = tmp[1]
+    # assert len(signal) != 3, 'Datacube required'
+    if len(signal) == 3:
+        time, space_y, space_x = signal.shape
+        fitted_cube = np.empty((time, space_y, space_x))
+        for i in range(space_y):
+            for j in range(space_x):
+                tmp = retino.get_trajectory(np.arange(start, stop, 1), signal[start:stop, i, j], (0, time))
+                fitted_cube[:, i, j] = tmp[1]
+    elif len(signal) == 1:
+        data_bins = signal.shape[0]
+        fitted_cube = np.empty((data_bins))
+        tmp = retino.get_trajectory(np.arange(start, stop, 1), signal[start:stop], (0, data_bins))
+
     return fitted_cube
 
 def correction_windowframe(signal3d_, start, end):
