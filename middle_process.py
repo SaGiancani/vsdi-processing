@@ -325,11 +325,11 @@ class Session:
         else:
             self.base_report, self.time_stamp, self.piezo, self.heart_beat  = None, None, None, None
 
+        self.time_course_blank = None
+        self.f_f0_blank = None
+        self.stde_f_f0_blank = None
         if self.header['deblank_switch']:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
-            self.time_course_blank = None
-            self.f_f0_blank = None
-            self.stde_f_f0_blank = None
             # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
             _ = self.get_signal(self.blank_id)
 
