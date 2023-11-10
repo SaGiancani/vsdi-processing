@@ -996,7 +996,10 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
 
                     tmp_m[n, :] = np.asarray(tmp)    
                 tmp_m_[m, :, :] = tmp_m
+                print(tmp_m_)
             m = np.nansum(tmp_m_, axis=1)
+            print(m)
+
         else:
             # This check has to be done before running the script
             print('Use a proper number of chunks: exact division for the number of frames required')
@@ -1029,8 +1032,10 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
                         tmp.append(np.nanmean(np.square(np.subtract(i[:], j[:]))))
                 tmp_m.append(tmp)    
             tmp_m_.append(tmp_m)
+            print(tmp_m_)
             #print(np.shape(tmp_list))
         m = np.nansum(tmp_m_, axis=1)
+        print(m)
 
     t_whol = list()
     coords = list()
