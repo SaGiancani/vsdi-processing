@@ -990,13 +990,13 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
 
                     for j in matrix_:    
                         if loss == 'mae':
-                            tmp.append(np.abs(np.subtract(i[m, :], j[m, :])).mean())
+                            tmp.append(np.abs(np.subtract(i[m, :], j[m, :])).nanmean())
                         elif loss == 'mse':
-                            tmp.append(np.square(np.subtract(i[m, :], j[m, :])).mean())
+                            tmp.append(np.square(np.subtract(i[m, :], j[m, :])).nanmean())
 
                     tmp_m[n, :] = np.asarray(tmp)    
                 tmp_m_[m, :, :] = tmp_m
-            m = np.sum(tmp_m_, axis=1)
+            m = np.nansum(tmp_m_, axis=1)
         else:
             # This check has to be done before running the script
             print('Use a proper number of chunks: exact division for the number of frames required')
@@ -1024,13 +1024,13 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
                 tmp = []
                 for j in tmp_list[m]:    
                     if loss == 'mae':
-                        tmp.append(np.abs(np.subtract(i[:], j[:])).mean())
+                        tmp.append(np.abs(np.subtract(i[:], j[:])).nanmean())
                     elif loss == 'mse':
-                        tmp.append(np.square(np.subtract(i[:], j[:])).mean())
+                        tmp.append(np.square(np.subtract(i[:], j[:])).nanmean())
                 tmp_m.append(tmp)    
             tmp_m_.append(tmp_m)
             #print(np.shape(tmp_list))
-        m = np.sum(tmp_m_, axis=1)
+        m = np.nansum(tmp_m_, axis=1)
 
     t_whol = list()
     coords = list()
