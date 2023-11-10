@@ -1044,7 +1044,6 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
         distr_info.append(l)
         ms_norm.append(m_norm)
 
-    print(coords, distr_info, ms_norm)
     # Intersection between the selected ones
     autoselect = list(set.intersection(*map(set,t_whol)))
     mask_array = np.zeros(m.shape[1], dtype=int)

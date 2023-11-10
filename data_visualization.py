@@ -194,17 +194,18 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
     shapes = np.shape(tc)
     if tmp_u is not None:
         axs[0].plot(np.arange(shapes[1]), tmp_u, color = 'crimson', linewidth = 0.5, label = 'Unselected trials')
-    axs[0].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
-    axs[0].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
+    axs[0].plot(np.arange(shapes[1]), np.nanmean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
+    axs[0].plot(np.arange(shapes[1]), np.nanmean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
     axs[0].legend(loc = 'upper left')
-    axs[0].set_ylim(np.min(tc[indeces_select]) - (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05, np.max(tc[indeces_select]) + (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05)
+    axs[0].set_ylim(np.nanmin(tc[indeces_select]) - (np.nanmax(tc[indeces_select]) - np.nanmin(tc[indeces_select]))*0.05, 
+                    np.nanmax(tc[indeces_select]) + (np.nanmax(tc[indeces_select]) - np.nanmin(tc[indeces_select]))*0.05)
     #plt.subplot(2,3,5)
     for k, i in enumerate(tc[indeces_select[:-1]]):
         axs[1].plot(i, 'gray', linewidth = 0.5)
     axs[1].plot(tc[indeces_select[-1]], 'gray', linewidth = 0.5, label = 'Trials')
-    axs[1].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
-    axs[1].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
-    axs[1].set_ylim(np.min(tc[indeces_select]) - 0.0005, np.max(tc[indeces_select]) + 0.0005)    
+    axs[1].plot(np.arange(shapes[1]), np.nanmean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
+    axs[1].plot(np.arange(shapes[1]), np.nanmean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
+    axs[1].set_ylim(np.nanmin(tc[indeces_select]) - 0.0005, np.nanmax(tc[indeces_select]) + 0.0005)    
     axs[1].legend(loc = 'upper left')
         
     tmp = path
@@ -494,7 +495,7 @@ def whole_time_sequence(data,
                                                         (k[1], k[0]), 
                                                         25, 
                                                         (0,360))
-                    ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=.3)
+                    ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=.2)
                 elif centroids_labeling == 'vlines':
                     ax.vlines(k[0], 0, blurred.shape[0], color = cc, lw= 1.5)
 
