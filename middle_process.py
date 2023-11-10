@@ -990,9 +990,9 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
 
                     for j in matrix_:    
                         if loss == 'mae':
-                            tmp.append(np.abs(np.subtract(i[m, :], j[m, :])).nanmean())
+                            tmp.append(np.nanmean(np.abs(np.subtract(i[m, :], j[m, :]))))
                         elif loss == 'mse':
-                            tmp.append(np.square(np.subtract(i[m, :], j[m, :])).nanmean())
+                            tmp.append(np.nanmean(np.square(np.subtract(i[m, :], j[m, :]))))
 
                     tmp_m[n, :] = np.asarray(tmp)    
                 tmp_m_[m, :, :] = tmp_m
@@ -1024,9 +1024,9 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
                 tmp = []
                 for j in tmp_list[m]:    
                     if loss == 'mae':
-                        tmp.append(np.abs(np.subtract(i[:], j[:])).nanmean())
+                        tmp.append(np.nanmean(np.abs(np.subtract(i[:], j[:]))))
                     elif loss == 'mse':
-                        tmp.append(np.square(np.subtract(i[:], j[:])).nanmean())
+                        tmp.append(np.nanmean(np.square(np.subtract(i[:], j[:]))))
                 tmp_m.append(tmp)    
             tmp_m_.append(tmp_m)
             #print(np.shape(tmp_list))
