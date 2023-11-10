@@ -652,14 +652,16 @@ class Session:
             for i, ax in enumerate(axs):
                 count = row*columns + i
                 if count < len(mask):
-                    ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
+                    ax.set_ylim(np.nanmin(sig[cdi_select, :]) - (np.nanmax(sig[cdi_select]) - np.nanmin(sig[cdi_select]))*0.005, 
+                                np.nanmax(sig[cdi_select, :]) + (np.nanmax(sig[cdi_select]) - np.nanmin(sig[cdi_select]))*0.005)
                     if mask[count]==1:
                         color = 'b'
                     else:
                         color = 'r'
                     ax.plot(sig[count, :], color)
                     ax.set_title(blks[count])
-                    ax.errorbar(x, np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
+                    ax.errorbar(x, np.nanmean(sig[cdi_select, :], axis = 0), yerr=(np.nanstd(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), 
+                                fmt='--', color = 'k', elinewidth = 0.5)
                     ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     #ax.set_ylim(-0.002,0.002)
                 if row<len(subfigs)-2:
@@ -669,13 +671,14 @@ class Session:
                 elif row == len(subfigs)-1:
                     ax.axis('off')
                     ax_ = subfig.subplots(1, 1)
-                    ax_.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
+                    ax_.set_ylim(np.nanmin(sig[cdi_select, :]) - (np.nanmax(sig[cdi_select]) - np.nanmin(sig[cdi_select]))*0.005, 
+                                 np.nanmax(sig[cdi_select, :]) + (np.nanmax(sig[cdi_select]) - np.nanmin(sig[cdi_select]))*0.005)
                     for i in sig[cdi_select[:-1], :]:
                         ax_.plot(x, i, 'gray', linewidth = 0.5)
                     ax_.plot(x, sig[cdi_select[-1], :], 'gray', linewidth = 0.5, label = 'Trials')
-                    ax_.plot(x, np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
-                    ax_.plot(x, np.mean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
-                    ax_.plot(x, np.mean(sig, axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
+                    ax_.plot(x, np.nanmean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
+                    ax_.plot(x, np.nanmean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
+                    ax_.plot(x, np.nanmean(sig, axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
                     ax_.plot(x, blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 2)
                     #ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
                     ax_.legend(loc="upper left")                
