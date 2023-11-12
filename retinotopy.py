@@ -12,6 +12,474 @@ COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal']
 
 NAME_RETINO_ANALYSIS = 'AMnbStrokes_Retinotopic_Analysis'
 
+class RetinoSession(md.Session):
+        def __init__(self, 
+                     path_session, 
+                     path_md, 
+                     green_name,                   
+                     spatial_bin = 3,
+                     temporal_bin = 1,
+                     zero_frames = None,
+                     tolerance = 20,
+                     mov_switch=False,
+                     deblank_switch=False,
+                     conditions_id =None,
+                     chunks = 1,
+                     strategy = 'mae',
+                     logs_switch =False,  
+                     base_report_name= 'BaseReport.csv',
+                     base_head_dim = 19, 
+                     logger = None, 
+                     condid = None, 
+                     store_switch = False, 
+                     data_vis_switch = True, 
+                     end_frame = None,
+                     single_stroke_label = 'pos',
+                     multiple_stroke_label = 'am',
+                     time_course_window_dim = 10,
+                     window_dim = 150,
+                     acquisition_fq = 100,#Hz
+                     **kwargs):
+            #path_session, logs_switch = False, deblank_switch = False
+
+            super(RetinoSession, self).__init__(path_session, 
+                                                spatial_bin = 3,
+                                                temporal_bin = 1,
+                                                zero_frames = None,
+                                                tolerance = 20,
+                                                mov_switch=False,
+                                                deblank_switch=False,
+                                                conditions_id =None,
+                                                chunks = 1,
+                                                strategy = 'mae',
+                                                logs_switch =False,  
+                                                base_report_name= 'BaseReport.csv',
+                                                base_head_dim = 19, 
+                                                logger = None, 
+                                                condid = None, 
+                                                store_switch = False, 
+                                                data_vis_switch = True, 
+                                                end_frame = None, 
+                                                **kwargs)
+
+            if logger is None:
+                self.log = utils.setup_custom_logger('myapp')
+            else:
+                self.log = logger        
+    
+            self.cond_names = None
+            self.header = super().get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
+            # All blks names loaded
+            self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
+            # A blk loaded for useful hyperparameters
+            blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
+                                self.header['spatial_bin'], 
+                                self.header['temporal_bin'])
+            self.header['n_frames'] = blk.header['nframesperstim']
+            self.header['original_height'] = blk.header['frameheight']
+            self.header['original_width'] = blk.header['framewidth']
+            # Setting key frames
+            # End
+            if end_frame is None:
+                self.header['ending_frame'] = int(round(self.header['n_frames']*0.9))
+            else:
+                self.header['ending_frame'] = end_frame
+            # Start
+            if zero_frames is None:
+                self.header['zero_frames'] = int(round(self.header['n_frames']*0.2))
+            else:
+                self.header['zero_frames'] = zero_frames
+            print(self.header)
+            self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
+
+            if len(self.all_blks) == 0:
+                print('Check the path: no blks found')
+            
+            self.single_stroke_label = single_stroke_label
+            self.multiple_stroke_label = multiple_stroke_label
+            print(self.single_stroke_label, self.multiple_stroke_label)
+            self.path_session = path_session
+            self.path_md = path_md
+
+            # Corresponding single stroke for each AM condition
+            self.retino_pos_am = get_conditions_correspondance(self.path_session)
+            print(self.retino_pos_am)
+            # All the conditions    
+            self.cond_dict = super().get_condition_name()
+            self.cond_names = list(self.cond_dict.values())
+            # Extract blank condition id
+            self.blank_id = super().get_blank_id(cond_id=condid)
+            # Store all conditions
+            self.cond_dict_all = self.cond_dict
+            # Separated dictionaries, for AM and single pos conditions
+            self.cond_pos = self.get_conditions_pos()
+            self.cond_am = self.get_conditions_am()
+            # Pick only inserted conditions and corresponding single positions
+            self.cond_dict = self.get_conditions_intersect()
+            # Name condition extraction
+            self.cond_names = list(self.cond_dict.values())
+            print(str(self.cond_dict) + '\n')
+            print(f'Only picked conditions: {self.cond_dict}\n')
+            print(f'All session conditions: {self.cond_dict_all}\n')
+            self.acquisition_frequency = acquisition_fq
+
+            # Metadata stimulus
+            self.stimulus_metadata = get_stimulus_metadata(self.path_session) 
+
+            # Blank condition loading
+            # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
+            self.time_course_blank = None
+            self.f_f0_blank = None
+            self.stde_f_f0_blank = None           
+            self.blank_condition = None            
+            self.get_blank()
+            self.mean_blank = self.blank_condition.averaged_df
+            self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
+
+            self.id_name = get_session_id_name(self.path_session)
+            print('Session ID name: ' + self.id_name)
+            self.green = self.get_green(green_name)
+            self.mask = self.get_mask()
+
+            # Single centroid mask dimension
+            self.tc_window_dimension =  time_course_window_dim
+            self.window_dimension = window_dim
+
+            self.visualization_switch = data_vis_switch
+            self.storage_switch = store_switch
+    
+        # def get_condition_name(self):
+        #     self.cond_dict = super().get_condition_name()
+        #     print(self.single_stroke_label, self.multiple_stroke_label)
+        #     # Two dictionaries, for type of conditions -pos or am-
+        #     single_pos_conds = self.get_conditions_pos()
+        #     am_conds = self.get_conditions_am()
+
+        #     # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
+        #     return {**single_pos_conds, **am_conds}                           
+
+
+        def get_conditions_pos(self):
+            return {k: v for k,v in self.cond_dict.items() if self.single_stroke_label.lower() in v.lower()}
+
+
+        def get_conditions_am(self):
+            return {k: v for k,v in self.cond_dict.items() if (self.single_stroke_label.lower() not in v.lower()) and (v.lower() != 'blank')}
+
+
+        def get_conditions_intersect(self):
+            conditions_id = self.header['conditions_id']
+            print(f'The picked ID conditions are: {conditions_id}')
+            # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
+            am_conds = self.cond_am
+            single_conds = self.cond_pos
+            conds_full = {**single_conds, **am_conds}
+
+            # Intersect the set of all the conditions with the picked one in the parser
+            if conditions_id is not None:
+                # Manual insert of condition id by key number
+                conds = {k: v for k,v in conds_full.items() if k in conditions_id}
+                # Taking the picked condition names
+                conds_names = list(conds.values())
+                # Taking the am conditions ONLY
+                am_tmp = list(set(conds_names).intersection(set(am_conds.values())))
+                # Taking the single stroke conditions that make the AM
+                cond_t_list =  [j for v in am_tmp for j in self.retino_pos_am[v]]
+                # Considering a sum of single stroke that make the picked AMs and unifying them to the one immediately picked -w/o repetition- 
+                tmp = list(conds.values()) + cond_t_list
+                all_considered_conds = list(set(tmp))
+                # Rebuild dictionary with id as key and condition name as value
+                conds = {k: v for k,v in conds_full.items() if v in all_considered_conds}
+            else:
+                conds = conds_full
+            print(f'Conditions picked: {conds}')
+            return conds
+        
+        
+        def get_mask(self):
+            # Loading handmade mask
+            try:
+                mask = np.load(os.path.join(self.path_session, 'derivatives','handmade_mask.npy'))
+                (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
+                x_bnnd_size = x_size
+                y_bnnd_size = y_size
+                mask = mask[0:y_bnnd_size , 0:x_bnnd_size ]
+                print('Mask loaded succesfully!')
+
+            except:
+                print('No mask present in derivatives folder for session ' + self.id_name)
+                mask = None
+            return mask
+
+        def get_green(self, green_name):
+            try:
+                # Loading green
+                green_path = utils.find_thing(green_name, self.path_session)
+                green = cv.imread(green_path[0], cv.IMREAD_UNCHANGED)
+
+                # Resizing green
+                (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
+                x_bnnd_size = x_size
+                y_bnnd_size = y_size
+
+                tmp = cv.resize(np.array(green, dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
+                green_ = np.copy(tmp)
+                print('Green '+green_name+' loaded succesfully!')
+                return green_
+
+            except:
+                print('No green '+ green_name+ ' present in rawdata folder for session ' + self.id_name)   
+                return None
+
+
+        def get_blank(self):
+            #conds = list(session.cond_dict.keys())
+            path_md_files = os.path.join(self.path_md,'md_data')
+
+            # Blank condition loading
+            cd_blank = md.Condition()
+            try:
+                print(os.path.join(path_md_files, 'md_data_blank'))
+                cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
+                self.blank_condition = cd_blank
+                print('Blank condition loaded succesfully!\n')
+                #mean_blank = np.nanmean(cd_blank.averaged_df[:20, :,:], axis=0)
+                #std_blank = np.nanstd(cd_blank.averaged_df[:20, :,:], axis=0)/np.sqrt(np.shape(cd_blank.averaged_df)[0]) 
+            except:
+                print('Blank condition not found in ' + path_md_files+ '\n')
+                # In case of absence of the blank condition, it processes and stores it
+                self.storage_switch = True
+                self.visualization_switch = False
+                # It is gonna get the blank signal automatically
+                print('Processing blank signal\n')
+                _ = self.get_signal(self.blank_id)
+                self.storage_switch = False
+                cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
+                self.blank_condition = cd_blank
+                print('Blank condition loaded succesfully!\n')
+            return 
+        
+
+        def get_retinotopy(self,
+                           name_cond, 
+                           time_limits, 
+                           retinotopic_path_folder, 
+                           dict_retino):
+            print('Start processing retinotopy analysis for condition ' + name_cond )
+            start_time = datetime.datetime.now().replace(microsecond=0)
+
+            # Condition instance
+            cd = md.Condition()
+            # Loading or building the condition
+            try:
+                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
+                print('Condition ' + name_cond + ' loaded!\n')
+
+            except:
+                print('Condition ' + name_cond + ' not found\n')
+                self.storage_switch = True
+                self.visualization_switch = False
+                # It is gonna get the blank signal automatically
+                print('Processing ' + name_cond + ' signal\n')
+                id_cond = [k for k, v in self.cond_dict_all.items() if v == name_cond][0]
+                _ = self.get_signal(id_cond)
+                self.storage_switch = False
+                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
+                print('Condition ' + name_cond + ' loaded!\n')
+            colrs = []
+            # Single stroke condition
+            if name_cond in list(self.cond_pos.values()):
+                # Try to check if retino_cond already exists
+                try:
+                    retino_cond = Retinotopy(self.path_session)
+                    retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
+                # If does not, it build it
+                except:
+                    retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
+                    # Store single stroke condition
+                    dict_retino[name_cond] = retino_cond
+                    # Extract visualization utility variables
+                    indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
+                    colrs.append(dv.COLORS_7[indeces_colors])
+    #                g_centers = [retino_cond.retino_pos]
+                    # If true, store pictures
+                    if self.visualization_switch:
+                        self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
+                    # If true store variables
+                    if self.storage_switch:
+                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+            
+            # Multiple stroke condition
+            elif name_cond in list(self.cond_am.values()):
+                # Storing variable
+                dict_retino[name_cond] = dict()
+                for i, j in enumerate(self.retino_pos_am[name_cond]):
+                    print('The stroke ' +j+f' is the number {i}')
+                    retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, str_type = 'multiple stroke')
+                    # Store single stroke within AM
+                    dict_retino[name_cond][j] = retino_cond
+                    # Extract visualization utility variables
+                    #indeces_colors =[list(dict_retino.keys()).index(k) for k in self.retino_pos_am[name_cond]]
+                    #g_centers = [dict_retino[k] for k in self.retino_pos_am[name_cond]]
+                    indeces_colors =[list(self.cond_pos.values()).index(j)][0]
+                    colrs.append(dv.COLORS_7[indeces_colors])
+#                    g_centers.append(dict_retino[j].retino_pos)
+                    # If true store variables
+                    if self.storage_switch:
+                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j))
+                # If true, store pictures
+                if self.visualization_switch:
+                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
+            print('End processing retinotopy analysis for condition ' + name_cond )
+            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')            
+            return dict_retino
+        
+
+        def get_retino_session(self):
+            start_time = datetime.datetime.now().replace(microsecond=0)
+            # Create Retinotopic Analysis folder path
+            retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(NAME_RETINO_ANALYSIS))
+            print('Retino session for data session ' + self.id_name + ' start to process...\n')                                            
+            # Storing variable
+            dict_retino = dict()
+            for cond_id, cond_name in self.cond_dict.items():
+                dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
+            print('Retino session elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')                                
+            return
+
+
+        def get_stroke_retinotopy(self,
+                                  name_cond,
+                                  time_limits, 
+                                  cd,
+                                  stroke_number = None,
+                                  str_type = 'single stroke'):
+
+            start_time = datetime.datetime.now().replace(microsecond=0)
+
+            if str_type == 'multiple stroke':
+                a = self.stimulus_metadata['pos metadata']
+                space_step = a[name_cond]['inter stimulus space']
+                starting_time = a[name_cond]['start'] #In frames
+                time_step = np.ceil((1/self.stimulus_metadata['speed'])*space_step*self.acquisition_frequency)
+                time_step = int(time_step) # In frames                  
+                print(f'The interstimulus space is {space_step}, for a starting time of {starting_time}\n')                                     
+                print(f'Frame step between the appearance of one stroke and the other: {time_step}')  
+
+            # dF/F0 of only autoselected trials 
+            df = md.get_selected(cd.df_fz, cd.autoselection)
+            avr_df = np.mean(df, axis = 0)
+
+            # COUNTERCHECK THIS BLANK 
+            mean_blank = np.nanmean(self.mean_blank, axis = 0)
+            z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
+
+            # Instance retinotopy object: single stroke
+            r = Retinotopy(self.path_session,
+                           cond_name = name_cond,
+                           name = self.id_name + '_cond_' +name_cond, 
+                           session_name = self.id_name,
+                           signal = z_s,
+                           mask = self.mask,
+                           green = self.green,
+                           stroke_type = str_type)
+
+            if (time_limits is not None):
+                r.time_limits = time_limits                                 
+
+            #z_s = process.zeta_score(cd_pos3.averaged_df, None, None, full_seq = True)
+            # Blob and centroids extraction
+            if str_type == 'multiple stroke':
+                begin_time = r.time_limits[0]+ starting_time+stroke_number*time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*time of occurrence of the stroke
+                end_time = r.time_limits[0]+ starting_time+stroke_number*time_step+time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
+                foi = ((0, time_step))
+            else:
+                begin_time = r.time_limits[0]
+                end_time = r.time_limits[1]
+                foi = None
+
+            print(f'Begin and end frames are: {(begin_time, end_time)}')
+
+            _, blurred, blobs, centroids, norm_centroids, z_s, _ = r.single_seq_retinotopy(avr_df, 
+                                                                                           None, None,
+                                                                                           begin_time,
+                                                                                           end_time,
+                                                                                           sig_blank = mean_blank,
+                                                                                           std_blank = self.std_blank,
+                                                                                           lim_blob_detect = 70)
+
+            r.blob = blobs
+            r.retino_pos = centroids[0]
+            print(f'Retinotopic averaged position at: {r.retino_pos}')
+            #min_bord = np.nanpercentile(blurred, 15)
+            #max_bord = np.nanpercentile(blurred, 98)
+            blurred[~r.mask] = np.NAN
+            r.map = blurred
+
+            #dv.whole_time_sequence(z_s, mask = multiple_stroke.mask, max=85, min=15, n_columns=3, global_cntrds = [multiple_stroke.retino_pos], colors_centr = ['magenta'])
+
+
+            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+
+
+            print(f'Shape of signal for single trial extracting centroids: {df.shape}\n')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+            print(f'Centroids and dimension of windows: {(r.retino_pos, self.window_dimension)}\n')
+            print(r.retino_pos, self.window_dimension, begin_time, end_time)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+            pos_single_trials_data = [r.single_seq_retinotopy(i, 
+                                                              r.retino_pos,
+                                                              self.window_dimension, 
+                                                              begin_time,
+                                                              end_time,
+                                                              df_f0_foi = foi,
+                                                              sig_blank = mean_blank,
+                                                              std_blank = self.std_blank,
+                                                              lim_blob_detect = 70) for i in df] 
+
+            # Storing distribution of points
+            pos_centroids = list(list(zip(*pos_single_trials_data))[0])
+            r.distribution_positions = list(zip(*pos_centroids))
+            return r
+
+        def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino):
+            if name_cond in list(self.cond_pos.values()):
+                col_distr = colrs
+                dv.whole_time_sequence(dict_retino[name_cond].signal, 
+                                    mask = dict_retino[name_cond].mask,
+                                    name='z_sequence_'+ name_cond + self.id_name, 
+                                    max=80, min=20,
+                                    handle_lims_blobs = ((97.72, 100)),
+                                    #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
+                                    global_cntrds = [dict_retino[name_cond].retino_pos],
+                                    colors_centr = colrs,
+                                    name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                # Parameters for heatmap plotting
+                min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
+                max_bord = np.nanpercentile(dict_retino[name_cond].map, 98)
+                # Averaged hetmap plot
+                dv.plot_averaged_map(name_cond, dict_retino[name_cond], dict_retino[name_cond].map, dict_retino[name_cond].retino_pos, min_bord, max_bord, colrs, self.id_name, colrs, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
+            elif name_cond in list(self.cond_am.values()):
+                if len(list(self.retino_pos_am[name_cond])) <3:
+                    col_distr = COLORS_STROKE_WITHIN_AM[0]
+                else:
+                    col_distr = COLORS_STROKE_WITHIN_AM[1]
+                for c, name_pos in enumerate(list(self.retino_pos_am[name_cond])):
+                    # Parameters for heatmap plotting
+                    min_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 15)
+                    max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
+                    # Averaged hetmap plot
+                    dv.plot_averaged_map(name_cond+name_pos, dict_retino[name_cond][name_pos], dict_retino[name_cond][name_pos].map, dict_retino[name_pos].retino_pos, min_bord, max_bord, [colrs[c]], self.id_name, col_distr, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
+                # Zscore
+                dv.whole_time_sequence(dict_retino[name_cond][name_pos].signal, 
+                                       mask = dict_retino[name_cond][name_pos].mask,
+                                       name='z_sequence_'+ name_cond + self.id_name, 
+                                       max=80, min=20,
+                                       handle_lims_blobs = ((97.72, 100)),
+                                       #significant_thresh = np.percentile(dict_retino[name_cond][name_pos].signal, 97.72), 
+                                       global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
+                                       colors_centr = colrs,
+                                       name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                return
+
 class Retinotopy:
     def __init__(self, 
                  session_path,
@@ -629,478 +1097,7 @@ def distribution_coords_normalize(points_distribution, unity, center, rotation_t
     y_dva_rotated = [(i-center[1])/unity for i in y_to_normalize]    
     
     return x_dva_rotated, y_dva_rotated
-
-
-
-class RetinoSession(md.Session):
-        def __init__(self, 
-                     path_session, 
-                     path_md, 
-                     green_name,                   
-                     spatial_bin = 3,
-                     temporal_bin = 1,
-                     zero_frames = None,
-                     tolerance = 20,
-                     mov_switch=False,
-                     deblank_switch=False,
-                     conditions_id =None,
-                     chunks = 1,
-                     strategy = 'mae',
-                     logs_switch =False,  
-                     base_report_name= 'BaseReport.csv',
-                     base_head_dim = 19, 
-                     logger = None, 
-                     condid = None, 
-                     store_switch = False, 
-                     data_vis_switch = True, 
-                     end_frame = None,
-                     single_stroke_label = 'pos',
-                     multiple_stroke_label = 'am',
-                     time_course_window_dim = 10,
-                     window_dim = 150,
-                     acquisition_fq = 100,#Hz
-                     **kwargs):
-            #path_session, logs_switch = False, deblank_switch = False
-
-            super(RetinoSession, self).__init__(path_session, 
-                                                spatial_bin = 3,
-                                                temporal_bin = 1,
-                                                zero_frames = None,
-                                                tolerance = 20,
-                                                mov_switch=False,
-                                                deblank_switch=False,
-                                                conditions_id =None,
-                                                chunks = 1,
-                                                strategy = 'mae',
-                                                logs_switch =False,  
-                                                base_report_name= 'BaseReport.csv',
-                                                base_head_dim = 19, 
-                                                logger = None, 
-                                                condid = None, 
-                                                store_switch = False, 
-                                                data_vis_switch = True, 
-                                                end_frame = None, 
-                                                **kwargs)
-
-            if logger is None:
-                self.log = utils.setup_custom_logger('myapp')
-            else:
-                self.log = logger        
-    
-            self.cond_names = None
-            self.header = super().get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
-            # All blks names loaded
-            self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
-            # A blk loaded for useful hyperparameters
-            blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
-                                self.header['spatial_bin'], 
-                                self.header['temporal_bin'])
-            self.header['n_frames'] = blk.header['nframesperstim']
-            self.header['original_height'] = blk.header['frameheight']
-            self.header['original_width'] = blk.header['framewidth']
-            # Setting key frames
-            # End
-            if end_frame is None:
-                self.header['ending_frame'] = int(round(self.header['n_frames']*0.9))
-            else:
-                self.header['ending_frame'] = end_frame
-            # Start
-            if zero_frames is None:
-                self.header['zero_frames'] = int(round(self.header['n_frames']*0.2))
-            else:
-                self.header['zero_frames'] = zero_frames
-            print(self.header)
-            self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
-
-            if len(self.all_blks) == 0:
-                print('Check the path: no blks found')
-            
-            self.single_stroke_label = single_stroke_label
-            self.multiple_stroke_label = multiple_stroke_label
-            print(self.single_stroke_label, self.multiple_stroke_label)
-            self.path_session = path_session
-            self.path_md = path_md
-
-            # Corresponding single stroke for each AM condition
-            self.retino_pos_am = get_conditions_correspondance(self.path_session)
-            print(self.retino_pos_am)
-            # All the conditions    
-            self.cond_dict = super().get_condition_name()
-            self.cond_names = list(self.cond_dict.values())
-            # Extract blank condition id
-            self.blank_id = super().get_blank_id(cond_id=condid)
-            # Store all conditions
-            self.cond_dict_all = self.cond_dict
-            # Separated dictionaries, for AM and single pos conditions
-            self.cond_pos = self.get_conditions_pos()
-            self.cond_am = self.get_conditions_am()
-            # Pick only inserted conditions and corresponding single positions
-            self.cond_dict = self.get_conditions_intersect()
-            # Name condition extraction
-            self.cond_names = list(self.cond_dict.values())
-            print(str(self.cond_dict) + '\n')
-            print(f'Only picked conditions: {self.cond_dict}\n')
-            print(f'All session conditions: {self.cond_dict_all}\n')
-            self.acquisition_frequency = acquisition_fq
-
-            # Metadata stimulus
-            self.stimulus_metadata = get_stimulus_metadata(self.path_session) 
-
-            # Blank condition loading
-            # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
-            self.time_course_blank = None
-            self.f_f0_blank = None
-            self.stde_f_f0_blank = None           
-            self.blank_condition = None            
-            self.get_blank()
-            self.mean_blank = self.blank_condition.averaged_df
-            self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
-
-            self.id_name = get_session_id_name(self.path_session)
-            print('Session ID name: ' + self.id_name)
-            self.green = self.get_green(green_name)
-            self.mask = self.get_mask()
-
-            # Single centroid mask dimension
-            self.tc_window_dimension =  time_course_window_dim
-            self.window_dimension = window_dim
-
-            self.visualization_switch = data_vis_switch
-            self.storage_switch = store_switch
-    
-        # def get_condition_name(self):
-        #     self.cond_dict = super().get_condition_name()
-        #     print(self.single_stroke_label, self.multiple_stroke_label)
-        #     # Two dictionaries, for type of conditions -pos or am-
-        #     single_pos_conds = self.get_conditions_pos()
-        #     am_conds = self.get_conditions_am()
-
-        #     # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
-        #     return {**single_pos_conds, **am_conds}                           
-
-
-        def get_conditions_pos(self):
-            return {k: v for k,v in self.cond_dict.items() if self.single_stroke_label.lower() in v.lower()}
-
-
-        def get_conditions_am(self):
-            return {k: v for k,v in self.cond_dict.items() if (self.single_stroke_label.lower() not in v.lower()) and (v.lower() != 'blank')}
-
-
-        def get_conditions_intersect(self):
-            conditions_id = self.header['conditions_id']
-            print(f'The picked ID conditions are: {conditions_id}')
-            # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
-            am_conds = self.cond_am
-            single_conds = self.cond_pos
-            conds_full = {**single_conds, **am_conds}
-
-            # Intersect the set of all the conditions with the picked one in the parser
-            if conditions_id is not None:
-                # Manual insert of condition id by key number
-                conds = {k: v for k,v in conds_full.items() if k in conditions_id}
-                # Taking the picked condition names
-                conds_names = list(conds.values())
-                # Taking the am conditions ONLY
-                am_tmp = list(set(conds_names).intersection(set(am_conds.values())))
-                # Taking the single stroke conditions that make the AM
-                cond_t_list =  [j for v in am_tmp for j in self.retino_pos_am[v]]
-                # Considering a sum of single stroke that make the picked AMs and unifying them to the one immediately picked -w/o repetition- 
-                tmp = list(conds.values()) + cond_t_list
-                all_considered_conds = list(set(tmp))
-                # Rebuild dictionary with id as key and condition name as value
-                conds = {k: v for k,v in conds_full.items() if v in all_considered_conds}
-            else:
-                conds = conds_full
-            print(f'Conditions picked: {conds}')
-            return conds
-        
-        
-        def get_mask(self):
-            # Loading handmade mask
-            try:
-                mask = np.load(os.path.join(self.path_session, 'derivatives','handmade_mask.npy'))
-                (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
-                x_bnnd_size = x_size
-                y_bnnd_size = y_size
-                mask = mask[0:y_bnnd_size , 0:x_bnnd_size ]
-                print('Mask loaded succesfully!')
-
-            except:
-                print('No mask present in derivatives folder for session ' + self.id_name)
-                mask = None
-            return mask
-
-        def get_green(self, green_name):
-            try:
-                # Loading green
-                green_path = utils.find_thing(green_name, self.path_session)
-                green = cv.imread(green_path[0], cv.IMREAD_UNCHANGED)
-
-                # Resizing green
-                (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
-                x_bnnd_size = x_size
-                y_bnnd_size = y_size
-
-                tmp = cv.resize(np.array(green, dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
-                green_ = np.copy(tmp)
-                print('Green '+green_name+' loaded succesfully!')
-                return green_
-
-            except:
-                print('No green '+ green_name+ ' present in rawdata folder for session ' + self.id_name)   
-                return None
-
-
-        def get_blank(self):
-            #conds = list(session.cond_dict.keys())
-            path_md_files = os.path.join(self.path_md,'md_data')
-
-            # Blank condition loading
-            cd_blank = md.Condition()
-            try:
-                print(os.path.join(path_md_files, 'md_data_blank'))
-                cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
-                self.blank_condition = cd_blank
-                print('Blank condition loaded succesfully!\n')
-                #mean_blank = np.nanmean(cd_blank.averaged_df[:20, :,:], axis=0)
-                #std_blank = np.nanstd(cd_blank.averaged_df[:20, :,:], axis=0)/np.sqrt(np.shape(cd_blank.averaged_df)[0]) 
-            except:
-                print('Blank condition not found in ' + path_md_files+ '\n')
-                # In case of absence of the blank condition, it processes and stores it
-                self.storage_switch = True
-                self.visualization_switch = False
-                # It is gonna get the blank signal automatically
-                print('Processing blank signal\n')
-                _ = self.get_signal(self.blank_id)
-                self.storage_switch = False
-                cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
-                self.blank_condition = cd_blank
-                print('Blank condition loaded succesfully!\n')
-            return 
-        
-
-        def get_retinotopy(self,
-                           name_cond, 
-                           time_limits, 
-                           retinotopic_path_folder, 
-                           dict_retino):
-            print('Start processing retinotopy analysis for condition ' + name_cond )
-            start_time = datetime.datetime.now().replace(microsecond=0)
-
-            # Condition instance
-            cd = md.Condition()
-            # Loading or building the condition
-            try:
-                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
-                print('Condition ' + name_cond + ' loaded!\n')
-
-            except:
-                print('Condition ' + name_cond + ' not found\n')
-                self.storage_switch = True
-                self.visualization_switch = False
-                # It is gonna get the blank signal automatically
-                print('Processing ' + name_cond + ' signal\n')
-                id_cond = [k for k, v in self.cond_dict_all.items() if v == name_cond][0]
-                _ = self.get_signal(id_cond)
-                self.storage_switch = False
-                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
-                print('Condition ' + name_cond + ' loaded!\n')
-            colrs = []
-            # Single stroke condition
-            if name_cond in list(self.cond_pos.values()):
-                # Try to check if retino_cond already exists
-                try:
-                    retino_cond = Retinotopy(self.path_session)
-                    retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
-                # If does not, it build it
-                except:
-                    retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
-                    # Store single stroke condition
-                    dict_retino[name_cond] = retino_cond
-                    # Extract visualization utility variables
-                    indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
-                    colrs.append(dv.COLORS_7[indeces_colors])
-    #                g_centers = [retino_cond.retino_pos]
-                    # If true, store pictures
-                    if self.visualization_switch:
-                        self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
-                    # If true store variables
-                    if self.storage_switch:
-                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
-            
-            # Multiple stroke condition
-            elif name_cond in list(self.cond_am.values()):
-                # Storing variable
-                dict_retino[name_cond] = dict()
-                for i, j in enumerate(self.retino_pos_am[name_cond]):
-                    print('The stroke ' +j+f' is the number {i}')
-                    retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, str_type = 'multiple stroke')
-                    # Store single stroke within AM
-                    dict_retino[name_cond][j] = retino_cond
-                    # Extract visualization utility variables
-                    #indeces_colors =[list(dict_retino.keys()).index(k) for k in self.retino_pos_am[name_cond]]
-                    #g_centers = [dict_retino[k] for k in self.retino_pos_am[name_cond]]
-                    indeces_colors =[list(self.cond_pos.values()).index(j)][0]
-                    colrs.append(dv.COLORS_7[indeces_colors])
-#                    g_centers.append(dict_retino[j].retino_pos)
-                    # If true store variables
-                    if self.storage_switch:
-                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j))
-                # If true, store pictures
-                if self.visualization_switch:
-                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
-            print('End processing retinotopy analysis for condition ' + name_cond )
-            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')            
-            return dict_retino
-        
-
-        def get_retino_session(self):
-            start_time = datetime.datetime.now().replace(microsecond=0)
-            # Create Retinotopic Analysis folder path
-            retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(NAME_RETINO_ANALYSIS))
-            print('Retino session for data session ' + self.id_name + ' start to process...\n')                                            
-            # Storing variable
-            dict_retino = dict()
-            for cond_id, cond_name in self.cond_dict.items():
-                dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
-            print('Retino session elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')                                
-            return
-
-
-        def get_stroke_retinotopy(self,
-                                  name_cond,
-                                  time_limits, 
-                                  cd,
-                                  stroke_number = None,
-                                  str_type = 'single stroke'):
-
-            start_time = datetime.datetime.now().replace(microsecond=0)
-
-            if str_type == 'multiple stroke':
-                a = self.stimulus_metadata['pos metadata']
-                space_step = a[name_cond]['inter stimulus space']
-                starting_time = a[name_cond]['start'] #In frames
-                time_step = np.ceil((1/self.stimulus_metadata['speed'])*space_step*self.acquisition_frequency)
-                time_step = int(time_step) # In frames                  
-                print(f'The interstimulus space is {space_step}, for a starting time of {starting_time}\n')                                     
-                print(f'Frame step between the appearance of one stroke and the other: {time_step}')  
-
-            # dF/F0 of only autoselected trials 
-            df = md.get_selected(cd.df_fz, cd.autoselection)
-            avr_df = np.mean(df, axis = 0)
-
-            # COUNTERCHECK THIS BLANK 
-            mean_blank = np.nanmean(self.mean_blank, axis = 0)
-            z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
-
-            # Instance retinotopy object: single stroke
-            r = Retinotopy(self.path_session,
-                           cond_name = name_cond,
-                           name = self.id_name + '_cond_' +name_cond, 
-                           session_name = self.id_name,
-                           signal = z_s,
-                           mask = self.mask,
-                           green = self.green,
-                           stroke_type = str_type)
-
-            if (time_limits is not None):
-                r.time_limits = time_limits                                 
-
-            #z_s = process.zeta_score(cd_pos3.averaged_df, None, None, full_seq = True)
-            # Blob and centroids extraction
-            if str_type == 'multiple stroke':
-                begin_time = r.time_limits[0]+ starting_time+stroke_number*time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*time of occurrence of the stroke
-                end_time = r.time_limits[0]+ starting_time+stroke_number*time_step+time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
-                foi = ((0, time_step))
-            else:
-                begin_time = r.time_limits[0]
-                end_time = r.time_limits[1]
-                foi = None
-
-            print(f'Begin and end frames are: {(begin_time, end_time)}')
-
-            _, blurred, blobs, centroids, norm_centroids, z_s, _ = r.single_seq_retinotopy(avr_df, 
-                                                                                           None, None,
-                                                                                           begin_time,
-                                                                                           end_time,
-                                                                                           sig_blank = mean_blank,
-                                                                                           std_blank = self.std_blank,
-                                                                                           lim_blob_detect = 70)
-
-            r.blob = blobs
-            r.retino_pos = centroids[0]
-            print(f'Retinotopic averaged position at: {r.retino_pos}')
-            #min_bord = np.nanpercentile(blurred, 15)
-            #max_bord = np.nanpercentile(blurred, 98)
-            blurred[~r.mask] = np.NAN
-            r.map = blurred
-
-            #dv.whole_time_sequence(z_s, mask = multiple_stroke.mask, max=85, min=15, n_columns=3, global_cntrds = [multiple_stroke.retino_pos], colors_centr = ['magenta'])
-
-
-            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
-
-
-            print(f'Shape of signal for single trial extracting centroids: {df.shape}\n')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-            print(f'Centroids and dimension of windows: {(r.retino_pos, self.window_dimension)}\n')
-            print(r.retino_pos, self.window_dimension, begin_time, end_time)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
-            pos_single_trials_data = [r.single_seq_retinotopy(i, 
-                                                              r.retino_pos,
-                                                              self.window_dimension, 
-                                                              begin_time,
-                                                              end_time,
-                                                              df_f0_foi = foi,
-                                                              sig_blank = mean_blank,
-                                                              std_blank = self.std_blank,
-                                                              lim_blob_detect = 70) for i in df] 
-
-            # Storing distribution of points
-            pos_centroids = list(list(zip(*pos_single_trials_data))[0])
-            r.distribution_positions = list(zip(*pos_centroids))
-            return r
-
-        def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino):
-            if name_cond in list(self.cond_pos.values()):
-                col_distr = colrs
-                dv.whole_time_sequence(dict_retino[name_cond].signal, 
-                                    mask = dict_retino[name_cond].mask,
-                                    name='z_sequence_'+ name_cond + self.id_name, 
-                                    max=80, min=20,
-                                    handle_lims_blobs = ((97.72, 100)),
-                                    #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
-                                    global_cntrds = [dict_retino[name_cond].retino_pos],
-                                    colors_centr = colrs,
-                                    name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
-                # Parameters for heatmap plotting
-                min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
-                max_bord = np.nanpercentile(dict_retino[name_cond].map, 98)
-                # Averaged hetmap plot
-                dv.plot_averaged_map(name_cond, dict_retino[name_cond], dict_retino[name_cond].map, dict_retino[name_cond].retino_pos, min_bord, max_bord, colrs, self.id_name, colrs, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
-            elif name_cond in list(self.cond_am.values()):
-                if len(list(self.retino_pos_am[name_cond])) <3:
-                    col_distr = COLORS_STROKE_WITHIN_AM[0]
-                else:
-                    col_distr = COLORS_STROKE_WITHIN_AM[1]
-                for c, name_pos in enumerate(list(self.retino_pos_am[name_cond])):
-                    # Parameters for heatmap plotting
-                    min_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 15)
-                    max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
-                    # Averaged hetmap plot
-                    dv.plot_averaged_map(name_cond+name_pos, dict_retino[name_cond][name_pos], dict_retino[name_cond][name_pos].map, dict_retino[name_pos].retino_pos, min_bord, max_bord, [colrs[c]], self.id_name, col_distr, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
-                # Zscore
-                dv.whole_time_sequence(dict_retino[name_cond][name_pos].signal, 
-                                       mask = dict_retino[name_cond][name_pos].mask,
-                                       name='z_sequence_'+ name_cond + self.id_name, 
-                                       max=80, min=20,
-                                       handle_lims_blobs = ((97.72, 100)),
-                                       #significant_thresh = np.percentile(dict_retino[name_cond][name_pos].signal, 97.72), 
-                                       global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
-                                       colors_centr = colrs,
-                                       name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
-                return
-            
-                        
+                
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')
 

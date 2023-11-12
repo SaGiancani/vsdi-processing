@@ -1,7 +1,6 @@
 import datetime
 import numpy as np
 from scipy.interpolate import interp1d
-import retinotopy as retino
 
 
 def linear_extrapolation(signal, stop, start = 0):
@@ -22,17 +21,17 @@ def linear_extrapolation(signal, stop, start = 0):
     ndarray: The extrapolated 3D data cube with the same shape as the input.
     """
     # assert len(signal) != 3, 'Datacube required'
-    if len(signal) == 3:
+    if len(signal.shape) == 3:
         time, space_y, space_x = signal.shape
         fitted_cube = np.empty((time, space_y, space_x))
         for i in range(space_y):
             for j in range(space_x):
-                tmp = retino.get_trajectory(np.arange(start, stop, 1), signal[start:stop, i, j], (0, time))
+                tmp = get_trajectory(np.arange(start, stop, 1), signal[start:stop, i, j], (0, time))
                 fitted_cube[:, i, j] = tmp[1]
-    elif (len(signal) == 1) or ((len(signal) >10)):
+    elif (len(signal.shape) == 1) or ((len(signal.shape) >10)):
         data_bins = signal.shape[0]
         fitted_cube = np.empty((data_bins))
-        tmp = retino.get_trajectory(np.arange(start, stop, 1), signal[start:stop], (0, data_bins))
+        tmp = get_trajectory(np.arange(start, stop, 1), signal[start:stop], (0, data_bins))
 
     return fitted_cube
 
@@ -103,6 +102,24 @@ def linear_fitting_filtering(raw_data_per_trial, mask):
 
     print('Fitting by pixel performed in ' + str(datetime.datetime.now().replace(microsecond=0) - start_time) + '!\n')
     return fittedY
+
+def get_trajectory(xs, ys, limits):
+    """
+    Get a trajectory by fitting a line to data points and resampling it.
+
+    Args:
+    xs (array-like): X-coordinates of the data points.
+    ys (array-like): Y-coordinates of the data points.
+    limits (tuple): A tuple containing the start and end limits for resampling.
+
+    Returns:
+    tuple: A tuple containing the resampled X and Y coordinates of the fitted trajectory.
+    """
+    xs_to_fit =  np.round(np.linspace(limits[0], limits[1]-1, limits[1]-limits[0])) 
+    ys_to_fit = np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs_to_fit))
+    #ys_fitted = [int(round(np.interp(i, xs_to_fit, ys_to_fit))) for i in xs_fitted]
+    return xs_to_fit, ys_to_fit
+
 
 def get_template(detrended_data, 
                  data_heart_beat, 
