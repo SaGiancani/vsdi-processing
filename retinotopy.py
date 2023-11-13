@@ -8,7 +8,7 @@ import process_vsdi as process
 
 from scipy.ndimage.filters import gaussian_filter
 
-COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal']
+COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal', 'orange', 'lime']
 
 NAME_RETINO_ANALYSIS = 'AMnbStrokes_Retinotopic_Analysis'
 

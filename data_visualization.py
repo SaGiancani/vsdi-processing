@@ -14,7 +14,7 @@ from scipy.stats import norm
 
 STORAGE_PATH = '/envau/work/neopto/USERS/GIANCANI/Analysis/'
 
-COLORS_7 = ['crimson', 'tomato', 'magenta', 'darkorange', 'burlywood', 'palevioletred', 'chocolate']
+COLORS_7 = ['crimson', 'tomato', 'magenta', 'darkorange', 'burlywood', 'palevioletred', 'chocolate', 'black', 'white', 'gray']
 
 def set_storage_folder(storage_path = STORAGE_PATH, name_analysis = 'prova'):    
     folder_path = os.path.join(storage_path, name_analysis)               
