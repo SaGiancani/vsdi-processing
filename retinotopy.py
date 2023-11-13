@@ -108,7 +108,7 @@ class RetinoSession(md.Session):
             self.cond_dict = super().get_condition_name()
             self.cond_names = list(self.cond_dict.values())
             # Extract blank condition id
-            self.blank_id = super().get_blank_id(cond_id=condid)
+            self.blank_id = md.get_blank_id(cond_id=condid)
             # Store all conditions
             self.cond_dict_all = self.cond_dict
             # Separated dictionaries, for AM and single pos conditions
@@ -368,7 +368,7 @@ class RetinoSession(md.Session):
 
             # dF/F0 of only autoselected trials 
             df = md.get_selected(cd.df_fz, cd.autoselection)
-            avr_df = np.mean(df, axis = 0)
+            avr_df = np.nanmean(df, axis = 0)
 
             # COUNTERCHECK THIS BLANK 
             mean_blank = np.nanmean(self.mean_blank, axis = 0)
