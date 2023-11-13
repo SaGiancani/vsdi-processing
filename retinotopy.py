@@ -340,6 +340,7 @@ class RetinoSession(md.Session):
             # Create Retinotopic Analysis folder path
             retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(NAME_RETINO_ANALYSIS))
             print('Retino session for data session ' + self.id_name + ' start to process...\n')                                            
+            print('Data are gonna be stored at ' + retinotopic_path_folder+ '\n')                                            
             # Storing variable
             dict_retino = dict()
             for cond_id, cond_name in self.cond_dict.items():
