@@ -452,6 +452,7 @@ class RetinoSession(md.Session):
                                     #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
                                     global_cntrds = [dict_retino[name_cond].retino_pos],
                                     colors_centr = colrs,
+                                    ext='png',
                                     name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
                 # Parameters for heatmap plotting
                 min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
@@ -478,6 +479,7 @@ class RetinoSession(md.Session):
                                        #significant_thresh = np.percentile(dict_retino[name_cond][name_pos].signal, 97.72), 
                                        global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
                                        colors_centr = colrs,
+                                       ext='png',
                                        name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
                 return
 
