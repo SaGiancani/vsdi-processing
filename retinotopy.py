@@ -108,7 +108,7 @@ class RetinoSession(md.Session):
             self.cond_dict = super().get_condition_name()
             self.cond_names = list(self.cond_dict.values())
             # Extract blank condition id
-            self.blank_id = md.get_blank_id(cond_id=condid)
+            self.blank_id = md.get_blank_id(self.cond_names, cond_id=condid)
             # Store all conditions
             self.cond_dict_all = self.cond_dict
             # Separated dictionaries, for AM and single pos conditions
