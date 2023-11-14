@@ -351,7 +351,7 @@ def whole_time_sequence(data,
                         name_analysis_ = 'RetinotopicPositions',
                         max_bord = None,
                         min_bord = None,
-                        ext= 'svg',
+                        ext= 'png',
                         mappa = utils.PARULA_MAP,
                         titles = None,
                         pixel_spacing = None,
@@ -529,10 +529,12 @@ def whole_time_sequence(data,
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         #plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
-        plt.savefig(os.path.join(tmp, name + '.png'), format = 'png', dpi =500)
+        os.system('/usr/bin/sync')
+        plt.savefig(os.path.join(tmp, name + '.'+ext), format = 'png', dpi =500)
+        os.system('/usr/bin/sync')
         plt.rc('figure', max_open_warning = 0)
         plt.rcParams.update({'font.size': 12})
-        plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
+        # plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
         #plt.savefig(os.path.join(tmp, 'Bretz_pos2inAM3_SingleTrial_distrib' + '.pdf'), format='pdf', dpi =500)
         print(name + ext+ ' stored successfully!')
     #else:
