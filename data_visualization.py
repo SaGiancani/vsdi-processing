@@ -529,9 +529,9 @@ def whole_time_sequence(data,
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         #plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
-        os.system('/usr/bin/sync')
+        print(os.system('/usr/bin/sync'))
         plt.savefig(os.path.join(tmp, name + '.'+ext), format = 'png', dpi =500)
-        os.system('/usr/bin/sync')
+        print(os.system('/usr/bin/sync'))
         plt.rc('figure', max_open_warning = 0)
         plt.rcParams.update({'font.size': 12})
         # plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
