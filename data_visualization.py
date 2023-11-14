@@ -623,8 +623,8 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
     if store_pic:
         # Storing picture
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)#os.path.join(name_analysis_, ID_NAME, v))
-        plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.svg'))
-        print('averagedheatmap_' +name_cond+ '.svg'+ ' stored successfully!')
+        # plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.svg'))
+        # print('averagedheatmap_' +name_cond+ '.svg'+ ' stored successfully!')
         plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.png'))
         plt.close('all')
     else:
