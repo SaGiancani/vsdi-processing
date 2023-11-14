@@ -373,6 +373,7 @@ class RetinoSession(md.Session):
 
             # COUNTERCHECK THIS BLANK 
             mean_blank = np.nanmean(self.mean_blank, axis = 0)
+            print(f'The blank employed in the zscore has shape {mean_blank.shape}')
             z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
 
             # Instance retinotopy object: single stroke
@@ -411,7 +412,7 @@ class RetinoSession(md.Session):
 
             r.blob = blobs
             r.retino_pos = centroids[0]
-            print(f'Retinotopic averaged position at: {r.retino_pos}')
+            print(f'Retinotopic averaged position at: {r.retino_pos}\n')
             #min_bord = np.nanpercentile(blurred, 15)
             #max_bord = np.nanpercentile(blurred, 98)
             blurred[~r.mask] = np.NAN
@@ -420,7 +421,7 @@ class RetinoSession(md.Session):
             #dv.whole_time_sequence(z_s, mask = multiple_stroke.mask, max=85, min=15, n_columns=3, global_cntrds = [multiple_stroke.retino_pos], colors_centr = ['magenta'])
 
 
-            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')
 
 
             print(f'Shape of signal for single trial extracting centroids: {df.shape}\n')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
@@ -801,7 +802,7 @@ def get_session_id_name(path_session):
 
 def get_assess_centroid(centroids, mask):
     '''
-    Assess position of the centroids: if within the mask, then it is considered
+    Assess position of the centroids: if inside the mask, then it is considered
     '''
     return [i for i in centroids if mask[i[1],i[0]]]
 
