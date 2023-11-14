@@ -303,10 +303,10 @@ class RetinoSession(md.Session):
                     colrs.append(dv.COLORS_7[indeces_colors])
     #                g_centers = [retino_cond.retino_pos]
                     # If true, store pictures
-                    print(print(os.system('/usr/bin/sync')))
+                    print('Os system print: '+ os.system('/usr/bin/sync'))
                     if self.visualization_switch:
                         self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
-                        print(print(os.system('/usr/bin/sync')))
+                        print('Os system print: '+ os.system('/usr/bin/sync'))
                     # If true store variables
                     if self.storage_switch:
                         retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
@@ -330,10 +330,10 @@ class RetinoSession(md.Session):
                     if self.storage_switch:
                         retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j))
                 # If true, store pictures
-                print(print(os.system('/usr/bin/sync')))
+                print('Os system print: '+ os.system('/usr/bin/sync'))
                 if self.visualization_switch:
                     self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
-                    print(print(os.system('/usr/bin/sync')))
+                    print('Os system print: '+ os.system('/usr/bin/sync'))
             print('End processing retinotopy analysis for condition ' + name_cond )
             print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')            
             return dict_retino
