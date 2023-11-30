@@ -557,10 +557,38 @@ class Session:
         if self.visualization_switch:
             # zero_frames and ending_frames have to be recovered by trials
             # titles gets the name of blank condition as first, since it was stored first
-            dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
-            #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
-            # Double deblanking: further blank subtraction here
-            dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.nanpercentile(self.z_score, 15), np.nanpercentile(self.z_score, 90)), log_ = self.log)
+            for i, j in enumerate(self.avrgd_df_fz):
+                # dF/F0
+                dv.whole_time_sequence(j, 
+                                       mask = np.ones((j.shape)),
+                                       name=f'df_average_cond{i+1}', 
+                                       max=80, min=20,
+                                       handle_lims_blobs = ((97.72, 100)),
+                                       #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
+                                       # global_cntrds = [dict_retino[name_cond].retino_pos],
+                                       # colors_centr = colrs,
+                                       ext='png',
+                                       name_analysis_= os.path.join(self.set_md_folder(), 'activity_maps'))
+
+                dv.whole_time_sequence(self.z_score[i], 
+                                       mask = np.ones((j.shape)),
+                                       name=f'zscore_cond{i+1}', 
+                                       max=80, min=20,
+                                       handle_lims_blobs = ((97.72, 100)),
+                                       #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
+                                       # global_cntrds = [dict_retino[name_cond].retino_pos],
+                                       # colors_centr = colrs,
+                                       ext='png',
+                                       name_analysis_= os.path.join(self.set_md_folder(), 'activity_maps'))
+                # dv.time_sequence_visualization(self.header['zero_frames'], 
+                #                                20,
+                #                                self.header['ending_frame'], 
+                #                                self.avrgd_df_fz, 
+                #                                [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] ,
+                #                                'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
+                # #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
+                # # Double deblanking: further blank subtraction here
+                # dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.nanpercentile(self.z_score, 15), np.nanpercentile(self.z_score, 90)), log_ = self.log)
 
         else:
             self.log.info('No visualization charts.')
