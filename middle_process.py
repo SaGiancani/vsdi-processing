@@ -558,6 +558,7 @@ class Session:
             # zero_frames and ending_frames have to be recovered by trials
             # titles gets the name of blank condition as first, since it was stored first
             for i, j in enumerate(self.avrgd_df_fz):
+                print(j.shape)
                 # dF/F0
                 dv.whole_time_sequence(j, 
                                        mask = np.ones((j[0, :, :].shape)),
