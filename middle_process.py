@@ -561,7 +561,7 @@ class Session:
                 print(j.shape)
                 # dF/F0
                 dv.whole_time_sequence(j, 
-                                       mask = np.ones((j[0, :, :].shape)),
+                                       mask = np.ones((j[0, :, :].shape), dtype=bool),
                                        name=f'df_average_cond{i+1}', 
                                        max=80, min=20,
                                        handle_lims_blobs = ((97.72, 100)),
@@ -572,7 +572,7 @@ class Session:
                                        name_analysis_= os.path.join(self.set_md_folder(), 'activity_maps'))
 
                 dv.whole_time_sequence(self.z_score[i], 
-                                       mask = np.ones((j[0, :, :].shape)),
+                                       mask = np.ones((j[0, :, :].shape), dtype=bool),
                                        name=f'zscore_cond{i+1}', 
                                        max=80, min=20,
                                        handle_lims_blobs = ((97.72, 100)),
