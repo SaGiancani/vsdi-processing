@@ -284,7 +284,8 @@ class RetinoSession(md.Session):
                 id_cond = [k for k, v in self.cond_dict_all.items() if v == name_cond][0]
                 _ = self.get_signal(id_cond)
                 self.storage_switch = False
-                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
+                # It doesnt work at this line: no storage in case of exceptional run
+                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond)) 
                 print('Condition ' + name_cond + ' loaded!\n')
             colrs = []
             # Single stroke condition
@@ -474,7 +475,16 @@ class RetinoSession(md.Session):
                     min_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 15)
                     max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
                     # Averaged hetmap plot
-                    dv.plot_averaged_map(name_cond+name_pos, dict_retino[name_cond][name_pos], dict_retino[name_cond][name_pos].map, dict_retino[name_pos].retino_pos, min_bord, max_bord, [colrs[c]], self.id_name, col_distr, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
+                    dv.plot_averaged_map(name_cond+name_pos+'_'+str(c+1), 
+                                         dict_retino[name_cond][name_pos], 
+                                         dict_retino[name_cond][name_pos].map, 
+                                         dict_retino[name_pos].retino_pos, 
+                                         min_bord, max_bord, 
+                                         [colrs[c]], 
+                                         self.id_name, 
+                                         col_distr, 
+                                         name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
+                                         store_path = retinotopic_path_folder)
                 # Zscore
                 dv.whole_time_sequence(dict_retino[name_cond][name_pos].signal, 
                                        mask = dict_retino[name_cond][name_pos].mask,
