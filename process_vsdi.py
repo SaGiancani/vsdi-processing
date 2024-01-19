@@ -106,7 +106,6 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
         return countours_, centroids_, blobs_
     
 
-# @jit(nopython=True)
 def find_highest_sum_area(matrix, window_size):
     '''
     Description:
@@ -125,25 +124,45 @@ def find_highest_sum_area(matrix, window_size):
     within the area with the highest sum of elements.
 
     '''
+    # rows, cols = matrix.shape
+    # max_sum = -np.inf
+    # max_position = (0, 0)
+
+    # matrix_ = np.copy(matrix)
+    # matrix_ = np.nan_to_num(matrix_, nan=-1e3)
+
+    # for i in range(rows - window_size + 1):
+    #     for j in range(cols - window_size + 1):
+    #         current_sum = 0
+    #         for x in range(i, i + window_size):
+    #             for y in range(j, j + window_size):
+    #                 current_sum += matrix[x, y]
+
+    #         if current_sum > max_sum:
+    #             max_sum = current_sum
+    #             max_position = (i + window_size // 2, j + window_size // 2)
+
+    # return max_position
     rows, cols = matrix.shape
     max_sum = -np.inf
     max_position = (0, 0)
 
-    matrix_ = np.copy(matrix)
-    matrix_ = np.nan_to_num(matrix_, nan=-1e3)
-
+    # Precompute cumulative sum
+    cumsum_matrix = np.nancumsum(np.nancumsum(matrix, axis=0), axis=1)
+    
     for i in range(rows - window_size + 1):
         for j in range(cols - window_size + 1):
-            current_sum = 0
-            for x in range(i, i + window_size):
-                for y in range(j, j + window_size):
-                    current_sum += matrix[x, y]
-
+            # Calculate the sum using the cumulative sum
+            current_sum = cumsum_matrix[min(i + window_size, rows-1), min(j + window_size, cols-1)] \
+                        - cumsum_matrix[min(i, rows - 1), min(j + window_size, cols-1)] \
+                        - cumsum_matrix[min(i + window_size, rows-1), min(j, cols - 1)] \
+                        + cumsum_matrix[min(i, rows - 1), min(j, cols - 1)]
             if current_sum > max_sum:
                 max_sum = current_sum
                 max_position = (i + window_size // 2, j + window_size // 2)
 
     return max_position
+
 
 
 def get_centroids(contours):
@@ -206,7 +225,8 @@ def time_course_signal(df_fz, roi_mask):#, hand_made=False):
     """
     roi_sign = list()
     for i in df_fz:
-        to_app = np.nanmean(np.ma.masked_array(i, mask = roi_mask))
+        masked_array = np.ma.masked_array(i, mask = roi_mask)
+        to_app = np.nanmean(masked_array)
         roi_sign.append(to_app)
     return np.array(roi_sign)
 
