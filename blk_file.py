@@ -5,7 +5,7 @@
 # Modified by Isabelle Racicot <racicot.isabelle@gmail.com> on 12/2019 
 # Python3 portability by Salvatore Giancani <sa.giancani@gmail.com>
 import cv2 as cv
-import denoise
+from denoise import correction_windowframe
 import itertools as it
 import io
 import numpy as np
@@ -475,8 +475,7 @@ class BlkFile:
 		# Detrending
 		if self.detrend_switch:
 			a = np.asarray(a)
-			print(a.shape)
-			a = denoise.correction_windowframe(a, 0, a.shape[0])
+			a = correction_windowframe(a, 0, a.shape[0])
 		a = np.reshape(a,(t_size,z_size,y_size,x_size)) # Transformation of data linear bitstream to a regular image 2D + time data
 		a = np.reshape(a[:,0,:,:], (t_size, y_size,x_size))
 		return a
