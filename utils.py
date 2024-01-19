@@ -169,6 +169,7 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
         experiments = [s.lower() for s in experiments if not (s.startswith("."))]
 
     if (experiments is None) and (exp_type is not None):
+        print(exp_type)
         if 'VSDI' in exp_type and 'BEHAV' in exp_type:
             ending_string = "BEHAV+VSDI"
         elif 'VSDI' in exp_type and 'BEHAV' not in exp_type:
