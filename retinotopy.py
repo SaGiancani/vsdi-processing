@@ -136,7 +136,7 @@ class RetinoSession(md.Session):
             self.mean_blank = self.blank_condition.averaged_df
             self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
-            self.id_name = get_session_id_name(self.path_session)
+            self.id_name = utils.get_session_id_name(self.path_session)
             print('Session ID name: ' + self.id_name)
             self.green = self.get_green(green_name)
             self.mask = self.get_mask()
@@ -807,12 +807,7 @@ class Retinotopy:
         else:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
-
-def get_session_id_name(path_session):                
-    # Session names extraction
-    sub_name, experiment_name, session_name = get_session_metainfo(path_session)
-    id_name = sub_name + experiment_name + session_name
-    return id_name
+    
 
 def get_assess_centroid(centroids, mask):
     '''
@@ -943,13 +938,6 @@ def centroid_max(X, Y, data):
         elif i == 0:
             print('Something wrong with the centroid_max method')
     return index, max_point
-
-
-def get_session_metainfo(path_session):
-    experiment_name = path_session.split('exp-')[1].split('sub-')[0][:-1]  
-    session_name = path_session.split('sess-')[1][0:12]
-    sub_name = path_session.split('sub-')[1].split('sess-')[0][:-1]
-    return sub_name, experiment_name, session_name
 
 
 def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, id_name, sub = 'No Wallace or Bretzel'):
