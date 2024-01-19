@@ -168,6 +168,7 @@ def add_blknames2basereport(BaseReport, all_blks):
     #print(f'Tris value: {tris}')
     return BaseReport, tris
 
+
 def discrepancy_blk_attribution(BaseReport):
     count = 0
     a = list()
@@ -184,6 +185,7 @@ def discrepancy_blk_attribution(BaseReport):
             BaseReport.loc[BaseReport['BLK Names']  == t[l], 'BLK Names'] = np.nan
             count+=1
     return BaseReport, count
+
 
 def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', header_dimension = 19):
     '''
@@ -216,6 +218,38 @@ def get_basereport(session_path, all_blks, name_report = 'BaseReport.csv', heade
         BaseReport, tris = add_blknames2basereport(BaseReport, all_blks)
     # Check the discrepancy between IDcondition and BLK Names columns
     return BaseReport, tris
+
+def get_denoised_basereport(all_blks, path_session, name_report = 'BaseReport_.csv', header_dimension = 19):
+    start_time = datetime.datetime.now().replace(microsecond=0)
+    print(f'Length of all_blks list: {len(all_blks)}')
+    base_report, _ = get_basereport(path_session, all_blks, name_report = name_report, header_dimension = header_dimension)
+    # Separator converter processing: , -string- to . -float-.
+    for i in list(base_report.columns):
+        try:
+            base_report[[i]] = base_report[[i]].applymap(separator_converter)
+        except:
+            print(f'Column {i} is not a float')
+    base_report, count = discrepancy_blk_attribution(base_report)
+    print(f'Mismatch for {count} blk files')                
+    # Check in case of presence of BLK file with no correspondance in BaseReport
+    # In case of presence, they are removed from all_blks
+    security_check_blks = set(all_blks).difference(set(list(base_report.loc[base_report['Preceding Event IT'] == 'FixCorrect','BLK Names'])))
+    if len(security_check_blks) != 0:
+        print(f'Length of all_blks before popping off the elements: {len(all_blks)}')
+        for j in list(security_check_blks):
+            all_blks.remove(j)
+            print(f'{j} popped out')
+        print(f'Length of all_blks list after popping off from get_basereport: {len(all_blks)}')
+
+    print('BaseReport properly loaded!')
+    print('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+    start_time = datetime.datetime.now().replace(microsecond=0)
+    #time_stamp, piezo, heart_beat = al.get_analog_signal(path_session, base_report, name_report = 'SignalData.csv')
+    #print('Piezo and Heart Beat signals properly loaded!')
+    #print('Analogic signals loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
+    base_report = base_report.loc[(base_report['Preceding Event IT'] == 'FixCorrect')]
+    new_blks = all_blks     
+    return base_report, new_blks
 
 def get_basereport_header(BaseReport_path, header_dimension = 19):    
     '''
@@ -254,32 +288,118 @@ def get_basereport_header(BaseReport_path, header_dimension = 19):
     dict_['Export Log Files'] = bool(dict_['Export Log Files'])
     return dict_
 
-def get_analog_signal(session_path, BaseReport, name_report = 'SignalData.csv'):
+
+def get_affidability_mask(base_correct, toogles_starts, toogles_ends, timestamps, affidability_range = 50):
+    if len(base_correct) != len(toogles_starts):
+        print('Mismatch in length of BaseReport and Toogle tracks considered')
+        return 
+    
+    analog_timestamp_array = timestamps
+
+    alleged_starts = analog_timestamp_array[toogles_starts]
+    alleged_end    = analog_timestamp_array[toogles_ends]
+
+    affidable_ends = np.where((np.array(base_correct['Onset Time_ End Stim']) > (alleged_end - affidability_range//2)) & 
+                              ((np.array(base_correct['Onset Time_ End Stim']) < (alleged_end + affidability_range//2))))[0]
+
+    affidable_starts = np.where((np.array(base_correct['Onset Time_ Pre Stim']) > (alleged_starts - affidability_range//2)) & 
+                                ((np.array(base_correct['Onset Time_ Pre Stim']) < (alleged_starts + affidability_range//2))))[0]
+
+    affidability_mask = np.zeros((len(base_correct)))
+    affidability_mask[affidable_starts] = 1
+    return affidability_mask, affidable_starts, affidable_ends
+
+
+def get_signal_on_timewindow(central_timebin, signal, threshold = -1, window_length = 3000, safety_range = 0, adjustment_value = 0):
+    central_timebin = int(central_timebin)
+    window_side     = int(window_length//2)
+    first_id        = int((central_timebin - adjustment_value - window_side))
+    last_id         = int((central_timebin - adjustment_value + window_side))
+    if (first_id)<0:
+        first_id = 0
+    tmp             = signal[(first_id):(last_id)]
+    indeces         = np.where(tmp>threshold)[0]
+    (start, end)    = ((first_id + indeces[0]  - safety_range, 
+                        first_id + indeces[-1] + safety_range))
+    return start, end
+
+
+def get_analog_signal(session_path, BaseReport, toogle_v = False, safety_range = 30, name_report = 'SignalData.csv'):
     analog_sign_path = utils.find_thing(name_report, session_path, what = 'file')
     SignalData = pd.read_csv(analog_sign_path[0], sep=';', header=2)
+    #signal_data_header = ['Timestamp', 'TrigInStim', 'TrigHeart', 'Toogle', 'TrigReadyStim', 'CtrlShutter', 'Heart', 'Piezo', 'None']
     # Timestamp importing
-    temp = SignalData[['Timestamp','Dev1/ai5', 'Dev1/ai6' ]].applymap(separator_converter)
+    temp = SignalData[['Timestamp', 'Dev1/ai0', 'Dev1/ai2', 'Dev1/ai5', 'Dev1/ai6']].applymap(separator_converter)
     analog_timestamp_array = np.array(temp['Timestamp'])
+    # TrigInStim
+    analog_ai1_array = np.array(temp['Dev1/ai0'])
+    # Toogle
+    analog_ai3_array = np.array(temp['Dev1/ai2'])
     # HeartBeat
     analog_ai5_array = np.array(temp['Dev1/ai5'])
     # Piezo
     analog_ai6_array = np.array(temp['Dev1/ai6'])
+    
     # Three csvs are synchronized
     #t = BaseReport[['Onset Time_ Pre Trial', 'Onset Time_ End Trial']]#.applymap(separator_converter)
-    t = BaseReport[['Onset Time_ Pre Stim',  'Onset Time_ End Stim']]#.applymap(separator_converter)
+    t         = BaseReport[['Onset Time_ Pre Stim',  'Onset Time_ End Stim']]#.applymap(separator_converter)
     onset_pre = t['Onset Time_ Pre Stim'].tolist()
     onset_end = t['Onset Time_ End Stim'].tolist()
-    tracks_6, tracks_5, time = [], [], []
-    
-    for pre, end in zip(onset_pre, onset_end):
-        # Piezo
-        tracks_6.append(signal_cutter(analog_timestamp_array, analog_ai6_array, pre, end))
-        # HeartBeat
-        tracks_5.append(signal_cutter(analog_timestamp_array, analog_ai5_array, pre, end))
-        # TimeStamp
-        time.append(signal_cutter(analog_timestamp_array, analog_timestamp_array, pre, end))
+    tracks_1, tracks_3, tracks_5, tracks_6, time = [], [], [], [], []
+    temp_list         = []
+    if toogle_v:
+
+        center_time = np.mean((np.array((t['Onset Time_ End Stim'], 
+                                         t['Onset Time_ Pre Stim']))), axis = 0)
+#         print(t['Onset Time_ End Stim'][:5])
+#         print(t['Onset Time_ Pre Stim'][:5])
+#         print(center_time[:5])
+        
+        tmp_ai3_array    = (analog_ai3_array-np.min(analog_ai3_array, axis=0, keepdims=True))
+        analog_ai3_array =  tmp_ai3_array/np.max(tmp_ai3_array, axis=0, keepdims=True)
+        for center in center_time:
+#             try:
+            tmp = get_signal_on_timewindow(center, 
+                                           analog_ai3_array, 
+                                           threshold = .3, 
+                                           adjustment_value=int(analog_timestamp_array[0]))
+#             except:
+#                 print('Exception: Onset and Offset Trial Times used')
+#                 tmp = (int(onset_pre[n_c]+int(analog_timestamp_array[0])), int(onset_end[n_c]+int(analog_timestamp_array[0])))
+            temp_list.append(tmp)
+        toogle_pre = list(list(zip(*temp_list))[0])
+        toogle_end = list(list(zip(*temp_list))[1])
+        for pre, end in zip(toogle_pre, toogle_end):
+            p = pre - safety_range
+            e = end + safety_range
+            tracks_6.append(analog_ai6_array[p:e])
+            # HeartBeat
+            tracks_5.append(analog_ai5_array[p:e])
+            # Toogle
+            tracks_3.append(analog_ai3_array[p:e])
+            # TrigInStim
+            tracks_1.append(analog_ai1_array[p:e])
+            # TimeStamp
+            time.append(analog_timestamp_array[p:e]) 
+        affidability = get_affidability_mask(t, toogle_pre, toogle_end, analog_timestamp_array)
+
+        return time, tracks_6, tracks_5, tracks_3, tracks_1, ((toogle_pre, toogle_end)), affidability
+            
+    else:    
+        for pre, end in zip(onset_pre, onset_end):
+            # Piezo
+            tracks_6.append(signal_cutter(analog_timestamp_array, analog_ai6_array, pre, end))
+            # HeartBeat
+            tracks_5.append(signal_cutter(analog_timestamp_array, analog_ai5_array, pre, end))
+            # Toogle
+            tracks_3.append(signal_cutter(analog_timestamp_array, analog_ai3_array, pre, end))
+            # TrigInStim
+            tracks_1.append(signal_cutter(analog_timestamp_array, analog_ai1_array, pre, end))
+            # TimeStamp
+            time.append(signal_cutter(analog_timestamp_array, analog_timestamp_array, pre, end))
   
-    return time, tracks_6, tracks_5
+        return time, tracks_6, tracks_5, tracks_3, tracks_1, ((None, None)), None
+
 
 def get_eye_signal(base_report, eyetrack):
     only_blks = base_report.loc[base_report['Preceding Event IT'] == 'FixCorrect']['Total Trial Number'].tolist()
