@@ -310,20 +310,21 @@ class Session:
                 self.log.info('BaseReport properly loaded!')
                 self.log.info('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
                 start_time = datetime.datetime.now().replace(microsecond=0)
-                self.time_stamp, self.piezo, self.heart_beat = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
+                self.time_stamp, self.piezo, self.heart_beat, self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
                 self.log.info('Piezo and Heart Beat signals properly loaded!')
                 self.log.info('Analogic signals loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
                 self.base_report = self.base_report.loc[(self.base_report['Preceding Event IT'] == 'FixCorrect')] 
             except:
                 self.log.info('Something went wrong loading the BaseReport or SignalData')
-                self.base_report, self.time_stamp, self.piezo, self.heart_beat  = None, None, None, None
-
+                self.base_report, self.time_stamp, self.piezo, self.heart_beat,   = None, None, None, None
+                self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability  = None, None, None, None
             #try:
             #    path_trackreport = utils.find_thing('TrackerLog.csv', self.header['path_session'])
             #except:
             #    self.log('Something went wrong loading the TrackerLog')
         else:
             self.base_report, self.time_stamp, self.piezo, self.heart_beat  = None, None, None, None
+            self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability  = None, None, None, None
 
         self.time_course_blank = None
         self.f_f0_blank = None
