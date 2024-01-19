@@ -468,8 +468,11 @@ def whole_time_sequence(data,
         if (manual_thresh is not None) and (flag_simple_thres) and (blobs is None):
             blobs_ = np.zeros(blurred.shape, dtype = bool)
             blobs_[np.where(blurred>manual_thresh)] = 1
+            # If there is a mask, it looks for maximi inside the blob
+            if (mask is not None) and (np.sum(blobs_) > 20).all():
+                blobs_ = blobs_*mask
             if np.nansum(blobs_)>0:
-                (x_, y_) = process.find_highest_sum_area(blurred, 20)
+                (x_, y_) = process.find_highest_sum_area(blurred*blobs_, 20)
                 centroids.append([(y_, x_)])
             else:
                 centroids.append([])
@@ -511,7 +514,7 @@ def whole_time_sequence(data,
         #fig, ax = plt.subplots()
         fontprops = fm.FontProperties(size=14)
         scalebar = AnchoredSizeBar(ax.transData,
-                                    round(2/pixel_spacing), '2mm', 'upper right', 
+                                    round(2/pixel_spacing), '2mm', 'lower right', #'upper right' 
                                     pad=0.1,
                                     color='crimson',
                                     frameon=False,
@@ -632,3 +635,107 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
     else:
         plt.show()
     return
+
+import st_builder as st
+
+
+def plot_st(profilemap,  threshold_contour, 
+            traj_mask,
+            pixel_spacing,
+            retinotopic_pos = None,
+            retinotopic_time = None, 
+            map_type = utils.PARULA_MAP,
+            st_title = None,
+            onset_time = 4,
+            colors_retinotopy = ['crimson', 'tomato', 'magenta'],
+            draw_peak_traj = True,
+            is_delay = 30,#ms
+            sampling_fq = 100,#Hz
+            high_level = 5,
+            color_peak = 'teal',
+            low_level = -1,
+            store_path = None):
+    
+    # Safety checks
+#     if (retinotopic_pos is not None) and (retinotopic_time is not None):
+#         assert len(retinotopic_pos) == len(colors_retinotopy), 'Mismatch in retinotopic positions numbers and colors available'
+    space, time  = profilemap.shape
+    timing_frame = int((1/sampling_fq)*1000)
+    assert (is_delay/timing_frame)>1, 'Something weird: sampling frequency and timing of a frame incompatible'
+    isi_frames   = int(is_delay/timing_frame)
+
+    # Plot colormap
+    fig, ax = plt.subplots(1,1, figsize=(9,7))
+    pc_ = ax.pcolormesh(profilemap, cmap= map_type, vmax = high_level, vmin=low_level)
+    
+    # Plot intensity contour
+    blobs = np.zeros(profilemap.shape, dtype = bool)
+#     blobs[np.where(median_filter(profilemap, size=(5,5))>=threshold_contour)] = 1
+    blobs[np.where(profilemap>=threshold_contour)] = 1
+    ax.contour(blobs, 4, colors='k', alpha = .5, levels=[1])
+    
+    blobs_ = np.copy(blobs)
+    blobs_[np.where(median_filter(profilemap, size=(5,5))>=threshold_contour)] = 1
+    
+    # Draw peak's trajectory
+    if draw_peak_traj:
+        a = st.maximi_inda_blob(profilemap, blobs_)
+        ax.scatter(list(list(zip(*a))[1]), list(list(zip(*a))[0]), marker = '.', color = 'k')
+        ax.plot(list(list(zip(*a))[1]), list(list(zip(*a))[0]), ls = '-', color = 'k', alpha = .3)
+    
+    if (retinotopic_pos is not None) and (retinotopic_time is not None):
+        number_strokes = len(retinotopic_pos)
+        # Plot timelines and retinotopic positions
+        for n in range(number_strokes):
+            print(f'stroke\'s peak {retinotopic_time[n]+n*isi_frames} coordinate')
+            ax.scatter(retinotopic_time[n]+n*isi_frames, retinotopic_pos[n], marker = 'o', color = colors_retinotopy[n], s= 100)
+
+    else:
+        colors_retinotopy = [color_peak]
+        number_strokes = 1
+        
+    for n in range(number_strokes):
+        plt.vlines(onset_time+n*isi_frames, 
+                   np.where(traj_mask != 0)[1].min(), 
+                   np.where(traj_mask != 0)[1].max(), 
+                   color = colors_retinotopy[n], ls ='--', lw=2)
+    
+    # Plot highest spot
+    a, b = process.find_highest_sum_area(profilemap*blobs_, 5)
+    ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
+    print(a, b)
+
+    # Custom axis
+    strokes_onset_times = [onset_time+i*isi_frames for i in range(number_strokes)]
+    strokes_onset_times.sort()
+    print(strokes_onset_times)
+    start_time_instants = [0] + strokes_onset_times
+    tmp = start_time_instants + list(np.linspace(start_time_instants[-1], time, (2+(time-start_time_instants[-1])//10)))
+
+    print(tmp)
+    ax.set_xticks(tmp)
+    labels_ = [item.get_text() for item in ax.get_xticklabels()]
+    # x_tmp = np.arange((zero_of_cond-12), (zero_of_cond+30+12), len(tmp))
+    list_x = list()
+    for i, x in zip(labels_, tmp):
+        list_x.append(f'{int((x-(onset_time))*10)}')
+    ax.set_xticklabels(list_x, fontsize = 12)
+    ax.set_xlabel('Time - ms', fontsize = 15)
+
+    tmp_y = np.linspace(0, space-10, 9) 
+    ax.set_yticks(tmp_y)
+    labels_ = [item.get_text() for item in ax.get_yticklabels()]
+    list_y = list()
+    for y in np.linspace(0, (pixel_spacing*space) , 9):
+        list_y.append(f'{y:.1f}')
+    ax.set_yticklabels(list_y, fontsize = 12)
+    ax.set_ylabel('Space - mm', fontsize = 15)
+    ax.set_ylim((np.where(traj_mask != 0)[1].min(), np.where(traj_mask != 0)[1].max()))
+    fig.colorbar(pc_) 
+                   
+    if st_title is not None:
+        plt.title(st_title, fontsize = 15)
+        if store_path is not None:
+            plt.savefig(os.path.join(f'st_map_{st_title}_h20210108' + '.pdf'), format = 'pdf', dpi =500)
+    plt.show()
+    return (a,b)
