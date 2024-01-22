@@ -76,24 +76,22 @@ class Condition:
         It can be problematic from versioning.
         '''
         tp = utils.inputs_load(path)
-
-        list_of_attributes = [self.session_header,
-                              self.session_name,
-                              self.cond_name,
-                              self.cond_id,
-                              self.binned_data,
-                              self.df_fz,
-                              self.time_course,
-                              self.averaged_df, 
-                              self.averaged_timecourse, 
-                              self.autoselection,
-                              self.blk_names,
-                              self.trials,
-                              self.z_score]
-
-        for i in range(len(tp)):
-            list_of_attributes[i] = tp[i]
-
+        self.session_header = tp[0]
+        self.session_name = tp[1]
+        self.cond_name = tp[2]
+        self.cond_id = tp[3]
+        self.binned_data = tp[4]
+        self.df_fz = tp[5]
+        self.time_course = tp[6]
+        self.averaged_df = tp[7]
+        self.averaged_timecourse = tp[8]
+        self.autoselection = tp[9]
+        self.blk_names = tp[10]
+        self.trials = tp[11]
+        try:
+            self.z_score = tp[12]
+        except:
+            print('z_score attribute not found')
         return
     
     def get_behav_latency(self, blank_id):
