@@ -1,4 +1,5 @@
 import cv2 as cv
+import json
 import numpy as np
 import scipy.io as scio
 import datetime, fnmatch, logging, os, pickle, sys, struct
@@ -221,6 +222,34 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
             exps[exp.split('exp-')[1]][sub.split('sub-')[1]] = paths
 
     return exps
+
+def sort_blks_list(lista):
+    return sorted(lista, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+
+def get_stimulus_metadata(path):
+    '''
+    Reading stimulus metadata json file
+    '''
+    tmp = find_thing('json_data.json', path)
+    if len(tmp) == 0:
+        print('Check the json_data.json presence inside the session folder and subfolders')
+        return None
+    # else, load the json
+    else :
+        f = open(tmp[0])
+        # returns JSON object as a dictionary
+        data = json.load(f)
+        a = json.loads(data)
+    return  a[list(a.keys())[0]]
+
+def get_conditions_correspondance(path):
+    '''
+    Reading metadata json file for conditions positions
+    '''
+    a = get_stimulus_metadata(path)
+    # Build a dictionary with am conditions as keys and corresponding single stroke position as lists
+    return {i: j['conditions'] for i, j in list(a['pos metadata'].items())}
+
 
 def get_session_id_name(path_session):                
     # Session names extraction
