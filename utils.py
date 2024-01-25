@@ -225,7 +225,8 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
 
 def sort_blks_list(lista):
     tmp = {i.split('_')[3]: i for n, i in enumerate(lista)}
-    sorting_values = list(tmp.keys()).sort()
+    sorting_values = list(tmp.keys())
+    sorting_values.sort()
     sorted_blks = [tmp[i] for i in sorting_values]
     return sorted_blks
     # return sorted(lista, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
