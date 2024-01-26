@@ -1,5 +1,4 @@
 import datetime, os, utils
-import middle_process as mp
 import numpy as np
 import pandas as pd
 
@@ -319,6 +318,7 @@ def get_signal_on_timewindow(central_timebin, signal, threshold = -1, window_len
         first_id = 0
     tmp             = signal[(first_id):(last_id)]
     indeces         = np.where(tmp>threshold)[0]
+    print(indeces)
     (start, end)    = ((first_id + indeces[0]  - safety_range, 
                         first_id + indeces[-1] + safety_range))
     return start, end
