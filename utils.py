@@ -224,7 +224,12 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
     return exps
 
 def sort_blks_list(lista):
-    tmp = {i.split('_')[3]: i for n, i in enumerate(lista)}
+    tmp = {}
+    for n, i in enumerate(lista):
+        if type(i) == float:
+            print(i)
+        else:
+            tmp[i.split('_')[3]] = i
     sorting_values = list(tmp.keys())
     sorting_values.sort()
     sorted_blks = [tmp[i] for i in sorting_values]
