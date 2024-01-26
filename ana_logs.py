@@ -316,6 +316,7 @@ def get_signal_on_timewindow(central_timebin, signal, threshold = -1, window_len
     last_id         = int((central_timebin - adjustment_value + window_side))
     if (first_id)<0:
         first_id = 0
+    print(first_id, last_id)
     tmp             = signal[(first_id):(last_id)]
     indeces         = np.where(tmp>threshold)[0]
     print(indeces)
