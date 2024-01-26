@@ -227,7 +227,7 @@ def sort_blks_list(lista):
     tmp = {}
     for n, i in enumerate(lista):
         if type(i) == float:
-            print(i)
+            pass
         else:
             tmp[i.split('_')[3]] = i
     sorting_values = list(tmp.keys())
