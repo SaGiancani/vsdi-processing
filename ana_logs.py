@@ -319,8 +319,11 @@ def get_signal_on_timewindow(central_timebin, signal, threshold = -1, window_len
     tmp             = signal[(first_id):(last_id)]
     indeces         = np.where(tmp>threshold)[0]
     print(indeces)
-    (start, end)    = ((first_id + indeces[0]  - safety_range, 
-                        first_id + indeces[-1] + safety_range))
+    try:
+        (start, end)    = ((first_id + indeces[0]  - safety_range, 
+                            first_id + indeces[-1] + safety_range))
+    except:
+        (start, end)    = ((None, None))
     return start, end
 
 
