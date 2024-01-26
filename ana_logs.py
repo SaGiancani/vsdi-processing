@@ -310,13 +310,15 @@ def get_affidability_mask(base_correct, toogles_starts, toogles_ends, timestamps
 
 
 def get_signal_on_timewindow(central_timebin, signal, threshold = -1, window_length = 3000, safety_range = 0, adjustment_value = 0):
+    #-------------------------------------------------------------------------------------------
+    # Bug Found in case of several BaseReport for same session
+    #-------------------------------------------------------------------------------------------
     central_timebin = int(central_timebin)
     window_side     = int(window_length//2)
     first_id        = int((central_timebin - adjustment_value - window_side))
     last_id         = int((central_timebin - adjustment_value + window_side))
     if (first_id)<0:
         first_id = 0
-    print(first_id, last_id)
     tmp             = signal[(first_id):(last_id)]
     indeces         = np.where(tmp>threshold)[0]
     try:
