@@ -5,6 +5,7 @@
 # Modified by Isabelle Racicot <racicot.isabelle@gmail.com> on 12/2019 
 # Python3 portability by Salvatore Giancani <sa.giancani@gmail.com>
 import cv2 as cv
+from denoise import correction_windowframe
 import itertools as it
 import io
 import numpy as np
@@ -49,7 +50,7 @@ class BlkFile:
 	    Reads the data contained in the BLK file
 	"""
 
-	def __init__(self, filename, spatial_binning, temporal_binning, header = None, motion_switch = False, filename_particle = 'vsd_C'):
+	def __init__(self, filename, spatial_binning, temporal_binning, header = None, motion_switch = False, detrend_switch = False, filename_particle = 'vsd_C'):
 		"""Initializes attributes
 		Default values for:
 		* p : '1p'
@@ -72,6 +73,7 @@ class BlkFile:
 		self.f = self.sizeofunity(4,'f')
 		self.l = self.sizeofunity(8,'l')
 		self.L = self.sizeofunity(8,'L')
+		self.detrend_switch = detrend_switch
 		self.filename=filename # String of filename
 		if header is None:
 			self.header=self.get_head() # Dictionary for metadata
@@ -471,12 +473,11 @@ class BlkFile:
 			t_size = t_size_header
 		a = self.data
 		# Detrending
-		#if detrend:
-		#	a = np.reshape(a, (t_size, z_size*y_size*x_size))
-		#	a =  signal.detrend(np.nan_to_num(a))# + np.mean(a, axis=0)
+		if self.detrend_switch:
+			a = np.asarray(a)
+			a = correction_windowframe(a, 0, a.shape[0])
 		a = np.reshape(a,(t_size,z_size,y_size,x_size)) # Transformation of data linear bitstream to a regular image 2D + time data
 		a = np.reshape(a[:,0,:,:], (t_size, y_size,x_size))
-		#print('vsdi-signal extraction time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
 		return a
         
 
@@ -510,11 +511,11 @@ class BlkFile:
 			t_size_binned = int( np.ceil( float(t_size) / self.temporal_binning ) )
 			# print 't_size_binned if: ', t_size_binned
 			# b = np.zeros( [ t_size_binned, a.shape[1], a.shape[2] ] )
-			b = np.zeros((t_size_binned, y_size, x_size))
+			b = np.zeros((t_size_binned, y_size, x_size), dtype='float64')
 			for t in range(t_size_binned):
 				ind_min = t*self.temporal_binning
 				ind_max = min((t+1)*self.temporal_binning, t_size )
-				b[t,:,:] = self.image[ind_min:ind_max,:,:].mean(0).astype(int)
+				b[t,:,:] = self.image[ind_min:ind_max,:,:].mean(0).astype('float64')
 		else:
 			t_size_binned = t_size
 
@@ -527,7 +528,7 @@ class BlkFile:
 				#tmp[i, :, :] = cv.resize(b[i, :, :], (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_CUBIC)
 			b = tmp
 		#print('binning time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
-		return b
+		return b.astype('float64')
 
 
 	def motion_index(self):

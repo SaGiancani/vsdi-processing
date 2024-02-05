@@ -5,10 +5,11 @@ import matplotlib.pyplot as plt
 import middle_process as md
 import numpy as np
 import process_vsdi as process
+import trajectory as trj
 
 from scipy.ndimage.filters import gaussian_filter
 
-COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal']
+COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal', 'orange', 'lime']
 
 NAME_RETINO_ANALYSIS = 'AMnbStrokes_Retinotopic_Analysis'
 
@@ -102,13 +103,13 @@ class RetinoSession(md.Session):
             self.path_md = path_md
 
             # Corresponding single stroke for each AM condition
-            self.retino_pos_am = get_conditions_correspondance(self.path_session)
+            self.retino_pos_am = utils.get_conditions_correspondance(self.path_session)
             print(self.retino_pos_am)
             # All the conditions    
             self.cond_dict = super().get_condition_name()
             self.cond_names = list(self.cond_dict.values())
             # Extract blank condition id
-            self.blank_id = super().get_blank_id(cond_id=condid)
+            self.blank_id = md.get_blank_id(self.cond_names, cond_id=condid)
             # Store all conditions
             self.cond_dict_all = self.cond_dict
             # Separated dictionaries, for AM and single pos conditions
@@ -136,7 +137,7 @@ class RetinoSession(md.Session):
             self.mean_blank = self.blank_condition.averaged_df
             self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
-            self.id_name = self.get_session_id_name()
+            self.id_name = utils.get_session_id_name(self.path_session)
             print('Session ID name: ' + self.id_name)
             self.green = self.get_green(green_name)
             self.mask = self.get_mask()
@@ -211,14 +212,6 @@ class RetinoSession(md.Session):
                 mask = None
             return mask
 
-
-        def get_session_id_name(self):                
-            # Session names extraction
-            sub_name, experiment_name, session_name = get_session_metainfo(self.path_session)
-            id_name = sub_name + experiment_name + session_name
-            return id_name
-
-
         def get_green(self, green_name):
             try:
                 # Loading green
@@ -292,7 +285,8 @@ class RetinoSession(md.Session):
                 id_cond = [k for k, v in self.cond_dict_all.items() if v == name_cond][0]
                 _ = self.get_signal(id_cond)
                 self.storage_switch = False
-                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
+                # It doesnt work at this line: no storage in case of exceptional run
+                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond)) 
                 print('Condition ' + name_cond + ' loaded!\n')
             colrs = []
             # Single stroke condition
@@ -311,8 +305,10 @@ class RetinoSession(md.Session):
                     colrs.append(dv.COLORS_7[indeces_colors])
     #                g_centers = [retino_cond.retino_pos]
                     # If true, store pictures
+                    print('Os system print: '+ str(os.system('/usr/bin/sync')))
                     if self.visualization_switch:
                         self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
+                        print('Os system print: '+ str(os.system('/usr/bin/sync')))
                     # If true store variables
                     if self.storage_switch:
                         retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
@@ -334,10 +330,12 @@ class RetinoSession(md.Session):
 #                    g_centers.append(dict_retino[j].retino_pos)
                     # If true store variables
                     if self.storage_switch:
-                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j))
+                        retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j + '_'+str(i+1)))
                 # If true, store pictures
+                print('Os system print: '+ str(os.system('/usr/bin/sync')))
                 if self.visualization_switch:
                     self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
+                    print('Os system print: '+ str(os.system('/usr/bin/sync')))
             print('End processing retinotopy analysis for condition ' + name_cond )
             print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')            
             return dict_retino
@@ -348,6 +346,7 @@ class RetinoSession(md.Session):
             # Create Retinotopic Analysis folder path
             retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(NAME_RETINO_ANALYSIS))
             print('Retino session for data session ' + self.id_name + ' start to process...\n')                                            
+            print('Data are gonna be stored at ' + retinotopic_path_folder+ '\n')                                            
             # Storing variable
             dict_retino = dict()
             for cond_id, cond_name in self.cond_dict.items():
@@ -376,10 +375,11 @@ class RetinoSession(md.Session):
 
             # dF/F0 of only autoselected trials 
             df = md.get_selected(cd.df_fz, cd.autoselection)
-            avr_df = np.mean(df, axis = 0)
+            avr_df = np.nanmean(df, axis = 0)
 
             # COUNTERCHECK THIS BLANK 
             mean_blank = np.nanmean(self.mean_blank, axis = 0)
+            print(f'The blank employed in the zscore has shape {mean_blank.shape}')
             z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
 
             # Instance retinotopy object: single stroke
@@ -418,7 +418,7 @@ class RetinoSession(md.Session):
 
             r.blob = blobs
             r.retino_pos = centroids[0]
-            print(f'Retinotopic averaged position at: {r.retino_pos}')
+            print(f'Retinotopic averaged position at: {r.retino_pos}\n')
             #min_bord = np.nanpercentile(blurred, 15)
             #max_bord = np.nanpercentile(blurred, 98)
             blurred[~r.mask] = np.NAN
@@ -427,7 +427,7 @@ class RetinoSession(md.Session):
             #dv.whole_time_sequence(z_s, mask = multiple_stroke.mask, max=85, min=15, n_columns=3, global_cntrds = [multiple_stroke.retino_pos], colors_centr = ['magenta'])
 
 
-            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!')
+            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')
 
 
             print(f'Shape of signal for single trial extracting centroids: {df.shape}\n')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
@@ -459,6 +459,7 @@ class RetinoSession(md.Session):
                                     #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
                                     global_cntrds = [dict_retino[name_cond].retino_pos],
                                     colors_centr = colrs,
+                                    ext='png',
                                     name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
                 # Parameters for heatmap plotting
                 min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
@@ -475,7 +476,16 @@ class RetinoSession(md.Session):
                     min_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 15)
                     max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
                     # Averaged hetmap plot
-                    dv.plot_averaged_map(name_cond+name_pos, dict_retino[name_cond][name_pos], dict_retino[name_cond][name_pos].map, dict_retino[name_pos].retino_pos, min_bord, max_bord, [colrs[c]], self.id_name, col_distr, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
+                    dv.plot_averaged_map(name_cond+name_pos+'_'+str(c+1), 
+                                         dict_retino[name_cond][name_pos], 
+                                         dict_retino[name_cond][name_pos].map, 
+                                         dict_retino[name_pos].retino_pos, 
+                                         min_bord, max_bord, 
+                                         [colrs[c]], 
+                                         self.id_name, 
+                                         col_distr, 
+                                         name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
+                                         store_path = retinotopic_path_folder)
                 # Zscore
                 dv.whole_time_sequence(dict_retino[name_cond][name_pos].signal, 
                                        mask = dict_retino[name_cond][name_pos].mask,
@@ -485,9 +495,9 @@ class RetinoSession(md.Session):
                                        #significant_thresh = np.percentile(dict_retino[name_cond][name_pos].signal, 97.72), 
                                        global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
                                        colors_centr = colrs,
+                                       ext='png',
                                        name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
                 return
-
 
 class Retinotopy:
     def __init__(self, 
@@ -594,7 +604,7 @@ class Retinotopy:
 
 
     def get_retinotopic_features(self, FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):# MODIFIED HERE 22/03/23
-        num_for_nan = np.nanmin(FOI)/10
+        num_for_nan = np.nanpercentile(FOI, 20)
         #num_for_nan = -33e-10
         print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
         #averaged_df1 = np.nan_to_num(averaged_df1, nan=np.nanmin(averaged_df1), neginf=np.nanmin(averaged_df1[np.where(averaged_df1 != -np.inf)]), posinf=np.nanmax(averaged_df1[np.where(averaged_df1 != np.inf)]))
@@ -739,7 +749,7 @@ class Retinotopy:
         # Thresholding values
         mean_ztmp = np.nanmean(ztmp, axis=0)
         lim_inf = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], lim_blob_detect)
-        lim_sup = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], 100)
+        lim_sup = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], 99)
         #print(lim_inf, lim_sup)
 
         # If want to store information from single frame
@@ -798,53 +808,17 @@ class Retinotopy:
         else:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
+    
 
 def get_assess_centroid(centroids, mask):
     '''
-    Assess position of the centroids: if within the mask, then it is considered
+    Assess position of the centroids: if inside the mask, then it is considered
     '''
     return [i for i in centroids if mask[i[1],i[0]]]
 
-
-def get_stimulus_metadata(path):
-    '''
-    Reading stimulus metadata json file
-    '''
-    tmp = utils.find_thing('json_data.json', path)
-    if len(tmp) == 0:
-        print('Check the json_data.json presence inside the session folder and subfolders')
-        return None
-    # else, load the json
-    else :
-        f = open(tmp[0])
-        # returns JSON object as a dictionary
-        data = json.load(f)
-        a = json.loads(data)
-    return  a[list(a.keys())[0]]
-
-def get_conditions_correspondance(path):
-    '''
-    Reading metadata json file for conditions positions
-    '''
-    a = get_stimulus_metadata(path)
-    # Build a dictionary with am conditions as keys and corresponding single stroke position as lists
-    return {i: j['conditions'] for i, j in list(a['pos metadata'].items())}
-
-        
-def get_mask_on_trajectory(dims, xs, ys, radius = 2):
-    up = int(np.max(xs))
-    bottom = int(np.min(xs))
-    x, y = get_trajectory(xs, ys, (bottom, up))
-    xs_fit_lins = np.round(np.linspace(bottom,up,(up-bottom)*2))
-    masks_small = [utils.sector_mask(dims, (int(round(np.interp(i, x, y))), i), radius, (0,360)) for i in xs_fit_lins]
-    small_mask = sum(masks_small)
-    small_mask[np.where(small_mask>1)] = 1
-    return small_mask
-
-
 def rotate_distribution(xs, ys, theta = None):
     if theta is None:
-        theta = -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
+        theta = trj.get_rad(xs, ys)
     print(theta)
     # subtracting mean from original coordinates and saving result to X_new and Y_new 
     X_new = xs - np.mean(xs)
@@ -856,25 +830,6 @@ def rotate_distribution(xs, ys, theta = None):
     # adding mean back to rotated coordinates
     return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
  
-
-def get_trajectory(xs, ys, limits):
-    print(limits[0], limits[1])
-    xs_to_fit =  np.round(np.linspace(limits[0], limits[1]-1, limits[1]-limits[0])) 
-    ys_to_fit = np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs_to_fit))
-    #ys_fitted = [int(round(np.interp(i, xs_to_fit, ys_to_fit))) for i in xs_fitted]
-    return xs_to_fit, ys_to_fit
-
-def get_trajectory_mask(points_in_space, frame_dimension, extremities = (0,0)):
-    '''
-    points_in_space: list of tuples with coordinates (x,y).
-    frame_dimension: tuple with shape dimension
-    extremities: tuple with amount to subtract from the frame_dimension
-    '''
-    xs = list(list(zip(*points_in_space))[0])
-    ys = list(list(zip(*points_in_space))[1])
-    a, b = get_trajectory(xs, ys, (0 + extremities[0], frame_dimension[1]- extremities[1]))
-    traject_mask = get_mask_on_trajectory(frame_dimension, a, b, radius = 15)
-    return traject_mask
 
 def centroid_max(X, Y, data):
     '''
@@ -891,13 +846,6 @@ def centroid_max(X, Y, data):
         elif i == 0:
             print('Something wrong with the centroid_max method')
     return index, max_point
-
-
-def get_session_metainfo(path_session):
-    experiment_name = path_session.split('exp-')[1].split('sub-')[0][:-1]  
-    session_name = path_session.split('sess-')[1][0:12]
-    sub_name = path_session.split('sub-')[1].split('sess-')[0][:-1]
-    return sub_name, experiment_name, session_name
 
 
 def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, id_name, sub = 'No Wallace or Bretzel'):
@@ -1035,7 +983,34 @@ def subtraction_among_conditions(path_session,
 
     return params, pos_inferred_averaged 
 
+def distribution_coords_normalize(points_distribution, unity, center, rotation_theta):
+    '''
+    The method rotates, normalizes and recenters a distribution of points.
+    Input:
+        points_distribution: a list of two tuples, first x coordinates and second y coordinates of a distribution
+        of points. 
+        unity: float, itrepresents the unite against which normalize. 
+        center: tuple of two elements, respectively x and y coordinates of a point. 
+                It is used for recentering the distribution.
+        rotation theta: np.array with a float element inside, the corrective orientation to apply to the points.
+    Output:
+        x_dva_rotated, y_dva_rotated: list of float. The coordinates for the distribution of points, normalized and
+                                      recentered. 
+    Example of usage: 
+        x_test, y_test = distance_converter_pixel2dva(distribution_positions, x[0]-x[1], (x[-1], y[-1]), theta_h)
+    '''
+    # Linearize coordinates
+    xs = points_distribution[0]
+    ys = points_distribution[1]
 
+    # Rotate distribution according the rotation_theta provided
+    x_to_normalize, y_to_normalize, _ = rotate_distribution(xs, ys, theta = rotation_theta)
+
+    # Normalization of the coordinates for their center and the picked unity
+    x_dva_rotated = [(i-center[0])/unity for i in x_to_normalize]
+    y_dva_rotated = [(i-center[1])/unity for i in y_to_normalize]    
+    
+    return x_dva_rotated, y_dva_rotated
                 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')

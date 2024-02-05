@@ -9,12 +9,12 @@ import matplotlib.font_manager as fm
 import numpy as np
 import os
 import process_vsdi as process
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage.filters import gaussian_filter, median_filter
 from scipy.stats import norm
 
 STORAGE_PATH = '/envau/work/neopto/USERS/GIANCANI/Analysis/'
 
-COLORS_7 = ['crimson', 'tomato', 'magenta', 'darkorange', 'burlywood', 'palevioletred', 'chocolate']
+COLORS_7 = ['crimson', 'tomato', 'magenta', 'darkorange', 'burlywood', 'palevioletred', 'chocolate', 'black', 'white', 'gray']
 
 def set_storage_folder(storage_path = STORAGE_PATH, name_analysis = 'prova'):    
     folder_path = os.path.join(storage_path, name_analysis)               
@@ -194,17 +194,18 @@ def chunk_distribution_visualization(coords, m_norm, l, cd_i, header, tc, indece
     shapes = np.shape(tc)
     if tmp_u is not None:
         axs[0].plot(np.arange(shapes[1]), tmp_u, color = 'crimson', linewidth = 0.5, label = 'Unselected trials')
-    axs[0].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
-    axs[0].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
+    axs[0].plot(np.arange(shapes[1]), np.nanmean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
+    axs[0].plot(np.arange(shapes[1]), np.nanmean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
     axs[0].legend(loc = 'upper left')
-    axs[0].set_ylim(np.min(tc[indeces_select]) - (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05, np.max(tc[indeces_select]) + (np.max(tc[indeces_select]) - np.min(tc[indeces_select]))*0.05)
+    axs[0].set_ylim(np.nanmin(tc[indeces_select]) - (np.nanmax(tc[indeces_select]) - np.nanmin(tc[indeces_select]))*0.05, 
+                    np.nanmax(tc[indeces_select]) + (np.nanmax(tc[indeces_select]) - np.nanmin(tc[indeces_select]))*0.05)
     #plt.subplot(2,3,5)
     for k, i in enumerate(tc[indeces_select[:-1]]):
         axs[1].plot(i, 'gray', linewidth = 0.5)
     axs[1].plot(tc[indeces_select[-1]], 'gray', linewidth = 0.5, label = 'Trials')
-    axs[1].plot(np.arange(shapes[1]), np.mean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
-    axs[1].plot(np.arange(shapes[1]), np.mean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
-    axs[1].set_ylim(np.min(tc[indeces_select]) - 0.0005, np.max(tc[indeces_select]) + 0.0005)    
+    axs[1].plot(np.arange(shapes[1]), np.nanmean(tc[indeces_select], axis=0), color = 'k', linewidth = 2, label = 'Average among selected trials')
+    axs[1].plot(np.arange(shapes[1]), np.nanmean(tc[unselected], axis=0), color = 'red', linewidth = 2, label = 'Average among unselected trials')
+    axs[1].set_ylim(np.nanmin(tc[indeces_select]) - 0.0005, np.nanmax(tc[indeces_select]) + 0.0005)    
     axs[1].legend(loc = 'upper left')
         
     tmp = path
@@ -336,6 +337,7 @@ def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = 
 def whole_time_sequence(data, 
                         global_cntrds = None, 
                         colors_centr = ['black', 'purple', 'aqua'], 
+                        centroids_labeling = 'dotted circles',
                         cntrds = None, 
                         blbs = None, 
                         max=80, min=10, 
@@ -349,11 +351,21 @@ def whole_time_sequence(data,
                         name_analysis_ = 'RetinotopicPositions',
                         max_bord = None,
                         min_bord = None,
-                        ext= '.svg',
+                        ext= 'png',
                         mappa = utils.PARULA_MAP,
                         titles = None,
                         pixel_spacing = None,
-                        color_scale_bar = 'white'):
+                        second_contour = None,
+                        kern_median = 5,
+                        color_text = 'white',
+                        manual_thresh = None,
+                        flag_simple_thres = False,
+                        render_flag = False,
+                        padding_axes = .05,
+                        y_title = 1,
+                        x_title = 1,
+                        font_size = 20,
+                        color_contour = 'k'):
 
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
@@ -365,7 +377,7 @@ def whole_time_sequence(data,
     
     grid = AxesGrid(fig, 111,
                     nrows_ncols=(int(np.ceil(np.shape(data)[0]/n_columns)), n_columns),
-                    axes_pad=0.3,
+                    axes_pad=padding_axes,
                     share_all=True,
                     label_mode="L",
                     cbar_mode='single',
@@ -384,13 +396,27 @@ def whole_time_sequence(data,
         # Significant threshold for blob thresholding
         bottom_limit = np.nanpercentile(data, 80)
         upper_limit = np.nanpercentile(data, 100)
+        # Significant threshold for blob thresholding
         ad_t = False
-        _, centroids, blobs = process.detection_blob(data,
-                                                     min_lim = bottom_limit,
-                                                     max_lim = upper_limit,
-                                                     min_2_lim = handle_lims_blobs[0], 
-                                                     max_2_lim = handle_lims_blobs[1],  
-                                                     adaptive_thresh = ad_t)
+
+        if manual_thresh is None:
+            manual_th = handle_lims_blobs[0]
+            _, centroids, blobs = process.detection_blob(data,
+                                                         min_lim = bottom_limit,
+                                                         max_lim = upper_limit,
+                                                         min_2_lim = manual_th, 
+                                                         max_2_lim = handle_lims_blobs[1],  
+                                                         adaptive_thresh = ad_t)
+            
+        elif (manual_thresh is not None) and (not flag_simple_thres):
+            a = [process.manual_thresholding(i, manual_thresh) for i in data]
+            centroids = list(zip(*a))[1]
+            blobs = list(zip(*a))[2]
+
+        elif (manual_thresh is not None) and (flag_simple_thres):
+            centroids = []
+            blobs = None    
+            
         if len(centroids)>0:
             new_centroids = []
 
@@ -404,6 +430,7 @@ def whole_time_sequence(data,
 
                 new_centroids.append(cntrds)
             centroids = new_centroids
+            
     else:
         centroids = cntrds
         blobs = blbs
@@ -416,7 +443,8 @@ def whole_time_sequence(data,
             min_bord = np.nanpercentile(l, min)
 
         if blur:
-            blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=np.nanmin(l), posinf=None, neginf=None), sigma=1)
+            #blurred = gaussian_filter(np.nan_to_num(l, copy=False, nan=np.nanmin(l), posinf=None, neginf=None), sigma=1)
+            blurred = median_filter(np.nan_to_num(l, copy=False, nan=np.nanmin(l), posinf=None, neginf=None), (kern_median,kern_median))
         else:
             blurred = l
 
@@ -424,39 +452,72 @@ def whole_time_sequence(data,
             blurred[~mask] = np.NAN
         
         p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=mappa)
+
+        if second_contour is not None:
+            second_contour = second_contour*mask
+            ax.contour(second_contour, 15, colors='white', ls = 'dotted', lw = .3)
+        
         ax.set_xticks([])
         ax.set_yticks([])
         ax.axis('off')
         # Title for each frame
-        ax.set_title(titles[i])
-        
-        if blobs is not None:
+        ax.annotate(titles[i], xy=(0.5, 1), xytext=(x_title, y_title), 
+                    textcoords='offset points', ha='center', 
+                    fontsize=font_size, color=color_text)
+        ax.set_title("")  # Remove the default title
+
+        if (manual_thresh is not None) and (flag_simple_thres) and (blobs is None):
+            blobs_ = np.zeros(blurred.shape, dtype = bool)
+            blobs_[np.where(blurred>manual_thresh)] = 1
+            # If there is a mask, it looks for maximi inside the blob
+            if (mask is not None) and (np.sum(blobs_) > 20).all():
+                blobs_ = blobs_*mask
+            if np.nansum(blobs_)>0:
+                (x_, y_) = process.find_highest_sum_area(blurred*blobs_, 20)
+                centroids.append([(y_, x_)])
+            else:
+                centroids.append([])
+
+        elif blobs is not None:
             if mask is not None:
                 blobs_ = blobs[i]*mask
             else:
                 blobs_ = blobs[i]                    
-            ax.contour(blobs_, 4, colors='k', linestyles = 'dotted')
-            
+                
+        ax.contour(blobs_, .5, colors=color_contour, levels=[1])
+
         if centroids is not None:
             if len(centroids[i])>0:
                 for j in centroids[i]:
-                    print(j)
                     ax.scatter(j[0],j[1],color='r', marker = 'X')
 
         if global_cntrds is not None:
-            for i, cc in zip(global_cntrds, colors_centr):
-                ax.vlines(i[0], 0, blurred.shape[0], color = cc, lw= 1.5)
+            for k, cc in zip(global_cntrds, colors_centr):
+                # ax.vlines(i[0], 0, blurred.shape[0], color = cc, lw= 1.5)
+                if centroids_labeling == 'dotted circles':
+                    mask_single_dot = utils.sector_mask(l.shape, 
+                                                        (k[1], k[0]), 
+                                                        25, 
+                                                        (0,360))
+                    ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=.2)
+                elif centroids_labeling == 'vlines':
+                    ax.vlines(k[0], 0, blurred.shape[0], color = cc, lw= 1.5)
+
+    
+    # print(centroids)
+
 
     cbar = ax.cax.colorbar(p)
     cbar = grid.cbar_axes[0].colorbar(p)
-    
+
+
     if pixel_spacing is not None:
         #fig, ax = plt.subplots()
         fontprops = fm.FontProperties(size=14)
         scalebar = AnchoredSizeBar(ax.transData,
-                                    round(2/pixel_spacing), '2mm', 'upper right', 
+                                    round(2/pixel_spacing), '2mm', 'lower right', #'upper right' 
                                     pad=0.1,
-                                    color=color_scale_bar,
+                                    color='crimson',
                                     frameon=False,
                                     size_vertical=2,
                                     fontproperties=fontprops)
@@ -472,15 +533,18 @@ def whole_time_sequence(data,
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         #plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
-        plt.savefig(os.path.join(tmp, name + '.png'), format = 'png', dpi =500)
+        print(os.system('/usr/bin/sync'))
+        plt.savefig(os.path.join(tmp, name + '.'+ext), format = 'png', dpi =500)
+        print(os.system('/usr/bin/sync'))
         plt.rc('figure', max_open_warning = 0)
         plt.rcParams.update({'font.size': 12})
-        plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
+        # plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
         #plt.savefig(os.path.join(tmp, 'Bretz_pos2inAM3_SingleTrial_distrib' + '.pdf'), format='pdf', dpi =500)
         print(name + ext+ ' stored successfully!')
     #else:
     #    plt.show()
-    plt.show()
+    if render_flag:
+        plt.show()
     plt.close('all')
     return
 
@@ -565,10 +629,116 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
     if store_pic:
         # Storing picture
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)#os.path.join(name_analysis_, ID_NAME, v))
-        plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.svg'))
-        print('averagedheatmap_' +name_cond+ '.svg'+ ' stored successfully!')
+        # plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.svg'))
+        # print('averagedheatmap_' +name_cond+ '.svg'+ ' stored successfully!')
         plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.png'))
         plt.close('all')
     else:
         plt.show()
     return
+
+import st_builder as st
+
+
+def plot_st(profilemap,  threshold_contour, 
+            traj_mask,
+            pixel_spacing,
+            retinotopic_pos = None,
+            retinotopic_time = None, 
+            map_type = utils.PARULA_MAP,
+            st_title = None,
+            onset_time = 4,
+            colors_retinotopy = ['crimson', 'tomato', 'magenta'],
+            draw_peak_traj = True,
+            is_delay = 30,#ms
+            sampling_fq = 100,#Hz
+            high_level = 5,
+            color_peak = 'teal',
+            low_level = -1,
+            store_path = None):
+    
+    # Safety checks
+#     if (retinotopic_pos is not None) and (retinotopic_time is not None):
+#         assert len(retinotopic_pos) == len(colors_retinotopy), 'Mismatch in retinotopic positions numbers and colors available'
+    space, time  = profilemap.shape
+    timing_frame = int((1/sampling_fq)*1000)
+    assert (is_delay/timing_frame)>1, 'Something weird: sampling frequency and timing of a frame incompatible'
+    isi_frames   = int(is_delay/timing_frame)
+
+    # Plot colormap
+    fig, ax = plt.subplots(1,1, figsize=(9,7))
+    fig.set_facecolor('white')
+    pc_ = ax.pcolormesh(profilemap, cmap= map_type, vmax = high_level, vmin=low_level)
+    
+    # Plot intensity contour
+    blobs = np.zeros(profilemap.shape, dtype = bool)
+#     blobs[np.where(median_filter(profilemap, size=(5,5))>=threshold_contour)] = 1
+    blobs[np.where(profilemap>=threshold_contour)] = 1
+    ax.contour(blobs, 4, colors='k', alpha = .5, levels=[1])
+    
+    blobs_ = np.copy(blobs)
+    blobs_[np.where(median_filter(profilemap, size=(5,5))>=threshold_contour)] = 1
+    
+    # Draw peak's trajectory
+    if draw_peak_traj:
+        a = st.maximi_inda_blob(profilemap, blobs_)
+        ax.scatter(list(list(zip(*a))[1]), list(list(zip(*a))[0]), marker = '.', color = 'k')
+        ax.plot(list(list(zip(*a))[1]), list(list(zip(*a))[0]), ls = '-', color = 'k', alpha = .3)
+    
+    if (retinotopic_pos is not None) and (retinotopic_time is not None):
+        number_strokes = len(retinotopic_pos)
+        # Plot timelines and retinotopic positions
+        for n in range(number_strokes):
+            print(f'stroke\'s peak {retinotopic_time[n]+n*isi_frames} coordinate')
+            ax.scatter(retinotopic_time[n]+n*isi_frames, retinotopic_pos[n], marker = 'o', color = colors_retinotopy[n], s= 100)
+
+    else:
+        colors_retinotopy = [color_peak]
+        number_strokes = 1
+        
+    for n in range(number_strokes):
+        plt.vlines(onset_time+n*isi_frames, 
+                   np.where(traj_mask != 0)[1].min(), 
+                   np.where(traj_mask != 0)[1].max(), 
+                   color = colors_retinotopy[n], ls ='--', lw=2)
+    
+    # Plot highest spot
+    a, b = process.find_highest_sum_area(profilemap*blobs_, 5)
+    ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
+    print(a, b)
+
+    # Custom axis
+    strokes_onset_times = [onset_time+i*isi_frames for i in range(number_strokes)]
+    strokes_onset_times.sort()
+    print(strokes_onset_times)
+    start_time_instants = [0] + strokes_onset_times
+    tmp = start_time_instants + list(np.linspace(start_time_instants[-1], time, (2+(time-start_time_instants[-1])//10)))
+
+    print(tmp)
+    ax.set_xticks(tmp)
+    labels_ = [item.get_text() for item in ax.get_xticklabels()]
+    # x_tmp = np.arange((zero_of_cond-12), (zero_of_cond+30+12), len(tmp))
+    list_x = list()
+    for i, x in zip(labels_, tmp):
+        list_x.append(f'{int((x-(onset_time))*timing_frame)}')
+    ax.set_xticklabels(list_x, fontsize = 12)
+    ax.set_xlabel('Time - ms', fontsize = 15)
+
+    tmp_y = np.linspace(0, space-10, 9) 
+    ax.set_yticks(tmp_y)
+    labels_ = [item.get_text() for item in ax.get_yticklabels()]
+    list_y = list()
+    for y in np.linspace(0, (pixel_spacing*space) , 9):
+        list_y.append(f'{y:.1f}')
+    ax.set_yticklabels(list_y, fontsize = 12)
+    ax.set_ylabel('Space - mm', fontsize = 15)
+    ax.set_ylim((np.where(traj_mask != 0)[1].min(), np.where(traj_mask != 0)[1].max()))
+    fig.colorbar(pc_) 
+                   
+    if st_title is not None:
+        plt.title(st_title, fontsize = 15)
+        if store_path is not None:
+            plt.savefig(os.path.join(store_path+ '.pdf'), format = 'pdf', dpi =500)
+            plt.savefig(os.path.join(store_path+ '.png'), format = 'png', dpi =500)
+    plt.show()
+    return (a,b)

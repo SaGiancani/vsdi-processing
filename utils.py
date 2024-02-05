@@ -1,4 +1,5 @@
 import cv2 as cv
+import json
 import numpy as np
 import scipy.io as scio
 import datetime, fnmatch, logging, os, pickle, sys, struct
@@ -57,27 +58,19 @@ COLORS = colors_a = [  'forestgreen', 'purple', 'orange', 'blue',
                  'yellowgreen', 'aliceblue', 'mediumvioletred', 'gold', 'sandybrown',
                  'aquamarine', 'black','lime', 'pink', 'limegreen', 'royalblue','yellow']
 
-def nonlinear_map():
-# nonlincolormap, colormap for displaying suppression/facilitation in a
-# matrix 
-# fredo 2011
-# Salvatore Giancani 2023
-    m = len(cm_data)
-    n = int(np.ceil(m/6))
+import cv2 as cv 
 
-    u=np.linspace(0,n-1,n)/(n-1)
-
-    o=int(round(n/2))
-    v=u[(n-o+1):n]
-
-    J = np.zeros((m,3))
-    tmp = [0]*o + [0]*n + list(u) + [1]*n + [1]*n + list(np.flip(v))
-    J[:len(tmp),0] = tmp  #  %r
-    tmp = [0]*o + list(u) + [1]*n + [1]*n + list(np.flip(u)) + [0]*o  
-    J[:len(tmp),1] = tmp  #  %r
-    tmp = list(v) +[1]*n + [1]*n + list(np.flip(u)) + [0]*n + [0]*o   
-    J[:len(tmp),2] = tmp  
-    return J
+def bin_image(data, x_bnnd_size, y_bnnd_size):
+    assert len(data.shape) == 3, 'Shape of data matrix wrong'
+    time = data.shape[0]
+    b = data
+    tmp = np.zeros((time, y_bnnd_size, x_bnnd_size))
+    for i in range(time):
+        tmp[i, :, :] = cv.resize(np.array(b[i, :, :], dtype='float64'), 
+                                 (x_bnnd_size, y_bnnd_size), 
+                                 interpolation=cv.INTER_LINEAR)
+    b = tmp
+    return b
 
 class DrawLineWidget(object):
     def __init__(self, image):
@@ -170,11 +163,11 @@ def find_thing(pattern, path, what ='file'):
 def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None, experiments = None):
     
     if sessions is not None:
-        sessions = [s.lower() for s in sessions]
+        sessions = [s.lower() for s in sessions if not (s.startswith("."))]
     elif subs is not None:
-        subs = [s.lower() for s in subs]
+        subs = [s.lower() for s in subs if not (s.startswith("."))]
     elif experiments is not None:
-        experiments = [s.lower() for s in experiments]
+        experiments = [s.lower() for s in experiments if not (s.startswith("."))]
 
     if (experiments is None) and (exp_type is not None):
         if 'VSDI' in exp_type and 'BEHAV' in exp_type:
@@ -198,36 +191,88 @@ def get_sessions(path_storage, exp_type = ['VSDI'], sessions = None, subs = None
 
     exps = dict()
     for exp in exps_list:
+        print(exp)
         exps[exp.split('exp-')[1]] = dict()
         path_exp = os.path.join(path_storage, exp)
-        #subjs_list = [f.name for f in os.scandir(path_exp) if (subs is not None) and (f.name.split('sub-')[1].lower() in subs)]
         subjs_list = list()
         for f in  os.scandir(path_exp):
             try:
-                if (subs is not None) and (f.name.split('sub-')[1].lower() in subs):
+                if (subs is not None) and (f.name.split('sub-')[1].lower() in subs) and (not (f.name.startswith("."))) and ((f.name.startswith("sub-"))):
                     subjs_list.append(f.name)
-                elif (subs is None):
+                elif (subs is None) and (not (f.name.startswith("."))) and ((f.name.startswith("sub-"))):
                     subjs_list.append(f.name)        #print(subjs_list)
             except:
                 pass
         for sub in subjs_list:
+            print(sub)
             #exps[exp.split('exp-')[1]][sub.split('sub-')[1]] = dict() 
             path_sub = os.path.join(path_exp, sub)
             sess_list = list()
             for f in  os.scandir(path_sub):
-                if (sessions is not None) and (f.name.split('sess-')[1].lower() in sessions):
+                if (sessions is not None) and (f.name.split('sess-')[1].lower() in sessions) and (not (f.name.startswith("."))):
                     sess_list.append(f.name)
-                elif (sessions is None):
+                elif (sessions is None) and (not (f.name.startswith("."))):
                     sess_list.append(f.name)
-            #print(sess_list)
             paths = list()
             for sess in sess_list:  
+                print(sess)
                 path_sess = os.path.join(path_sub, sess)
                 paths.append(path_sess)
+            print(sub.split('sub-')) 
             exps[exp.split('exp-')[1]][sub.split('sub-')[1]] = paths
 
     return exps
-    
+
+def sort_blks_list(lista):
+    tmp = {}
+    for n, i in enumerate(lista):
+        if type(i) == float:
+            pass
+        else:
+            tmp[i.split('_')[3]] = i
+    sorting_values = list(tmp.keys())
+    sorting_values.sort()
+    sorted_blks = [tmp[i] for i in sorting_values]
+    return sorted_blks
+    # return sorted(lista, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
+
+def get_stimulus_metadata(path):
+    '''
+    Reading stimulus metadata json file
+    '''
+    tmp = find_thing('json_data.json', path)
+    if len(tmp) == 0:
+        print('Check the json_data.json presence inside the session folder and subfolders')
+        return None
+    # else, load the json
+    else :
+        f = open(tmp[0])
+        # returns JSON object as a dictionary
+        data = json.load(f)
+        a = json.loads(data)
+    return  a[list(a.keys())[0]]
+
+def get_conditions_correspondance(path):
+    '''
+    Reading metadata json file for conditions positions
+    '''
+    a = get_stimulus_metadata(path)
+    # Build a dictionary with am conditions as keys and corresponding single stroke position as lists
+    return {i: j['conditions'] for i, j in list(a['pos metadata'].items())}
+
+
+def get_session_id_name(path_session):                
+    # Session names extraction
+    sub_name, experiment_name, session_name = get_session_metainfo(path_session)
+    id_name = sub_name + experiment_name + session_name
+    return id_name
+
+def get_session_metainfo(path_session):
+    experiment_name = path_session.split('exp-')[1].split('sub-')[0][:-1]  
+    session_name = path_session.split('sess-')[1][0:12]
+    sub_name = path_session.split('sub-')[1].split('sess-')[0][:-1]
+    return sub_name, experiment_name, session_name
+
 def inputs_load(filename):
     '''
     ---------------------------------------------------------------------------------------------------------
@@ -248,6 +293,47 @@ def inputs_save(inputs, filename):
     '''
     with open(filename+'.pickle', 'wb') as f:
         pickle.dump(inputs, f, pickle.HIGHEST_PROTOCOL)
+
+def nonlinear_custom_map():
+    # Define the colormap boundaries
+    red = [1.0, 0.0, 0.0]
+    orange = [1.0, 0.5, 0.0]
+    yellow = [1.0, 1.0, 0.0]
+    white = [1.0, 1.0, 1.0]
+    light_blue = [0.5, 0.75, 1.0]
+    blue = [0.0, 0.0, 1.0]
+    dark_blue = [0.0, 0.0, 0.5]
+
+    # Create a dictionary for the colormap
+    cdict = {'red':   [(0.0, dark_blue[0], dark_blue[0]),
+                       (0.17, blue[0], blue[0]),
+                       (0.33, light_blue[0], light_blue[0]),
+                       (0.5, white[0], white[0]),
+                       (0.67, yellow[0], yellow[0]),
+                       (0.83, orange[0], orange[0]),
+                       (1.0, red[0], red[0])],
+
+             'green': [(0.0, dark_blue[1], dark_blue[1]),
+                       (0.17, blue[1], blue[1]),
+                       (0.33, light_blue[1], light_blue[1]),
+                       (0.5, white[1], white[1]),
+                       (0.67, yellow[1], yellow[1]),
+                       (0.83, orange[1], orange[1]),
+                       (1.0, red[1], red[1])],
+
+             'blue':  [(0.0, dark_blue[2], dark_blue[2]),
+                       (0.17, blue[2], blue[2]),
+                       (0.33, light_blue[2], light_blue[2]),
+                       (0.5, white[2], white[2]),
+                       (0.67, yellow[2], yellow[2]),
+                       (0.83, orange[2], orange[2]),
+                       (1.0, red[2], red[2])]}
+
+    # Create the colormap
+    custom_cmap = LinearSegmentedColormap('custom_colormap', cdict)
+
+    return custom_cmap
+
 
 def sector_mask(shape,centre,radius,angle_range):
     """

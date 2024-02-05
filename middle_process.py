@@ -88,7 +88,10 @@ class Condition:
         self.autoselection = tp[9]
         self.blk_names = tp[10]
         self.trials = tp[11]
-        self.z_score = tp[12]
+        try:
+            self.z_score = tp[12]
+        except:
+            print('z_score attribute not found')
         return
     
     def get_behav_latency(self, blank_id):
@@ -97,14 +100,22 @@ class Condition:
         blank condition, than the behavioral latency is stored, for computing the mean and the standard error. 
         '''
         tmp = [trial.behav_latency for trial in self.trials.values() if (trial.fix_correct and self.cond_id != blank_id)]
-        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
+        tmp_ = [i for i in tmp if i>0]
+        return float(np.mean(tmp_)), float(np.std(tmp_)/np.sqrt(len(tmp_))), tmp
 
     def get_success_rate(self):
         '''
         The method computes the rate of success of the behavioral task: it returns mean and standard error of the rate.
         '''
         tmp = [1 if trial.correct_behav else 0 for trial in self.trials.values()]
-        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))) 
+        return float(np.mean(tmp)), float(np.std(tmp)/np.sqrt(len(tmp))), tmp
+    
+    def get_orientation_behav(self):
+        '''
+        The method stores the behavioral outcome for each trial of the condition.
+        '''
+        return (([trial.orientation for trial in self.trials.values()], [trial.orientation_outcome for trial in self.trials.values()]))
+
 
 # Inserting inside the class variables and features useful for one session: we needs an object at this level for
 # keeping track of conditions, filenames, selected or not flag for each trial.
@@ -115,8 +126,9 @@ class Session:
                  temporal_bin = 1,
                  zero_frames = None,
                  tolerance = 20,
-                 mov_switch=False,
-                 deblank_switch=False,
+                 mov_switch = False,
+                 deblank_switch = False,
+                 detrend_switch = False,
                  conditions_id =None,
                  chunks = 1,
                  strategy = 'mae',
@@ -127,7 +139,8 @@ class Session:
                  condid = None, 
                  store_switch = False, 
                  data_vis_switch = True, 
-                 end_frame = None, 
+                 end_frame = None,
+                 filename_particle = 'vsd_C', 
                  **kwargs):
         """
         Initializes attributes
@@ -213,7 +226,8 @@ class Session:
         if logger is None:
             self.log = utils.setup_custom_logger('myapp')
         else:
-            self.log = logger              
+            self.log = logger
+        self.detrend_switch = detrend_switch              
         self.cond_names = None
         self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
@@ -221,14 +235,17 @@ class Session:
             print('Check the path: no blks found')
         self.cond_dict = self.get_condition_name()
         self.cond_names = list(self.cond_dict.values())
-        self.blank_id = self.get_blank_id(cond_id=condid)
+        self.blank_id = get_blank_id(self.cond_names, cond_id=condid)
+        self.filename_particle = filename_particle
 
         # This can be automatized, with zero_frames, extracting parameters from BaseReport
         # Avoiding to load a BLK file
         # A blk loaded for useful hyperparameters
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
-                            self.header['spatial_bin'], 
-                            self.header['temporal_bin'])
+                               self.header['spatial_bin'], 
+                               self.header['temporal_bin'],
+                               detrend_switch    = self.detrend_switch,
+                               filename_particle = self.filename_particle)
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
@@ -247,7 +264,7 @@ class Session:
         # If considered conditions are not explicitly indicated, then all the conditions are considered
         # The adjustment of conditions_id set has to be done ALWAYS before the session_blks extraction       
         if self.header['conditions_id'] is None:
-            self.header['conditions_id'] = self.get_condition_ids()
+            self.header['conditions_id'] = get_condition_ids(self.all_blks, filename_particle = self.filename_particle)
         else:
             self.header['conditions_id'] = list(set(self.header['conditions_id']+[self.blank_id]))
         # only the used blks for the selection
@@ -296,59 +313,63 @@ class Session:
                 self.log.info('BaseReport properly loaded!')
                 self.log.info('BaseReport loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
                 start_time = datetime.datetime.now().replace(microsecond=0)
-                self.time_stamp, self.piezo, self.heart_beat = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
+                self.time_stamp, self.piezo, self.heart_beat, self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability = al.get_analog_signal(self.header['path_session'], self.base_report, name_report = 'SignalData.csv')
                 self.log.info('Piezo and Heart Beat signals properly loaded!')
                 self.log.info('Analogic signals loading time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))
                 self.base_report = self.base_report.loc[(self.base_report['Preceding Event IT'] == 'FixCorrect')] 
             except:
                 self.log.info('Something went wrong loading the BaseReport or SignalData')
-                self.base_report, self.time_stamp, self.piezo, self.heart_beat  = None, None, None, None
-
+                self.base_report, self.time_stamp, self.piezo, self.heart_beat,   = None, None, None, None
+                self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability  = None, None, None, None
             #try:
             #    path_trackreport = utils.find_thing('TrackerLog.csv', self.header['path_session'])
             #except:
             #    self.log('Something went wrong loading the TrackerLog')
         else:
             self.base_report, self.time_stamp, self.piezo, self.heart_beat  = None, None, None, None
+            self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability  = None, None, None, None
 
+        self.time_course_blank = None
+        self.f_f0_blank = None
+        self.stde_f_f0_blank = None
         if self.header['deblank_switch']:
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
-            self.time_course_blank = None
-            self.f_f0_blank = None
-            self.stde_f_f0_blank = None
             # Calling get_signal in the instantiation of Session allows to obtain the blank signal immediately.
             _ = self.get_signal(self.blank_id)
 
-    def get_blank_id(self, cond_id = None):
-        '''
-        The method returns the index of blank condition.
-        Some session require a specific condition index: cond_id variable designed for manual setting.
-        If it is None -by default-, the method checks among the condition names: if labelConds.txt
-        file exists, than the position of "blank" label is picked. Otherwise the position of last condition 
-        is picked.
-        '''
-        if cond_id is None:
-            try:
-                tmp = [idx for idx, s in enumerate(self.cond_names) if 'blank' in s][-1]+1
-                self.log.info('Blank id: ' + str(tmp))
-                return tmp
-            except IndexError:
-                self.log.info('No clear blank condition was identified: the last condition has picked')
-                tmp = len(self.cond_names)
-                self.log.info('Blank id: ' + str(tmp))
-                return tmp
-        else:
-            return cond_id
 
     def get_signal(self, condition):
+        '''
+        Parameters:
+            self: This parameter refers to the instance of the class Session. 
+            It is used to access instance variables and methods within Session class.
+            condition: An integer representing the condition for which the signal is being extracted.
+
+        Method Description:
+            This method is responsible for extracting signals and related data for a specific condition.
+            It starts by filtering a list of "blks" that match the provided condition.
+            It defines "zero_of_cond" and "end_of_cond" based on attributes in the Session header.
+            Depending on whether the condition is the "blank_id" (the blank condition), it follows different logic paths.
+            If the condition is the "blank_id":
+                It extracts signals, data frames, conditions, and other information using the signal_extraction function.
+                It processes and stores various data, including the signal, normalized signal, and z-scores.
+                Visualization and other operations are performed if specified.
+                If storage is enabled, a "Condition" object is instantiated and stored.
+            If the condition is not the "blank_id":
+                Similar signal extraction and processing are performed as in the "blank_id" case, but some data is 
+                appended to existing class attributes. Visualization and storage are handled in the same way.
+            Various data and variables are deleted from memory to free up resources.
+            The method returns a binary mask based on a selection criterion for trials.
+            
+        '''
         # All the blank blks
-        blks = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2])==condition)]
+        blks = [f for f in self.all_blks if (int(f.split(self.filename_particle)[1][0:2])==condition)]
         zero_of_cond = self.header['zero_frames']
         end_of_cond = self.header['ending_frame']
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat)
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, detrend = self.detrend_switch, filename_particle = self.filename_particle)
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
@@ -381,7 +402,7 @@ class Session:
             self.log.info('Blank signal computed')
                         
         else:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat)
+            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, detrend= self.detrend_switch, filename_particle = self.filename_particle)
             mask = self.get_selection_trials(condition, sig)
             self.conditions = self.conditions + conditions
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
@@ -453,19 +474,13 @@ class Session:
             return self.all_blks
         else:
             self.log.info('BLKs for conditions ' + str(self.header['conditions_id']) + 'sorted by time creation')
-            tmp = [f for f in self.all_blks if (int(f.split('vsd_C')[1][0:2]) in self.header['conditions_id'])]
+            tmp = [f for f in self.all_blks if (int(f.split(self.filename_particle)[1][0:2]) in self.header['conditions_id'])]
             try:
                 a = sorted(tmp, key=lambda t: datetime.datetime.strptime(t.split('_')[2] + t.split('_')[3], '%d%m%y%H%M%S'))
             except:
                 self.log.info('Warning: sorting BLK filenames was not performed')
                 a = tmp
             return a 
-
-    def get_condition_ids(self):
-        '''
-        The method returns a list of all the condition's ids, taken from the .BLK names.
-        '''
-        return list(set([int(i.split('vsd_C')[1][0:2]) for i in self.all_blks]))
         
     def get_condition_name(self):
         '''
@@ -486,7 +501,7 @@ class Session:
             # If also with find_thing there is no labelConds.txt file, than loaded as name Condition n#
             if len(tmp) == 0:
                 self.log.info('Check the labelConds.txt presence inside the session folder and subfolders')
-                cds = self.get_condition_ids()
+                cds = get_condition_ids(self.all_blks, filename_particle = self.filename_particle)
                 return {j+1:'Condition ' + str(c) for j, c in enumerate(cds)}
             # else, load the labelConds from the alternative path
             else :
@@ -502,6 +517,7 @@ class Session:
         header['tolerance'] = tolerance
         header['mov_switch'] = mov_switch
         header['deblank_switch'] = deblank_switch
+        header['detrend_switch'] = self.detrend_switch
         header['conditions_id'] = conditions_id
         header['chunks'] = chunks
         header['strategy'] = strategy
@@ -509,7 +525,26 @@ class Session:
         return header
     
     def get_session(self):
+        '''
+        Parameters:
+            self: This parameter represents the instance of the class Session and is used to access instance 
+            variables and methods.
 
+        Method Description:
+            This method is part of a data processing workflow for an experimental VSDI session, handling 
+            multiple experimental conditions.
+            If there are multiple conditions defined (as indicated by the length of 'conditions_id' in the class header), 
+            the method iterates through each condition (denoted as 'cd').
+            For each condition, it logs the start of the loading procedure and the condition name.
+            It then calls the get_signal method for the current condition, which is responsible for signal 
+            extraction and related processing. 
+            After processing, it logs the number of trials selected for the condition.
+            The method keeps track of the total number of trials selected across all conditions.
+            It also constructs an array of trial names based on the selected trials.
+            If the visualization_switch is enabled (a boolean attribute), it generates time sequence visualizations
+            for the data. This includes visualizations of averaged conditions and z-scores.
+            The method returns without any explicit return value.        
+        '''
         if len(self.header['conditions_id']) > 1:
             for cd in self.header['conditions_id']:
                 c_name = self.cond_dict[cd]
@@ -526,16 +561,67 @@ class Session:
         if self.visualization_switch:
             # zero_frames and ending_frames have to be recovered by trials
             # titles gets the name of blank condition as first, since it was stored first
-            dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.avrgd_df_fz, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
-            #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
-            # Double deblanking: further blank subtraction here
-            dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.nanpercentile(self.z_score, 15), np.nanpercentile(self.z_score, 90)), log_ = self.log)
+            for i, j in enumerate(self.avrgd_df_fz):
+                print(j.shape)
+                # dF/F0
+                dv.whole_time_sequence(j, 
+                                       mask = np.ones((j[0, :, :].shape), dtype=bool),
+                                       name=f'df_average_cond{i+1}', 
+                                       max=80, min=20,
+                                       handle_lims_blobs = ((97.72, 100)),
+                                       #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
+                                       # global_cntrds = [dict_retino[name_cond].retino_pos],
+                                       # colors_centr = colrs,
+                                       ext='png',
+                                       name_analysis_= os.path.join(self.set_md_folder(), 'activity_maps'))
+
+                dv.whole_time_sequence(self.z_score[i], 
+                                       mask = np.ones((j[0, :, :].shape), dtype=bool),
+                                       name=f'zscore_cond{i+1}', 
+                                       max=80, min=20,
+                                       handle_lims_blobs = ((97.72, 100)),
+                                       #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
+                                       # global_cntrds = [dict_retino[name_cond].retino_pos],
+                                       # colors_centr = colrs,
+                                       ext='png',
+                                       name_analysis_= os.path.join(self.set_md_folder(), 'activity_maps'))
+                # dv.time_sequence_visualization(self.header['zero_frames'], 
+                #                                20,
+                #                                self.header['ending_frame'], 
+                #                                self.avrgd_df_fz, 
+                #                                [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] ,
+                #                                'avrgd_conds', self.header, self.set_md_folder(), log_ = self.log)
+                # #def time_sequence_visualization(start_frame, n_frames_showed, end_frame, data, titles, title_to_print, header, path_, circular_mask = True, log_ = None, max_trials = 20):
+                # # Double deblanking: further blank subtraction here
+                # dv.time_sequence_visualization(self.header['zero_frames'], 20, self.header['ending_frame'], self.z_score, [self.cond_dict[self.blank_id]]+[self.cond_dict[c] for c in self.header['conditions_id'] if c!=self.blank_id] , 'zscores', self.header, self.set_md_folder(), c_ax_ = (np.nanpercentile(self.z_score, 15), np.nanpercentile(self.z_score, 90)), log_ = self.log)
 
         else:
             self.log.info('No visualization charts.')
         return
 
     def get_selection_trials(self, condition, time_course):
+        '''
+        Parameters:
+            self: This parameter represents the instance of the class Session and is used to access instance variables and methods.
+            condition: An integer representing the condition for which selection trials are being determined.
+            time_course: numpy.array 3d matrix representing the time courses for a specific condition.
+
+        Method Description:
+            This method is responsible for automatically selecting trials based on a specified strategy.
+            It first retrieves various parameters from the class instance, such as the strategy, the number of frames, and other attributes.
+            It logs the start of the autoselection process for the given condition.
+            The selection strategy depends on the value of the strategy attribute in the class header. The following strategies are supported:
+                + 'mse' or 'mae' (Mean Squared Error or Mean Absolute Error): In this case, the data is divided into chunks, and overlap strategy
+                   is used to select trials. The number of chunks can be determined based on the number of frames -all the chunks of same number of frames- 
+                   and the 'chunks' attribute in the class header.
+                + 'roi', 'roi_signals', or 'ROI': This strategy is based on selecting trials using region of interest (ROI) information, with 
+                  specified tolerance and zero frames.
+                + 'statistic', 'statistical', or 'quartiles': A statistical strategy based on statistical measures is used 
+                   to select trials.
+            The selected trials are stored in the tmp variable.
+            The method logs the time it took for the autoselection process for the given condition.
+            It returns the selected trials (tmp) as the result of the method.        
+        '''
         strategy = self.header['strategy']
         n_frames = self.header['n_frames']
 
@@ -599,14 +685,16 @@ class Session:
             for i, ax in enumerate(axs):
                 count = row*columns + i
                 if count < len(mask):
-                    ax.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
+                    ax.set_ylim(np.nanmin(sig[cdi_select, :]) - (np.nanmax(sig[cdi_select]) - np.nanmin(sig[cdi_select]))*0.005, 
+                                np.nanmax(sig[cdi_select, :]) + (np.nanmax(sig[cdi_select]) - np.nanmin(sig[cdi_select]))*0.005)
                     if mask[count]==1:
                         color = 'b'
                     else:
                         color = 'r'
                     ax.plot(sig[count, :], color)
                     ax.set_title(blks[count])
-                    ax.errorbar(x, np.mean(sig[cdi_select, :], axis = 0), yerr=(np.std(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), fmt='--', color = 'k', elinewidth = 0.5)
+                    ax.errorbar(x, np.nanmean(sig[cdi_select, :], axis = 0), yerr=(np.nanstd(sig[cdi_select, :], axis = 0)/np.sqrt(len(cdi_select))), 
+                                fmt='--', color = 'k', elinewidth = 0.5)
                     ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
                     #ax.set_ylim(-0.002,0.002)
                 if row<len(subfigs)-2:
@@ -616,13 +704,14 @@ class Session:
                 elif row == len(subfigs)-1:
                     ax.axis('off')
                     ax_ = subfig.subplots(1, 1)
-                    ax_.set_ylim(np.min(sig[cdi_select, :]) - (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005, np.max(sig[cdi_select, :]) + (np.max(sig[cdi_select]) - np.min(sig[cdi_select]))*0.005)
+                    ax_.set_ylim(np.nanmin(sig[cdi_select, :]) - (np.nanmax(sig[cdi_select]) - np.nanmin(sig[cdi_select]))*0.005, 
+                                 np.nanmax(sig[cdi_select, :]) + (np.nanmax(sig[cdi_select]) - np.nanmin(sig[cdi_select]))*0.005)
                     for i in sig[cdi_select[:-1], :]:
                         ax_.plot(x, i, 'gray', linewidth = 0.5)
                     ax_.plot(x, sig[cdi_select[-1], :], 'gray', linewidth = 0.5, label = 'Trials')
-                    ax_.plot(x, np.mean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
-                    ax_.plot(x, np.mean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
-                    ax_.plot(x, np.mean(sig, axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
+                    ax_.plot(x, np.nanmean(sig[cdi_select, :], axis=0), 'k', label = 'Average Selected trials', linewidth = 2)
+                    ax_.plot(x, np.nanmean(sig[cdi_unselect, :], axis=0), 'crimson', label = 'Average Unselected trials', linewidth = 2)
+                    ax_.plot(x, np.nanmean(sig, axis=0), 'green', label = 'Average All trials Cond. ' + str(cd_i), linewidth = 2)
                     ax_.plot(x, blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 2)
                     #ax_.plot(list(range(0,np.shape(sig)[1])), blank_sign, color='m', label = 'Average Blank Signal' ,linewidth = 5)
                     ax_.legend(loc="upper left")                
@@ -650,6 +739,7 @@ class Session:
             + '_zerofrms' + str(self.header['zero_frames']) \
             + strat_depend\
             + '_mov' + str(self.header['mov_switch'])\
+            + '_dtrend' + str(self.detrend_switch)\
             + '_deblank' + str(self.header['deblank_switch'])
         
         folder_path = os.path.join(session_path, 'derivatives/',folder_name)               
@@ -658,16 +748,100 @@ class Session:
             os.makedirs(folder_path)
             #os.mkdirs(path_session+'/'+session_name)
         return folder_path
-#                    _, _, _, _, trials = md.signal_extraction(session.header, blks, None, None, session.base_report, blank_id, session.piezo, session.heart_beat, log = session.log, blks_load = False)
+    
+    def split_behav_blks(self, autoselection = False): 
+        '''
+        The method gets as input a condition and returns two lists of tuples, each tuple contains an index and corresponding blk filename.
+        The two lists correspond one to correct behavior blks, and the second to uncorrect behavior.         
+        Input:
+            cond: Condition object.
+            autoselection: boolean flag. If True returns an intersection of the correct/uncorrect indeces with the autoselected in the session.
+        Output:
+            2 lists of tuples.
+        '''
+        correct_blks_p1, uncorrect_blks_p1 = list(), list()
+        indeces_correct, indeces_uncorrect = list(), list()
+        for k,v in self.trials.items():
+            if v.correct_behav:
+                correct_blks_p1.append(k)
+                indeces_correct.append(self.blk_names.index(k))
+            else:
+                uncorrect_blks_p1.append(k)
+                indeces_uncorrect.append(self.blk_names.index(k))
+        
+        if autoselection:
+            indeces_correct_ = list(set(indeces_correct).intersection(set(np.where(self.autoselection)[0])))
+            correct_blks_p1 = [self.blk_names[i] for i in indeces_correct_]
+            indeces_uncorrect_ = list(set(indeces_uncorrect).intersection(set(np.where(self.autoselection)[0]))) 
+            uncorrect_blks_p1 = [self.blk_names[i] for i in indeces_uncorrect_]
+            
+        return [(self.blk_names.index(i), i) for i in correct_blks_p1], [(self.blk_names.index(i), i) for i in uncorrect_blks_p1]
 
-def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, log = None, blks_load = True):
+def get_condition_ids(all_blks, filename_particle = 'vsd_C'):
+    '''
+    The method returns a list of all the condition's ids, taken from the .BLK names.
+    '''
+    return list(set([int(i.split(filename_particle)[1][0:2]) for i in all_blks]))
+
+def get_blank_id(cond_names, cond_id = None):
+    '''
+    The method returns the index of blank condition.
+    Some session require a specific condition index: cond_id variable designed for manual setting.
+    If it is None -by default-, the method checks among the condition names: if labelConds.txt
+    file exists, than the position of "blank" label is picked. Otherwise the position of last condition 
+    is picked.
+    '''
+    if cond_id is None:
+        try:
+            tmp = [idx for idx, s in enumerate(cond_names) if 'blank' in s][-1]+1
+            print('Blank id: ' + str(tmp))
+            return tmp
+        except IndexError:
+            print('No clear blank condition was identified: the last condition has picked')
+            tmp = len(cond_names)
+            print('Blank id: ' + str(tmp))
+            return tmp
+    else:
+        return cond_id
+
+def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id, time, piezo, heart, detrend = False, log = None, blks_load = True, filename_particle = 'vsd_C'):
+    '''
+    Parameters:
+        header: the Session header. A dictionary containing various parameters and metadata.
+        blks: A list of trial (BLK) filenames to process.
+        blank_s: The blank signal, aka a reference signal.
+        blnk_switch: A switch that determines whether blank subtraction is applied.
+        base_report: A report containing information about trials (could be None if not available).
+        blank_id: The ID of the blank condition.
+        time: Time information.
+        piezo: Piezo data.
+        heart: Heart data.
+        log: A logging object for recording information (could be None).
+        blks_load: A flag indicating whether to load BLK files.
+        filename_particle: a string particle for distinguish between VSDI or IOI recordings.
+
+    Function Description:
+        The function begins by initializing some variables and parameters, including trials_dict, path_rawdata, and flag_remove.
+        It determines the type of strategy for processing the trials, such as 'mse', 'mae', 'roi', 'statistic', and more, based 
+        on the strategy attribute in the header.
+        If blks_load is True, it loads the trial data. For each trial in blks, it does the following:
+            Loads the trial data using the blk_file.BlkFile class and stores it in variables such as raws, delta_f, and sig.
+            The specific processing applied to the data depends on the chosen strategy. For example, if the strategy is 'mse' or 
+            'mae', the data is divided into chunks.
+            The trial information, including condition, is stored in the conditions list.
+            The function logs information about the loading process.
+            If a trial is empty, it is removed from the list of trials.
+        If blks_load is False, it doesn't load the trial data and only constructs the trials_dict.
+        The function returns the extracted and processed data: sig (time course), delta_f (delta F/F0), conditions (conditions of 
+        the trials), raws (raw data), and trials_dict (trial information).    
+    '''
     #motion_indeces, conditions = [], []
     conditions = []
     path_rawdata = os.path.join(header['path_session'],'rawdata/')
     flag_remove = False
     if base_report is not None:
         trials_dict = dict()
-        greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split('vsd_C')[1][0:2]))
+        greys = al.get_greys(header['path_session'], int(os.path.join(path_rawdata, blks[0]).split(filename_particle)[1][0:2]))
     else:
         trials_dict = None
         
@@ -710,7 +884,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         os.path.join(path_rawdata, blk_name),
                         header['spatial_bin'],
                         header['temporal_bin'],
-                        header = None)
+                        header = None, 
+                        detrend_switch    = detrend,
+                        filename_particle = filename_particle)
 
                     header_blk = BLK.header
                     raws = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
@@ -722,7 +898,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         os.path.join(path_rawdata, blk_name), 
                         header['spatial_bin'], 
                         header['temporal_bin'], 
-                        header = header_blk)
+                        header = header_blk,
+                        detrend_switch    = detrend, 
+                        filename_particle = filename_particle)
                 
                 # Log prints
                 if log is None:
@@ -751,7 +929,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         os.path.join(path_rawdata, blk_name),
                         header['spatial_bin'],
                         header['temporal_bin'],
-                        header = None)
+                        header = None, 
+                        detrend_switch    = detrend,
+                        filename_particle = filename_particle)
 
                     header_blk = BLK.header
                     raws = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
@@ -806,6 +986,33 @@ def roi_strategy(matrix, tolerance, zero_frames):
     return mask_array
 
 def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators = None, n_chunks = 1, loss = 'mae', threshold = 'median'):
+    '''
+    Parameters:
+        matrix: A data matrix that you want to process.
+        cd_i: The condition ID for which this strategy is being applied.
+        path: The path to a directory where visualization results may be saved.
+        header: A dictionary containing various parameters and metadata: namely, the Session header.
+        switch_vis: A boolean flag that determines whether to create visualizations (default is False).
+        separators: A list of indices that can be used to manually specify chunk boundaries (default is None).
+        n_chunks: The number of chunks to divide the data into.
+        loss: The loss metric used for selecting regions (e.g., 'mae' or 'mse').
+        threshold: A thresholding method for region selection (default is 'median').
+
+    Function Description:
+        If separators is not provided, the function divides the data into n_chunks chunks -equally dimensioned chunks-
+        and computes the loss metric for each pair of chunks using a selected loss metric (loss).
+        The loss metric could be Mean Absolute Error ('mae') or Mean Squared Error ('mse').
+        The function computes the pairwise loss metrics between chunks and creates a matrix (tmp_m_) representing 
+        the loss between different pairs of chunks.
+        The m matrix stores the sum of loss values for each chunk.
+        The function applies a thresholding method (threshold) to the m matrix to select specific regions of interest 
+        within the chunks.
+        The selected regions are stored in the autoselect list.
+        The mask_array is a binary array that indicates the selected regions within the matrix.
+        If switch_vis is True, the function generates visualizations based on the selected regions.
+        The function returns the autoselect list, mask_array, coordinates of selected regions, distribution information, 
+        and normalized loss values.
+    '''
     if separators is None:
         if  matrix.shape[1] % n_chunks == 0:
             matrix_ = matrix.reshape(matrix.shape[0], n_chunks, -1)
@@ -819,13 +1026,13 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
 
                     for j in matrix_:    
                         if loss == 'mae':
-                            tmp.append(np.abs(np.subtract(i[m, :], j[m, :])).mean())
+                            tmp.append(np.nanmean(np.abs(np.subtract(i[m, :], j[m, :]))))
                         elif loss == 'mse':
-                            tmp.append(np.square(np.subtract(i[m, :], j[m, :])).mean())
+                            tmp.append(np.nanmean(np.square(np.subtract(i[m, :], j[m, :]))))
 
                     tmp_m[n, :] = np.asarray(tmp)    
                 tmp_m_[m, :, :] = tmp_m
-            m = np.sum(tmp_m_, axis=1)
+            m = np.nansum(tmp_m_, axis=1)
         else:
             # This check has to be done before running the script
             print('Use a proper number of chunks: exact division for the number of frames required')
@@ -853,13 +1060,13 @@ def overlap_strategy(matrix, cd_i, path, header, switch_vis = False, separators 
                 tmp = []
                 for j in tmp_list[m]:    
                     if loss == 'mae':
-                        tmp.append(np.abs(np.subtract(i[:], j[:])).mean())
+                        tmp.append(np.nanmean(np.abs(np.subtract(i[:], j[:]))))
                     elif loss == 'mse':
-                        tmp.append(np.square(np.subtract(i[:], j[:])).mean())
+                        tmp.append(np.nanmean(np.square(np.subtract(i[:], j[:]))))
                 tmp_m.append(tmp)    
             tmp_m_.append(tmp_m)
             #print(np.shape(tmp_list))
-        m = np.sum(tmp_m_, axis=1)
+        m = np.nansum(tmp_m_, axis=1)
 
     t_whol = list()
     coords = list()
@@ -960,8 +1167,16 @@ if __name__=="__main__":
     parser.add_argument('--dblnk', 
                         dest='deblank_switch',
                         action='store_true')
-    parser.add_argument('--no-dblnk', 
+    parser.add_argument('--no-dblnk', # Bug 24/07/2023: AttributeError: 'Session' object has no attribute 'f_f0_blank'
                         dest='deblank_switch', 
+                        action='store_false')
+    parser.set_defaults(deblank_switch=False)
+
+    parser.add_argument('--dtrend', 
+                        dest='detrend_switch',
+                        action='store_true')
+    parser.add_argument('--no-dtrend', 
+                        dest='detrend_switch', 
                         action='store_false')
     parser.set_defaults(deblank_switch=False)
 
@@ -1026,7 +1241,19 @@ if __name__=="__main__":
     parser.add_argument('--no-vis', 
                         dest='data_vis_switch', 
                         action='store_false')
-    parser.set_defaults(data_vis_switch=False)  
+    parser.set_defaults(data_vis_switch=False) 
+
+    parser.add_argument('--particle', 
+                        dest='filename_particle',
+                        type=str,
+                        default = 'vsd_C',
+                        required=False)    
+    
+    parser.add_argument('--zero', 
+                        dest='zero_frames',
+                        type=int,
+                        default = None,
+                        required=False) 
     
 
     logger = utils.setup_custom_logger('myapp')

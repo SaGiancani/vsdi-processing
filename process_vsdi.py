@@ -1,89 +1,43 @@
 import cv2 as cv
 import numpy as np
-from scipy.ndimage.filters import uniform_filter1d, gaussian_filter, median_filter
+from scipy.ndimage.filters import convolve, gaussian_filter, median_filter, uniform_filter1d
 from scipy import optimize
 
-def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None, outlier_tresh = 1000):
+def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None):
     '''F/F0 computation with -or without- demean of n_frames_zero and killing of outlier 
 		----------
 		vsdi_sign : np.array, with shape nframes, width, height
         n_frames_zero: int, the number of frames taken as zero, aka prestimulus
         demean: bool, switch for demeaning the signal: F-mean(F[0:n_frames_zero])/mean(F[0:n_frames_zero]) if True
                 F/mean(F[0:n_frames_zero]) if False 
-        outlier_tresh: int, 1000 by default, over this -absolute- threshold the pixel-value is put to 0  
 		Returns
 		-------
 		df_fz : np.array, with shape nframes, width, height
     '''
     #mean_frames_zero = np.nanmean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
+    if len(vsdi_sign.shape) != 3:
+        print('Data input not a 3d matrix!')
+        return
+
     mean_frames_zero = np.nanmean(vsdi_sign[:n_frames_zero, :, :], axis = 0)
     #mean_frames_zero[np.where(mean_frames_zero==0)] = np.min(mean_frames_zero)
     # The case for precalculating the blank signal or not deblank at all
     if (deblank and (blank_sign is None)):
-        #t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
-        #vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val) 
-        
         df_fz= (vsdi_sign/mean_frames_zero) 
     # The case for calculating the signal deblanked
     elif deblank and (blank_sign is not None):
-        #t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
-        #vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val)
-        
-        #t_val = np.nanmean(np.ma.masked_invalid(blank_sign))
-        #blank_sign = np.nan_to_num(blank_sign,nan= t_val, posinf = t_val, neginf= t_val)          
-        
         df_fz = ((vsdi_sign/mean_frames_zero)/(blank_sign)) - 1
     # The case without deblank
     elif (not deblank):
-        #t_val = np.nanmean(np.ma.masked_invalid(vsdi_sign))
-        #vsdi_sign = np.nan_to_num(vsdi_sign,nan= t_val, posinf = t_val, neginf= t_val) 
-        
         df_fz = (vsdi_sign/mean_frames_zero) -1
-    # Conceptually problematic subtraction, if used in combination with first frame subtraction.         
-    #df_fz = df_fz - df_fz[0, :, :] 
-    #t_val = np.nanmean(np.ma.masked_invalid(df_fz))
-    #df_fz = np.nan_to_num(df_fz,nan= t_val, posinf = t_val, neginf= t_val)
-    #df_fz[np.where(np.abs(df_fz)>outlier_tresh)] = 0
+
     return df_fz
 
-def get_centroids(contours):
-    # Centroids detection
-    centroids = list()
-    #conts = list()
-    for i in contours:
-        #conts.append(np.squeeze(i))
-        M = cv.moments(i)
-        if M['m00'] != 0:
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
-            centroids.append((cx, cy))
-    return centroids
-
-def get_blobs(blurred, min_thresh2, max_thresh2):
-    _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
-    # Normalization and binarization
-    blobs = blobs/np.max(blobs)
-    blobs = blobs.astype(np.uint8)
-    return blobs
-
-def get_significant_sign(blurred, min_thresh2, max_thresh2):
-    blobs = get_blobs(blurred, min_thresh2, max_thresh2)
-    # Contours and centroid detections
-    contours, _ = cv.findContours(blobs, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    centroids = get_centroids(contours)
-    return contours, centroids, blobs 
-
-def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
-    # Thresholding of z_score
-    _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
-    # Median filter against salt&pepper noise
-    blurred_median = median_filter(threshed, size=(3,3))
-    # Gaussian filter for blob individuation
-    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)
-    print(np.nanmin(blurred), np.nanmax(blurred))
-    return blurred
-
 def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, max_2_lim = 100, std = 15, adaptive_thresh = True, kind = 'zscore'):#From 90 to 99 of min_2_lim
+    '''
+    Method for automatic detection of blobs, contours and their centroids.
+    '''
+
     #averaged_zscore = np.nan_to_num(averaged_zscore, copy=False, nan=-0.000001, posinf=None, neginf=None)# This could be an issue: using nanmin and divide the results by 10
     # Adaptive thresholding: if true it computes the percentile for thresholding, otherwise the threshold has to be provided
     dim_data = len(averaged_zscore.shape)
@@ -95,7 +49,7 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
         else:
             min_thresh = min_lim
             max_thresh = max_lim
-        print('get_signal_profile called')
+        # print('get_signal_profile called')
         averaged_zscore = np.nan_to_num(averaged_zscore, nan=np.nanmin(averaged_zscore), neginf=np.nanmin(averaged_zscore[np.where(averaged_zscore != -np.inf)]), posinf=np.nanmax(averaged_zscore[np.where(averaged_zscore != np.inf)]))
         blurred = get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = std)
 
@@ -122,8 +76,8 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
             max_thresh = max_lim
 
         # Signal profile extraction over frames
-        print(min_thresh, max_thresh)
-        print('get_signal_profile called')
+        # print(min_thresh, max_thresh)
+        # print('get_signal_profile called')
         averaged_zscore = np.nan_to_num(averaged_zscore, nan=np.nanmin(averaged_zscore), neginf=np.nanmin(averaged_zscore[np.where(averaged_zscore != -np.inf)]), posinf=np.nanmax(averaged_zscore[np.where(averaged_zscore != np.inf)]))
         data = [get_signal_profile(i, min_thresh, max_thresh) for i in averaged_zscore]
         data = np.asarray(data)
@@ -131,13 +85,13 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
         if kind == 'zscore':
             # Blob detection
             min_thresh2 = np.nanpercentile(data, min_2_lim)
-            print(min_thresh2)
-            print(min_2_lim)
+            # print(min_thresh2)
+            # print(min_2_lim)
         elif kind == 'df':
             min_thresh2 = 2*np.nanstd(data)
 
         max_thresh2 = np.nanpercentile(data, max_2_lim)
-        print('Boundaries for get_significant_sign '+str(min_thresh2) + ' -- '+str(max_thresh2))
+        # print('Boundaries for get_significant_sign '+str(min_thresh2) + ' -- '+str(max_thresh2))
         countours_ = list()
         centroids_ = list()
         blobs_ = list()
@@ -150,6 +104,112 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
             centroids_.append(centroids)
             
         return countours_, centroids_, blobs_
+    
+
+def find_highest_sum_area(matrix, window_size):
+    '''
+    Description:
+    The find_highest_sum_area method is designed to identify the area within a 2D matrix with 
+    the highest sum of elements. It employs a sliding window approach to calculate the sum of 
+    elements within local regions of the matrix and identifies the central position of the area
+    with the maximum sum.
+
+    Parameters:
+    matrix (numpy.ndarray): A 2D matrix (numpy array) containing numeric values.
+    window_size (int): The size of the moving window or mask used to calculate the sum of elements
+    within local regions.
+
+    Return Value:
+    max_position (tuple): A tuple containing the coordinates (row, column) of the central position
+    within the area with the highest sum of elements.
+
+    '''
+    # rows, cols = matrix.shape
+    # max_sum = -np.inf
+    # max_position = (0, 0)
+
+    # matrix_ = np.copy(matrix)
+    # matrix_ = np.nan_to_num(matrix_, nan=-1e3)
+
+    # for i in range(rows - window_size + 1):
+    #     for j in range(cols - window_size + 1):
+    #         current_sum = 0
+    #         for x in range(i, i + window_size):
+    #             for y in range(j, j + window_size):
+    #                 current_sum += matrix[x, y]
+
+    #         if current_sum > max_sum:
+    #             max_sum = current_sum
+    #             max_position = (i + window_size // 2, j + window_size // 2)
+
+    # return max_position
+    rows, cols = matrix.shape
+    max_sum = -np.inf
+    max_position = (0, 0)
+
+    # Precompute cumulative sum
+    cumsum_matrix = np.nancumsum(np.nancumsum(matrix, axis=0), axis=1)
+    
+    for i in range(rows - window_size + 1):
+        for j in range(cols - window_size + 1):
+            # Calculate the sum using the cumulative sum
+            current_sum = cumsum_matrix[min(i + window_size, rows-1), min(j + window_size, cols-1)] \
+                        - cumsum_matrix[min(i, rows - 1), min(j + window_size, cols-1)] \
+                        - cumsum_matrix[min(i + window_size, rows-1), min(j, cols - 1)] \
+                        + cumsum_matrix[min(i, rows - 1), min(j, cols - 1)]
+            if current_sum > max_sum:
+                max_sum = current_sum
+                max_position = (i + window_size // 2, j + window_size // 2)
+
+    return max_position
+
+
+
+def get_centroids(contours):
+    # Centroids detection
+    centroids = list()
+    #conts = list()
+    for i in contours:
+        #conts.append(np.squeeze(i))
+        M = cv.moments(i)
+        if M['m00'] != 0:
+            cx = int(M['m10']/M['m00'])
+            cy = int(M['m01']/M['m00'])
+            centroids.append((cx, cy))
+    return centroids
+
+def get_blobs(blurred, min_thresh2, max_thresh2, smoother_kernel = 10):
+    _, blobs = cv.threshold(blurred, min_thresh2, max_thresh2, cv.THRESH_BINARY)
+    # Smoother for salt and pepper noise at the edge from the previous filter
+    blobs = median_filter(blobs, (smoother_kernel,smoother_kernel))
+    # Normalization and binarization
+    blobs = blobs/np.nanmax(blobs)
+    blobs = blobs.astype(np.uint8)
+    return blobs
+
+def get_significant_sign(blurred, min_thresh2, max_thresh2):
+    blobs = get_blobs(blurred, min_thresh2, max_thresh2)
+    # Contours and centroid detections
+    contours, _ = cv.findContours(blobs, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    centroids = get_centroids(contours)
+    return contours, centroids, blobs 
+
+def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
+    # Thresholding of z_score
+    _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
+    # Median filter against salt&pepper noise
+    blurred_median = median_filter(threshed, size=(3,3))
+    # Gaussian filter for blob individuation
+    blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)
+    # print(np.nanmin(blurred), np.nanmax(blurred))
+    return blurred
+
+def manual_thresholding(data, threshold, filter_kernel = 30):
+    assert len(data.shape) == 2, 'The data matrix has to be 2D'
+    tmp = median_filter(data, (filter_kernel, filter_kernel))
+    max_thresh = np.nanpercentile(data, 99)
+    contours, centroids, blobs = get_significant_sign(tmp, threshold, max_thresh)
+    return contours, centroids, blobs 
 
 def time_course_signal(df_fz, roi_mask):#, hand_made=False):
     """
@@ -165,9 +225,29 @@ def time_course_signal(df_fz, roi_mask):#, hand_made=False):
     """
     roi_sign = list()
     for i in df_fz:
-        to_app = np.nanmean(np.ma.masked_array(i, mask = roi_mask))
+        masked_array = np.ma.masked_array(i, mask = roi_mask)
+        to_app = np.nanmean(masked_array)
         roi_sign.append(to_app)
     return np.array(roi_sign)
+
+def gaussian3d(data , size = 3, std = .65):
+    # Define the standard deviations for each dimension (t, y, x)
+    sigma_t = std
+    sigma_y = std
+    sigma_x = std
+
+    # Create a 3D Gaussian kernel
+    kernel_size = (size, size, size)  # Adjust the size as needed
+    t_kernel = np.linspace(-size/2, size/2, kernel_size[0])
+    y_kernel = np.linspace(-size/2, size/2, kernel_size[1])
+    x_kernel = np.linspace(-size/2, size/2, kernel_size[2])
+    t, y, x = np.meshgrid(t_kernel, y_kernel, x_kernel)
+    kernel = np.exp(-(t ** 2 / (2 * sigma_t ** 2) + y ** 2 / (2 * sigma_y ** 2) + x ** 2 / (2 * sigma_x ** 2)))
+    kernel /= kernel.sum()  # Normalize the kernel
+
+    # Apply the kernel to your 3D data
+    smoothed_data = convolve(data, kernel, mode='reflect')
+    return smoothed_data
 
 def gauss_1d(x, a, mean, stddev):
     return a*np.exp((-(x-mean)**2)/(2*stddev**2))
@@ -263,7 +343,7 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
 
         # Condition mean and stder computation
         mean_sign_overcond = np.nanmean(sig_cond[:, :, :, :], axis = 0)
-        stder_sign_overcond = np.nanstd(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+        # stder_sign_overcond = np.nanstd(sig_cond[:, :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
 
     # Case for single trial analysis: full time sequence analysis    
     elif len(np.shape(sig_cond))==3:
@@ -278,23 +358,18 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
         if full_seq:
             # Condition mean and stder computation
             mean_sign_overcond = sig_cond
-            stder_sign_overcond = 0
+            # stder_sign_overcond = 0
         else:        
             # Condition mean and stder computation
             mean_sign_overcond = np.nanmean(sig_cond[ :, :, :], axis = 0)
-            stder_sign_overcond = np.nanstd(sig_cond[ :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
+            # stder_sign_overcond = np.nanstd(sig_cond[ :, :, :], axis = 0)/np.sqrt(np.shape(sig_cond)[0])
     
     # Try to fix the zscore defected for Hip AM3Strokes second session.
     #zscore = np.nan_to_num(np.nan_to_num(mean_sign_overcond-mean_signblnk_overcond)/np.nan_to_num(np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)))
     #print(mean_sign_overcond.shape, mean_signblnk_overcond.shape)
     A = mean_sign_overcond-mean_signblnk_overcond
-    B = np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
-    #zscore = np.true_divide(A,  B, where = (A!=np.nan) | (B!=np.nan))#+eps)
-    #zscore = np.nan_to_num(zscore, copy=False, nan=-0.0000001, posinf=10e+07, neginf=-0.0000001)
+    B = stder_signblnk_overcond
+    # B = np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
     zscore = A/B
-    #zscore = np.nan_to_num(zscore, copy=False, 
-    #                       nan=np.nanmin(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]),
-    #                       posinf=np.nanmax(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]), 
-    #                       neginf=np.nanmin(zscore[np.where((zscore != -np.inf) | (zscore != np.inf))]))
     return zscore
 
