@@ -103,7 +103,7 @@ class RetinoSession(md.Session):
             self.path_md = path_md
 
             # Corresponding single stroke for each AM condition
-            self.retino_pos_am = get_conditions_correspondance(self.path_session)
+            self.retino_pos_am = utils.get_conditions_correspondance(self.path_session)
             print(self.retino_pos_am)
             # All the conditions    
             self.cond_dict = super().get_condition_name()
@@ -815,31 +815,6 @@ def get_assess_centroid(centroids, mask):
     Assess position of the centroids: if inside the mask, then it is considered
     '''
     return [i for i in centroids if mask[i[1],i[0]]]
-
-
-def get_stimulus_metadata(path):
-    '''
-    Reading stimulus metadata json file
-    '''
-    tmp = utils.find_thing('json_data.json', path)
-    if len(tmp) == 0:
-        print('Check the json_data.json presence inside the session folder and subfolders')
-        return None
-    # else, load the json
-    else :
-        f = open(tmp[0])
-        # returns JSON object as a dictionary
-        data = json.load(f)
-        a = json.loads(data)
-    return  a[list(a.keys())[0]]
-
-def get_conditions_correspondance(path):
-    '''
-    Reading metadata json file for conditions positions
-    '''
-    a = get_stimulus_metadata(path)
-    # Build a dictionary with am conditions as keys and corresponding single stroke position as lists
-    return {i: j['conditions'] for i, j in list(a['pos metadata'].items())}
 
 def rotate_distribution(xs, ys, theta = None):
     if theta is None:
