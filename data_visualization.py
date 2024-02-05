@@ -364,7 +364,8 @@ def whole_time_sequence(data,
                         padding_axes = .05,
                         y_title = 1,
                         x_title = 1,
-                        font_size = 20):
+                        font_size = 20,
+                        color_contour = 'k'):
 
     fig = plt.figure(figsize=(15,15), dpi=500)
     fig.subplots_adjust(bottom=0.2)
@@ -483,7 +484,7 @@ def whole_time_sequence(data,
             else:
                 blobs_ = blobs[i]                    
                 
-        ax.contour(blobs_, 4, colors='k', linestyles = 'dotted')
+        ax.contour(blobs_, .5, colors=color_contour, levels=[1])
 
         if centroids is not None:
             if len(centroids[i])>0:
@@ -666,6 +667,7 @@ def plot_st(profilemap,  threshold_contour,
 
     # Plot colormap
     fig, ax = plt.subplots(1,1, figsize=(9,7))
+    fig.set_facecolor('white')
     pc_ = ax.pcolormesh(profilemap, cmap= map_type, vmax = high_level, vmin=low_level)
     
     # Plot intensity contour
@@ -718,7 +720,7 @@ def plot_st(profilemap,  threshold_contour,
     # x_tmp = np.arange((zero_of_cond-12), (zero_of_cond+30+12), len(tmp))
     list_x = list()
     for i, x in zip(labels_, tmp):
-        list_x.append(f'{int((x-(onset_time))*10)}')
+        list_x.append(f'{int((x-(onset_time))*timing_frame)}')
     ax.set_xticklabels(list_x, fontsize = 12)
     ax.set_xlabel('Time - ms', fontsize = 15)
 
@@ -736,6 +738,7 @@ def plot_st(profilemap,  threshold_contour,
     if st_title is not None:
         plt.title(st_title, fontsize = 15)
         if store_path is not None:
-            plt.savefig(os.path.join(f'st_map_{st_title}_h20210108' + '.pdf'), format = 'pdf', dpi =500)
+            plt.savefig(os.path.join(store_path+ '.pdf'), format = 'pdf', dpi =500)
+            plt.savefig(os.path.join(store_path+ '.png'), format = 'png', dpi =500)
     plt.show()
     return (a,b)
