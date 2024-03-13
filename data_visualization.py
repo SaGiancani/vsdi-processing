@@ -628,8 +628,7 @@ def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_lab
     else:
         fig_title = 'Fig_Title'
         plt.show()
-        plt.close()
-
+    plt.close('all')
     return
 
 
