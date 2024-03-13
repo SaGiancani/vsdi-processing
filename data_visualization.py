@@ -548,7 +548,7 @@ def whole_time_sequence(data,
     plt.close('all')
     return
 
-def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_labels=None, fig_title=None, storage_folder = None):
+def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_labels=None, fig_title=None):
     num_lines = len(args)
     
     num_rows = int(np.ceil((num_lines) / num_cols) + 1)
@@ -577,13 +577,17 @@ def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_lab
         ax.tick_params(axis='both', which='major', labelsize=fontsize)
         ax.xaxis.label.set_size(fontsize)
         ax.yaxis.label.set_size(fontsize)
-        if axis_labels is None:        
-            ax.set_xlabel('X Label', fontsize=fontsize)
-            ax.set_ylabel('Y Label', fontsize=fontsize)
-        else:
-            ax.set_xlabel(axis_labels[0], fontsize=fontsize)
-            ax.set_ylabel(axis_labels[1], fontsize=fontsize)            
         
+        # Set ylabel only for the first plot of the row
+        if col == 0:
+            if axis_labels is None:
+                ax.set_ylabel('Y Label', fontsize=fontsize)
+            else:
+                ax.set_ylabel(axis_labels[1], fontsize=fontsize)
+        else:
+            ax.set_ylabel('')
+        
+        ax.set_xlabel('')
         ax.set_ylim(min_val, max_val)
     
     # Create a larger subplot at the end for combined plot of all lines
@@ -594,17 +598,19 @@ def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_lab
     ax_all.plot(avg_line, lw=2, color='red', label='Average')
     ax_all.legend(fontsize=fontsize)
     ax_all.set_title('All Lines with Average', fontsize=fontsize)    
-    if axis_labels is None:        
-        ax.set_xlabel('X Label', fontsize=fontsize)
-        ax.set_ylabel('Y Label', fontsize=fontsize)
-    else:
-        ax.set_xlabel(axis_labels[0], fontsize=fontsize)
-        ax.set_ylabel(axis_labels[1], fontsize=fontsize)            
-        
+    
     ax_all.tick_params(axis='both', which='major', labelsize=fontsize)
-    ax_all.xaxis.label.set_size(fontsize)
     ax_all.yaxis.label.set_size(fontsize)
     ax_all.set_ylim(min_val, max_val)
+    
+    # Set x label for the last subplot only
+    if axis_labels is None:
+        ax_all.set_xlabel('X Label', fontsize=fontsize)
+        ax_all.set_ylabel('Y Label', fontsize=fontsize)
+
+    else:
+        ax_all.set_xlabel(axis_labels[0], fontsize=fontsize)
+        ax_all.set_ylabel(axis_labels[1], fontsize=fontsize)
     
     try:
         # Remove empty subplots if necessary
@@ -613,17 +619,17 @@ def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_lab
                 fig.delaxes(axs.flatten()[i])
     except:
         pass
-    
-    if fig_title:
-        fig.suptitle(fig_title, fontsize=fontsize+6, y=1.01)  # Adjust y value for padding
-        plt.savefig(os.path.join(fig_title + '.png' ))
-    else:
-        fig_title = 'Fig_Title'
 
     plt.tight_layout()
-    plt.show()
     if fig_title:
+        fig.suptitle(fig_title, fontsize=fontsize+6, y=1.005)  # Adjust y value for padding
+        plt.savefig(os.path.join(fig_title + '.png' ))
+
+    else:
+        fig_title = 'Fig_Title'
+        plt.show()
         plt.close()
+
     return
 
 
