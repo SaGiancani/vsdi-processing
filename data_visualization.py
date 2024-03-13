@@ -548,6 +548,84 @@ def whole_time_sequence(data,
     plt.close('all')
     return
 
+def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_labels=None, fig_title=None, storage_folder = None):
+    num_lines = len(args)
+    
+    num_rows = int(np.ceil((num_lines) / num_cols) + 1)
+    fig, axs = plt.subplots(num_rows, num_cols, figsize=(5*num_cols, 5*num_rows), sharey=True)
+    
+    all_data = np.concatenate(args)
+    if y_lim is None:
+        min_val = np.min(all_data)
+        max_val = np.max(all_data)
+    else:
+        min_val = y_lim[0]
+        max_val = y_lim[1]
+    
+    for i, line_data in enumerate(args):
+        row = i // num_cols
+        col = i % num_cols
+        ax = axs[row, col] if num_rows > 1 else axs[col]
+        
+        ax.plot(line_data)
+        
+        if titles is None:
+            ax.set_title(f'Line {i+1}', fontsize=fontsize)
+        else:
+            ax.set_title(f'{titles[i]}', fontsize=fontsize)
+            
+        ax.tick_params(axis='both', which='major', labelsize=fontsize)
+        ax.xaxis.label.set_size(fontsize)
+        ax.yaxis.label.set_size(fontsize)
+        if axis_labels is None:        
+            ax.set_xlabel('X Label', fontsize=fontsize)
+            ax.set_ylabel('Y Label', fontsize=fontsize)
+        else:
+            ax.set_xlabel(axis_labels[0], fontsize=fontsize)
+            ax.set_ylabel(axis_labels[1], fontsize=fontsize)            
+        
+        ax.set_ylim(min_val, max_val)
+    
+    # Create a larger subplot at the end for combined plot of all lines
+    ax_all = plt.subplot2grid((num_rows, num_cols), (num_rows-1, 0), colspan=num_cols)
+    avg_line = np.mean(np.array(args), axis=0)
+    for line_data in args:
+        ax_all.plot(line_data, alpha=0.5)
+    ax_all.plot(avg_line, lw=2, color='red', label='Average')
+    ax_all.legend(fontsize=fontsize)
+    ax_all.set_title('All Lines with Average', fontsize=fontsize)    
+    if axis_labels is None:        
+        ax.set_xlabel('X Label', fontsize=fontsize)
+        ax.set_ylabel('Y Label', fontsize=fontsize)
+    else:
+        ax.set_xlabel(axis_labels[0], fontsize=fontsize)
+        ax.set_ylabel(axis_labels[1], fontsize=fontsize)            
+        
+    ax_all.tick_params(axis='both', which='major', labelsize=fontsize)
+    ax_all.xaxis.label.set_size(fontsize)
+    ax_all.yaxis.label.set_size(fontsize)
+    ax_all.set_ylim(min_val, max_val)
+    
+    try:
+        # Remove empty subplots if necessary
+        if num_lines < num_rows * num_cols:
+            for i in range(num_lines, num_rows*num_cols - 1):
+                fig.delaxes(axs.flatten()[i])
+    except:
+        pass
+    
+    if fig_title:
+        fig.suptitle(fig_title, fontsize=fontsize+6, y=1.01)  # Adjust y value for padding
+        plt.savefig(os.path.join(fig_title + '.png' ))
+    else:
+        fig_title = 'Fig_Title'
+
+    plt.tight_layout()
+    plt.show()
+    if fig_title:
+        plt.close()
+    return
+
 
 def plot_retinotopic_positions(dictionar, titles = ['Inferred centroids', 'Single stroke centroids'], distribution_shown = False, name = None, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, ext = '.svg'):#, labs = [ 'Single trial retinotopy', 'Averaged retinotopy']):
     # 
