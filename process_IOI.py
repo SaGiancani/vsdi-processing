@@ -257,9 +257,9 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
     print(f'The center of the stimulation is at {absolute_center}dva ')
     tmp_data = maps[1:, :, :, :]
     tmp_blank = maps[0, :, :, :]
-    
+    coords, x, y = get_relative_coordinates(list(sorted_cds_dictionary.values()))
+
     if (type == 'cocktail') or (type == 'both'):
-        coords, x, y = get_relative_coordinates(list(sorted_cds_dictionary.values()))
         if coordinate == 'x':
             n_considered_conds = len(coords)/len(x)
             picked_cord = np.array(x) + absolute_center[0]
