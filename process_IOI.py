@@ -133,7 +133,7 @@ class RFWorkspace:
             dv.whole_time_sequence(data, mask = np.ones((data.shape[1], data.shape[2]), dtype = bool),
                                    blbs = tmp_blb, 
                                    n_columns = 4, titles = titles, mappa = 'gray', 
-                                   max_bord=1.005, min_bord=.998,
+                                #    max_bord=1.005, min_bord=.998,
                                    store_path=dv.STORAGE_PATH, 
                                    name_analysis_= os.path.join(PROTOCOL + '_IOI', self.name_session),
                                    name = f'Maps {self.dimension_to_analyze} dimension _ {self.start_time}_{self.end_time}ms_{self.name_session}', ext='png')            
@@ -273,7 +273,7 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
         # Loop for averaging every n_considered_conds
         indeces = np.arange(0, len(coords)+1, n_considered_conds, dtype = int)
         output_matrix_cocktail = np.array([np.nanmean(tmp_data[indeces[i-1]:indeces[i], start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = (0, 1)) for i in range (1, len(indeces))])
-        print(f'Shape of {print_todo} normalization output matrix: {output_matrix_cocktail.shape}')
+        print(f'Shape of {print_todo} normalized output matrix: {output_matrix_cocktail.shape}')
         # cocktail_dict = {f'{coordinate}: {round(a, 2)}/{round(i, 2)}': b/j for a,b in zip(picked_cord, output_matrix_cocktail) for i, j in zip(picked_cord, output_matrix_cocktail)}
         cocktail_dict = {f'{coordinate}: {round(a, 2)}-{round(i, 2)}': b-j for a,b in zip(picked_cord, output_matrix_cocktail) for i, j in zip(picked_cord, output_matrix_cocktail)}
         data_dict = cocktail_dict
@@ -285,7 +285,7 @@ def operation_among_conditions(maps, sorted_cds_dictionary, start_time, stop_tim
         coords = [(round(i,2), round(j,2)) for (i, j) in coords]
         blnk = np.nanmean(tmp_blank[start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = 0) 
         output_matrix_regular = np.array([np.nanmean(i[start_time//frame_time_ext:stop_time//frame_time_ext, :, :], axis = 0)/blnk for i in tmp_data])
-        print(f'Shape of blank normalization output matrix: {output_matrix_regular.shape}')
+        print(f'Shape of blank normalized output matrix: {output_matrix_regular.shape}')
         regular_dict = {(str(a)): b for a,b in zip(coords, output_matrix_regular)}
         data_dict = regular_dict
         print('Blank normalization computed!')
