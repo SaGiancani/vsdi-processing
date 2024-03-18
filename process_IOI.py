@@ -133,6 +133,7 @@ class RFWorkspace:
             dv.whole_time_sequence(data, mask = np.ones((data.shape[1], data.shape[2]), dtype = bool),
                                    blbs = tmp_blb, 
                                    n_columns = 4, titles = titles, mappa = 'gray', 
+                                   color_text = 'crimson',
                                 #    max_bord=1.005, min_bord=.998,
                                    store_path=dv.STORAGE_PATH, 
                                    name_analysis_= os.path.join(PROTOCOL + '_IOI', self.name_session),
