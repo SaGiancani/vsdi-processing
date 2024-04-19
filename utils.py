@@ -307,25 +307,25 @@ def nonlinear_custom_map():
     # Create a dictionary for the colormap
     cdict = {'red':   [(0.0, dark_blue[0], dark_blue[0]),
                        (0.17, blue[0], blue[0]),
-                       (0.33, light_blue[0], light_blue[0]),
+                       (0.4, light_blue[0], light_blue[0]),
                        (0.5, white[0], white[0]),
-                       (0.67, yellow[0], yellow[0]),
+                       (0.6, yellow[0], yellow[0]),
                        (0.83, orange[0], orange[0]),
                        (1.0, red[0], red[0])],
 
              'green': [(0.0, dark_blue[1], dark_blue[1]),
                        (0.17, blue[1], blue[1]),
-                       (0.33, light_blue[1], light_blue[1]),
+                       (0.4, light_blue[1], light_blue[1]),
                        (0.5, white[1], white[1]),
-                       (0.67, yellow[1], yellow[1]),
+                       (0.6, yellow[1], yellow[1]),
                        (0.83, orange[1], orange[1]),
                        (1.0, red[1], red[1])],
 
              'blue':  [(0.0, dark_blue[2], dark_blue[2]),
                        (0.17, blue[2], blue[2]),
-                       (0.33, light_blue[2], light_blue[2]),
+                       (0.4, light_blue[2], light_blue[2]),
                        (0.5, white[2], white[2]),
-                       (0.67, yellow[2], yellow[2]),
+                       (0.6, yellow[2], yellow[2]),
                        (0.83, orange[2], orange[2]),
                        (1.0, red[2], red[2])]}
 
