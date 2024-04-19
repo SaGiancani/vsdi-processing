@@ -14,7 +14,6 @@ class SpatioTemporalMap:
                  data,
                  path_session,
                  trajectory_mask,
-                 threshold_contour, 
                  rotation_theta,
                  onset_time,
                  condition_name,
@@ -28,7 +27,8 @@ class SpatioTemporalMap:
                  low_level = None,
                  rotate_correction_factor = 0,
                  discard_thresh = 1e-7,
-                 colors_ret = ['grey'], 
+                 colors_ret = ['grey'],
+                 bounds_for_max_seek = (None, None, None, None), 
                  storing_path = None):
         self.signal                   = data
         self.path_session             = path_session
@@ -49,11 +49,10 @@ class SpatioTemporalMap:
             self.retino_pos                    = retino_pos
             self.retino_time                   = retino_time
         else:
-            a , b = process.find_highest_sum_area(self.map, AREA_MAXIMI_FOR_PEAK)
+            a , b = process.find_highest_sum_area(self.map, AREA_MAXIMI_FOR_PEAK, *bounds_for_max_seek)
             self.retino_pos                    = [a]
             self.retino_time                   = [b]          
 
-        self.threshold_contour        = threshold_contour
         self.pixel_spacing            = pixel_spacing
         self.interstimulus_delay      = is_delay#ms
         self.sampling_rate            = sampling_rate
@@ -76,37 +75,107 @@ class SpatioTemporalMap:
         else:
             self.colors_retinotopy = colors_ret
 
-    def plot_maps(self):
+    def plot_maps(self, 
+                  colors_retinotopy, 
+                  threshold_contour, 
+                  high_level  = None, 
+                  low_level   = None, 
+                  retino_pos  = None,
+                  retino_time = None, 
+                  color_mappa = utils.PARULA_MAP):
         if self.storing_path is not None:
             tmp = dv.set_storage_folder(storage_path = self.storing_path, name_analysis = 'STProfiles')
             new_storing_path = os.path.join(tmp, f'STProfile_{self.condition_name}_{self.session_name}')  
         else:
             new_storing_path = None
 
-        if len(self.retino_pos) >1:
+        if high_level is None:
+            high_level = self.high_level
+        elif low_level is None:
+            low_level = self.low_level
+
+        if retino_pos is None:
+            retino_pos = self.retino_pos
+        if retino_time is None:
+            retino_time = self.retino_time
+        
+        if len(retino_pos) >1:
             color_peak = 'teal'
             peak_traj = True
         else:
-            color_peak = 'grey'
+            color_peak = 'w'
             peak_traj = False
 
-        dv.plot_st(self.map,  
-                   self.threshold_contour, 
+        dv.plot_st(self.map, 
+                   threshold_contour, 
                    self.trajectory_mask,
                    self.pixel_spacing,
-                   retinotopic_pos = self.retino_pos,
-                   retinotopic_time = self.retino_time, 
-                   map_type = utils.PARULA_MAP,
-                   st_title = self.condition_name,
+                   retinotopic_pos  = retino_pos,
+                   retinotopic_time = retino_time, 
+                   map_type   = color_mappa,
+                   st_title   = self.condition_name,
                    onset_time = self.onset_time,
-                   colors_retinotopy = self.colors_retinotopy,
-                   draw_peak_traj = peak_traj,
-                   is_delay = self.interstimulus_delay,#ms
+                   colors_retinotopy = colors_retinotopy,
+                   draw_peak_traj    = peak_traj,
+                   is_delay    = self.interstimulus_delay,#ms
                    sampling_fq = self.sampling_rate,#Hz
-                   high_level = self.high_level,
-                   color_peak = color_peak,
-                   low_level = self.low_level,
-                   store_path = new_storing_path)
+                   high_level  = high_level,
+                   color_peak  = color_peak,
+                   low_level   = low_level,
+                   store_path  = new_storing_path)
+        return
+    
+    def store_stmap(self, t):
+        tp = [self.signal,
+              self.path_session, 
+              self.storing_path, 
+              self.session_name, 
+              self.trajectory_mask, 
+              self.rotation_angle, 
+              self.rotate_correction_factor, 
+              self.discard_thresh, 
+              self.map, 
+              self.masked_data, 
+              self.retino_pos, 
+              self.retino_time, 
+              self.pixel_spacing,
+              self.interstimulus_delay,
+              self.sampling_rate,
+              self.high_level,
+              self.low_level,
+              self.onset_time,
+              self.condition_name,
+              self.condition_type,
+              self.colors_retinotopy]
+        
+        storage_path = os.path.join(t, 'spatiotemporal_profile')
+        tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
+        utils.inputs_save(tp, os.path.join(tmp,'st_map_'+self.condition_name))
+        return
+
+    def load_stmap(self, path):
+        tp = utils.inputs_load(path)
+        self.signal                     = tp[0]
+        self.path_session               = tp[1]
+        self.storing_path               = tp[2]
+        self.session_name               = tp[3]
+        self.trajectory_mask            = tp[4]
+        self.rotation_angle             = tp[5]
+        self.rotate_correction_factor   = tp[6]
+        self.discard_thresh             = tp[7]
+        self.map                        = tp[8]
+        self.masked_data                = tp[9]
+        self.retino_pos                 = tp[10]
+        self.retino_time                = tp[11]
+        self.pixel_spacing              = tp[12]
+        self.interstimulus_delay        = tp[13]
+        self.sampling_rate              = tp[14]
+        self.high_level                 = tp[15]
+        self.low_level                  = tp[16]
+        self.onset_time                 = tp[17]
+        self.condition_name             = tp[18]
+        self.condition_type             = tp[19]
+        self.colors_retinotopy          = tp[20]
         return
 
 class SpatioTemporalSession:
@@ -195,7 +264,8 @@ def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe
     assert n_strokes != 1, 'The input has to be an array with more than one time sequence'
     
     # Calculate the step size for global shifting
-    step = int(np.ceil(global_shift/2))
+    # step = int(np.ceil(global_shift/2))
+    step = int(global_shift)
     
     # Copy the input sequences to avoid modifying the original data
     ppp = [np.copy(i) for i in array_of_sequences]
@@ -218,7 +288,7 @@ def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe
 
 import numpy as np
 
-def maximi_inda_blob(st_matrix, blob):
+def maximi_inda_blob(st_matrix, blob, activity_mask = None):
     """
     Find the indices of the maximum values in a given matrix multiplied by a binary blob.
 
@@ -257,6 +327,13 @@ def maximi_inda_blob(st_matrix, blob):
     # Apply the mask to the indices
     ty = ty * mask_blob
 
+    # Further mask is applied: constraining activity area
+    if activity_mask is not None:
+        active_mask = np.ones(st_matrix.shape)
+        active_mask[np.where(ty == 0)[0]] = 0
+        active_mask[activity_mask[0]:activity_mask[1], :] = 0
+        ty = ty * active_mask
+
     # Extract valid indices and corresponding positions
     y = ty[np.where(ty != 0)]
     x = np.where(mask_blob == 1)[0]
@@ -279,3 +356,14 @@ def rotate_map(profile_1, theta, correction_factor = 0, discard_thresh = 1e-5, k
     rotated[np.where(abs(rotated) <= discard_thresh*20)] = np.nan
     return rotated
 
+def get_threshold(data_maps, zero_of_cond, start_n_end=False, percentile = 99):
+    '''
+    data_maps: n°conditions, space, time
+    
+    '''
+    if start_n_end:
+        threshold_contour = np.nanpercentile(np.append(data_maps[:, :, :zero_of_cond].ravel(),
+                                                       data_maps[:, :, -zero_of_cond:].ravel()), percentile)  
+    else:
+        threshold_contour = np.nanpercentile(data_maps[:, :, :zero_of_cond].ravel(), percentile)      
+    return threshold_contour
