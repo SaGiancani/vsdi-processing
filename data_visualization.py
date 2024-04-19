@@ -334,6 +334,48 @@ def retino_pos_visualization(x, y, center, titles, green, name = 'Prova', ext = 
     plt.close('all')
     return
 
+def whole_time_sequence3d(data, num_rows = 1, num_cols = 10, vmax=10 , vmin = -1):
+    # Adjust the figure size based on the number of subplots
+    fig_width = 16
+    fig_height = 8
+    fig = plt.figure(figsize=(fig_width, fig_height), dpi = 150)
+
+    frames_data = data
+
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(16, 8), subplot_kw={'projection': '3d'}, 
+                             gridspec_kw={'hspace': 0.5, 'wspace': -0.6}, dpi = 300)
+
+    # Loop through the frames and plot each one in a subplot
+    for i, ax in enumerate(axes.flat):
+        frame_data = frames_data[i, :]
+        # Plot the heatmap for the current frame
+        x = np.arange(frame_data.shape[1])
+        y = np.arange(frame_data.shape[0])
+        x, y = np.meshgrid(x, y)
+        frame_data[~mask_] = np.NAN
+        heatmap = ax.plot_surface(x, y, frame_data, cmap=utils.PARULA_MAP, vmax = vmax, vmin = vmin)
+        # Remove the frame and grid
+        ax.set_facecolor('none')
+        ax.xaxis.pane.fill = False
+        ax.yaxis.pane.fill = False
+        ax.zaxis.pane.fill = False
+        ax.grid(False)
+        ax.axis('off')    
+        ax.view_init(elev=-60, azim=270)  
+
+    plt.rcParams['contour.negative_linestyle'] = 'solid'
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)  # Adjust subplot parameters to remove space
+
+    cbar_ax = fig.add_axes([.95, 0.45, 0.02, 0.12])  # Adjust position and size as needed
+    # x, y, width, height 
+    fig.colorbar(heatmap, cax=cbar_ax)
+
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
+
+    plt.show()
+    return
+
 def whole_time_sequence(data, 
                         global_cntrds = None, 
                         colors_centr = ['black', 'purple', 'aqua'], 
@@ -539,7 +581,6 @@ def whole_time_sequence(data,
         plt.rc('figure', max_open_warning = 0)
         plt.rcParams.update({'font.size': 12})
         # plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
-        #plt.savefig(os.path.join(tmp, 'Bretz_pos2inAM3_SingleTrial_distrib' + '.pdf'), format='pdf', dpi =500)
         print(name + ext+ ' stored successfully!')
     #else:
     #    plt.show()
@@ -723,7 +764,8 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
 import st_builder as st
 
 
-def plot_st(profilemap,  threshold_contour, 
+def plot_st(profilemap,  
+            threshold_contour, 
             traj_mask,
             pixel_spacing,
             retinotopic_pos = None,
@@ -786,9 +828,10 @@ def plot_st(profilemap,  threshold_contour,
                    color = colors_retinotopy[n], ls ='--', lw=2)
     
     # Plot highest spot
-    a, b = process.find_highest_sum_area(profilemap*blobs_, 5)
-    ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
-    print(a, b)
+    if len(retinotopic_pos)>0:
+        a, b = process.find_highest_sum_area(profilemap*blobs_, 5, None, None, onset_time, 45)
+        ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
+        print(a, b)
 
     # Custom axis
     strokes_onset_times = [onset_time+i*isi_frames for i in range(number_strokes)]
