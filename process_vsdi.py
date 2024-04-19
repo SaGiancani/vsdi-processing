@@ -1,7 +1,8 @@
 import cv2 as cv
 import numpy as np
-from scipy.ndimage.filters import convolve, gaussian_filter, median_filter, uniform_filter1d
 from scipy import optimize
+from scipy.ndimage.filters import convolve, gaussian_filter, median_filter, uniform_filter1d
+from scipy.special import erf
 
 def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None):
     '''F/F0 computation with -or without- demean of n_frames_zero and killing of outlier 
@@ -106,52 +107,52 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
         return countours_, centroids_, blobs_
     
 
-def find_highest_sum_area(matrix, window_size):
+def find_highest_sum_area(matrix, window_size, start_row=None, end_row=None, start_col=None, end_col=None):
     '''
     Description:
-    The find_highest_sum_area method is designed to identify the area within a 2D matrix with 
-    the highest sum of elements. It employs a sliding window approach to calculate the sum of 
-    elements within local regions of the matrix and identifies the central position of the area
-    with the maximum sum.
+    The find_highest_sum_submatrix method is designed to identify the area within a 2D matrix
+    specified by the start and end row and column indices with the highest sum of elements. It 
+    employs a sliding window approach to calculate the sum of elements within the specified 
+    submatrix and identifies the central position of the area with the maximum sum.
 
     Parameters:
     matrix (numpy.ndarray): A 2D matrix (numpy array) containing numeric values.
     window_size (int): The size of the moving window or mask used to calculate the sum of elements
     within local regions.
+    start_row (int or None): The starting row index of the submatrix. If None, the entire row dimension is considered.
+    start_col (int or None): The starting column index of the submatrix. If None, the entire column dimension is considered.
+    end_row (int or None): The ending row index of the submatrix. If None, the entire row dimension is considered.
+    end_col (int or None): The ending column index of the submatrix. If None, the entire column dimension is considered.
 
     Return Value:
     max_position (tuple): A tuple containing the coordinates (row, column) of the central position
     within the area with the highest sum of elements.
 
     '''
-    # rows, cols = matrix.shape
-    # max_sum = -np.inf
-    # max_position = (0, 0)
-
-    # matrix_ = np.copy(matrix)
-    # matrix_ = np.nan_to_num(matrix_, nan=-1e3)
-
-    # for i in range(rows - window_size + 1):
-    #     for j in range(cols - window_size + 1):
-    #         current_sum = 0
-    #         for x in range(i, i + window_size):
-    #             for y in range(j, j + window_size):
-    #                 current_sum += matrix[x, y]
-
-    #         if current_sum > max_sum:
-    #             max_sum = current_sum
-    #             max_position = (i + window_size // 2, j + window_size // 2)
-
-    # return max_position
     rows, cols = matrix.shape
+
+    if start_row is None:
+        start_row = 0
+    if start_col is None:
+        start_col = 0
+    if end_row is None:
+        end_row = rows
+    if end_col is None:
+        end_col = cols
+
+    if start_row >= end_row:
+        raise ValueError("start_row must be less than end_row")
+    if start_col >= end_col:
+        raise ValueError("start_col must be less than end_col")
+
     max_sum = -np.inf
     max_position = (0, 0)
 
     # Precompute cumulative sum
     cumsum_matrix = np.nancumsum(np.nancumsum(matrix, axis=0), axis=1)
-    
-    for i in range(rows - window_size + 1):
-        for j in range(cols - window_size + 1):
+
+    for i in range(start_row, min(end_row - window_size + 1, rows)):
+        for j in range(start_col, min(end_col - window_size + 1, cols)):
             # Calculate the sum using the cumulative sum
             current_sum = cumsum_matrix[min(i + window_size, rows-1), min(j + window_size, cols-1)] \
                         - cumsum_matrix[min(i, rows - 1), min(j + window_size, cols-1)] \
@@ -249,10 +250,19 @@ def gaussian3d(data , size = 3, std = .65):
     smoothed_data = convolve(data, kernel, mode='reflect')
     return smoothed_data
 
-def gauss_1d(x, a, mean, stddev):
-    return a*np.exp((-(x-mean)**2)/(2*stddev**2))
-    #return a * np.exp(-((x - mean) / 4 / stddev)**2)
-    #return a * np.exp(-(x - mean)**2 / (2 * stddev**2))
+def gaussian1d(x, A, mu, sigma, alpha):
+    return A * np.exp(-(x - mu)**2 / (2 * sigma**2)) * (1 + erf(alpha * (x - mu) / (np.sqrt(2) * sigma)))
+
+def gaussian2d(xy_mesh, A, x0, y0, sigma_x, sigma_y, theta, skewness):
+    x, y = xy_mesh
+    x_diff = x - x0
+    y_diff = y - y0
+    x_rot = np.cos(theta) * x_diff - np.sin(theta) * y_diff
+    y_rot = np.sin(theta) * x_diff + np.cos(theta) * y_diff
+    a = np.cos(theta)**2 / (2 * sigma_x**2) + np.sin(theta)**2 / (2 * sigma_y**2)
+    b = -np.sin(2 * theta) / (4 * sigma_x**2) + np.sin(2 * theta) / (4 * sigma_y**2)
+    c = np.sin(theta)**2 / (2 * sigma_x**2) + np.cos(theta)**2 / (2 * sigma_y**2)
+    return A * np.exp(-(a * x_rot**2 + 2 * b * x_rot * y_rot * (1 + skewness) + c * y_rot**2))
 
 def gaussian_fitting(td_mat, ax_to_fit, perc_wind = 3):
     if len(np.shape(td_mat)) > 2:
@@ -275,7 +285,7 @@ def gaussian_fitting(td_mat, ax_to_fit, perc_wind = 3):
     #proj = proj-proj[0]
     proj = proj-np.min(proj)
     proj = round(uniform_filter1d(proj, size=(len(proj)/100)*perc_wind)) # Moving Average Filter: check the result
-    popt,pcov = optimize.curve_fit(gauss_1d, ax, proj)#, bounds=bounds) or ,maxfev = 5000)
+    popt,pcov = optimize.curve_fit(gaussian1d, ax, proj)#, bounds=bounds) or ,maxfev = 5000)
     return ax, proj, popt, pcov 
 
 def log_norm(y, mu, sigma):
