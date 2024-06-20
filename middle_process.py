@@ -327,7 +327,7 @@ class Session:
             #    self.log('Something went wrong loading the TrackerLog')
         else:
             self.base_report, self.time_stamp, self.piezo, self.heart_beat  = None, None, None, None
-            self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability  = None, None, None, None
+            self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability  = None, None, (None, None), None
 
         self.time_course_blank = None
         self.f_f0_blank = None
