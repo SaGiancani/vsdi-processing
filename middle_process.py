@@ -460,11 +460,19 @@ class Session:
             cond.store_cond(t)
 
             if self.matlab_switch:
+                cond_name  = self.cond_dict[condition] 
+                cond_name  = cond_name.replace('-', '')
+                cond_name  = cond_name.replace('°', '')
+                cond_name  = cond_name.replace('0.', '0')
                 path_store_2mat = dv.set_storage_folder(storage_path = t, name_analysis = 'pickle2MAT')
-                path_tmp_raw    = os.path.join(path_store_2mat , f'raw_{self.cond_dict[condition]}.mat')
-                savemat(path_tmp_raw, {f'raw_{self.cond_dict[condition]}': raws}, format='5')                
-                savemat(path_tmp_raw, {f'dFF0_{self.cond_dict[condition]}': df_f0}, format='5')                
-                savemat(path_tmp_raw, {f'selection_mask_{self.cond_dict[condition]}': self.auto_selected}, format='5')      
+                
+                path_tmp_raw    = os.path.join(path_store_2mat , f'raw_{cond_name}.mat')
+                path_tmp_df     = os.path.join(path_store_2mat , f'dFF0_{cond_name}.mat')
+                path_tmp_sel    = os.path.join(path_store_2mat , f'selection_mask_{cond_name}.mat')
+
+                savemat(path_tmp_raw, {f'raw_{cond_name}': raws}, format='5')                
+                savemat(path_tmp_df, {f'dFF0_{cond_name}': df_f0}, format='5')                
+                savemat(path_tmp_sel, {f'sel_mask_{cond_name}': self.auto_selected}, format='5')      
 
             del cond
             self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))                
