@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from scipy import signal
+from scipy.io import savemat
 
 LABEL_CONDS_PATH = 'metadata/labelConds.txt' 
 
@@ -138,6 +139,7 @@ class Session:
                  logger = None, 
                  condid = None, 
                  store_switch = False, 
+                 matlab_switch = False,
                  data_vis_switch = True, 
                  end_frame = None,
                  filename_particle = 'vsd_C', 
@@ -227,7 +229,8 @@ class Session:
             self.log = utils.setup_custom_logger('myapp')
         else:
             self.log = logger
-        self.detrend_switch = detrend_switch              
+        self.detrend_switch = detrend_switch     
+        self.matlab_switch = matlab_switch                       
         self.cond_names = None
         self.header = self.get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         self.all_blks = get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
@@ -320,7 +323,7 @@ class Session:
             except:
                 self.log.info('Something went wrong loading the BaseReport or SignalData')
                 self.base_report, self.time_stamp, self.piezo, self.heart_beat,   = None, None, None, None
-                self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability  = None, None, None, None
+                self.toogle, self.triginstim, ((self.starting_times, self.ending_times)), self.affidability  = None, None, (None, None), None
             #try:
             #    path_trackreport = utils.find_thing('TrackerLog.csv', self.header['path_session'])
             #except:
@@ -455,6 +458,14 @@ class Session:
             if not os.path.exists(os.path.join(t,'md_data')):
                 os.makedirs(os.path.join(t,'md_data'))
             cond.store_cond(t)
+
+            if self.matlab_switch:
+                path_store_2mat = dv.set_storage_folder(storage_path = t, name_analysis = 'pickle2MAT')
+                path_tmp_raw    = os.path.join(path_store_2mat , f'raw_{self.cond_dict[condition]}.mat')
+                savemat(path_tmp_raw, {f'raw_{self.cond_dict[condition]}': raws}, format='5')                
+                savemat(path_tmp_raw, {f'dFF0_{self.cond_dict[condition]}': df_f0}, format='5')                
+                savemat(path_tmp_raw, {f'selection_mask_{self.cond_dict[condition]}': self.auto_selected}, format='5')      
+
             del cond
             self.log.info('Storing condition time: ' +str(datetime.datetime.now().replace(microsecond=0)-start_time))                
         del df_f0
@@ -1206,6 +1217,14 @@ if __name__=="__main__":
                         action='store_true')
     parser.add_argument('--no-store', 
                         dest='store_switch', 
+                        action='store_false')
+    parser.set_defaults(store_switch=False)   
+
+    parser.add_argument('--matlab', 
+                        dest='matlab_switch',
+                        action='store_true')
+    parser.add_argument('--no-matlab', 
+                        dest='matlab_switch', 
                         action='store_false')
     parser.set_defaults(store_switch=False)   
 
