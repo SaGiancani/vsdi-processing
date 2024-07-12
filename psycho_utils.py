@@ -308,6 +308,7 @@ def get_psychometric_curves(preprocessed_dict, flag = 'Bar', combined = True, co
 
 def sigmoid(x, a, b, c):
     # Define the sigmoid function
+    # return np.exp(-b * (x - c)) / (1 + np.exp(-b * (x - c)))
     return 1 / (1 + np.exp(-b * (x - c)))
 
 
@@ -334,7 +335,7 @@ def fit_sigmoid(ys, vertical_stretch = .98, horizontal_shift = 1, vertical_shift
     # Generate the fitted curve
     x_fit = np.linspace(extrapolation[0], extrapolation[1], 10000)
     y_fit = sigmoid(x_fit, a, b, c)
-    slope = b
+    slope = b/4
 
     # Forcing to converge to a sigmoid shape if the fitting grows exponentially
     if np.max(y_fit) > 1.2:
@@ -353,7 +354,7 @@ def fit_sigmoid(ys, vertical_stretch = .98, horizontal_shift = 1, vertical_shift
         # Generate the fitted curve
         x_fit = np.linspace(extrapolation[0], extrapolation[1], 10000)
         y_fit = sigmoid(x_fit, a, b, c)
-        slope = b
+        slope = b/4
  
     return x_fit, y_fit, slope
 
@@ -426,10 +427,12 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
                 sub_protocol = None, x_range = [0, 4], y_range = [-.66, .66], file_name = None):
     if len(sub_list) == 1:
         proportion = .85
+        x_prop = 10
     else:
         proportion = 1
+        x_prop = 12
         
-    fig, ax = plt.subplots(len(sub_list),2, figsize=(2*12,proportion*11*len(sub_list)),
+    fig, ax = plt.subplots(2, len(sub_list),figsize=(proportion*11*len(sub_list), 2*x_prop),
                            gridspec_kw={'wspace': .2, 'hspace': .5}, 
                            dpi = 70)
     
@@ -438,7 +441,7 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
     # Storing variables
     pse_dict          = dict()
     if len(sub_list) == 1:
-        ax = np.array(np.array(ax)).reshape(1, 2)
+        ax = np.array(np.array(ax)).reshape(2, 1)
     
     for n, i in enumerate(sub_list):
         sub = i
@@ -542,8 +545,10 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
             x_down, y_down, slope_down       =  fit_sigmoid(down_am, extrapolation = extrapolation)#,vertical_stretch = .98, horizontal_shift = 1, vertical_shift = 1)
             x_am, y_am, slope_am             =  fit_sigmoid(tmp['AM'], extrapolation = extrapolation)#,vertical_stretch = .98, horizontal_shift = 1, vertical_shift = 1)
             pse_am                           =  np.interp(.5, y_am, x_am)
+            pse_dict[f'sub{i}']['slope AM']  =  slope_am
 
-        x_static, y_static, slope_static =  fit_sigmoid(tmp['static'], extrapolation = extrapolation)#,vertical_stretch = .98, horizontal_shift = 1, vertical_shift = 1)
+        x_static, y_static, slope_static     =  fit_sigmoid(tmp['static'], extrapolation = extrapolation)#,vertical_stretch = .98, horizontal_shift = 1, vertical_shift = 1)
+        pse_dict[f'sub{i}']['slope static']  =  slope_static
 
         pse_stat = np.interp(.5, y_static, x_static)
 
@@ -557,10 +562,10 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
         # ---------------------------------------------------------
 
         # Plotting fit
-        ax[n][0].plot(x_static, y_static,colors_combined[0], label = 'static control')
+        ax[0][n].plot(x_static, y_static,colors_combined[0], label = 'static control')
 
         if (protocol != 'DoubleAMMultiSpeeds') and (protocol != 'DoubleAMMultiStrokes'):
-            ax[n][0].plot(x_am, y_am, colors_combined[1], label = 'AM')
+            ax[0][n].plot(x_am, y_am, colors_combined[1], label = 'AM')
         else:
             dict_fit_sigm = dict()
             counter = 1
@@ -570,43 +575,43 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
                 if ('traj' in k) or ('_t' in k): 
                     cond_colors[k] = colors_combined[counter]
                     dict_fit_sigm[k] =  fit_sigmoid(tmp[k], extrapolation = extrapolation)          
-                    ax[n][0].plot(dict_fit_sigm[k][0], dict_fit_sigm[k][1], cond_colors[k], label = k)
+                    ax[0][n].plot(dict_fit_sigm[k][0], dict_fit_sigm[k][1], cond_colors[k], label = k)
+                    pse_dict[f'sub{i}'][f'slope {k}']  =  dict_fit_sigm[k][2]
+
                     counter += 1
 
         # Linking dots
-        ax[n][0].plot(np.linspace(0, 4, len(tmp['static'])), 
+        ax[0][n].plot(np.linspace(0, 4, len(tmp['static'])), 
                       tmp['static'], colors_combined[0], alpha = .5, lw =.5)
         if (protocol != 'DoubleAMMultiSpeeds') and (protocol != 'DoubleAMMultiStrokes'):
-            ax[n][0].plot(np.linspace(0, 4, len(tmp['AM'])), 
+            ax[0][n].plot(np.linspace(0, 4, len(tmp['AM'])), 
                           tmp['AM'], colors_combined[1], alpha = .5, lw =.5)
         else:
             counter = 1
             tmp_x = np.linspace(0, 4, len(tmp['static']))
             for k in tmp.keys():
                 if ('traj' in k) or ('_t' in k): 
-                    ax[n][0].plot(tmp_x, tmp[k], cond_colors[k], alpha = .5, lw =.5)
+                    ax[0][n].plot(tmp_x, tmp[k], cond_colors[k], alpha = .5, lw =.5)
                     counter += 1
 
 
         print(f'Data points static: {data_points_stat}, Data points statAM {data_points_am}')
         # Plotting dots
-        ax[n][0].scatter(np.linspace(0, 4, len(tmp['static'])), 
+        ax[0][n].scatter(np.linspace(0, 4, len(tmp['static'])), 
                          tmp['static'], color = colors_combined[0], s=data_points_stat*3, edgecolors='black')
         if (protocol != 'DoubleAMMultiSpeeds') and (protocol != 'DoubleAMMultiStrokes'):
-            ax[n][0].scatter(np.linspace(0, 4, len(tmp['AM'])), 
+            ax[0][n].scatter(np.linspace(0, 4, len(tmp['AM'])), 
                              tmp['AM'],  color = colors_combined[1], s=data_points_am*3, edgecolors='black')
         else:
             counter = 1
             for k in tmp.keys():
                 if ('traj' in k) or ('_t' in k): 
-                    ax[n][0].scatter(tmp_x, tmp[k], color = cond_colors[k], s = data_points_am*3, edgecolors='black')
+                    ax[0][n].scatter(tmp_x, tmp[k], color = cond_colors[k], s = data_points_am*3, edgecolors='black')
                     counter += 1
 
-
-
         if (protocol != 'DoubleAMMultiSpeeds') and (protocol != 'DoubleAMMultiStrokes'):
-            ax[n][0].vlines(pse_am, -.1, .5, color = colors_combined[1], ls ='-', lw=2, alpha = .5)
-            ax[n][0].hlines(.5, x_range[0], np.nanmax([pse_am, pse_stat]), color = 'k', ls ='-', lw=.5, alpha = 1)
+            ax[0][n].vlines(pse_am, -.1, .5, color = colors_combined[1], ls ='-', lw=2, alpha = .5)
+            ax[0][n].hlines(.5, x_range[0], np.nanmax([pse_am, pse_stat]), color = 'k', ls ='-', lw=.5, alpha = 1)
 
         else:
             counter = 1
@@ -615,16 +620,16 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
             for k in tmp.keys():
                 if ('traj' in k) or ('_t' in k): 
                     pse_tmp     = np.interp(.5, dict_fit_sigm[k][1], dict_fit_sigm[k][0])
-                    ax[n][0].vlines(pse_tmp, -.1, .5, color = cond_colors[k], ls ='-', lw=2, alpha = .5)
+                    ax[0][n].vlines(pse_tmp, -.1, .5, color = cond_colors[k], ls ='-', lw=2, alpha = .5)
                     pse_tmps[k]  = pse_tmp
                     pse_colors[pse_tmp] = colors_combined[counter]
                     counter +=1 
             pse_tmps['static']  = pse_stat
             pse_colors[pse_stat] = colors_combined[0]
-            ax[n][0].hlines(.5, x_range[0], np.nanmax([np.nanmax(list(pse_tmps.values())), pse_stat]), color = 'k', ls ='-', lw=.5, alpha = 1)
+            ax[0][n].hlines(.5, x_range[0], np.nanmax([np.nanmax(list(pse_tmps.values())), pse_stat]), color = 'k', ls ='-', lw=.5, alpha = 1)
 
-        ax[n][0].vlines(pse_stat, -.1, .5, color = colors_combined[0], ls ='-', lw=2, alpha = .5)
-        ax[n][0].set_xlim(x_range[0], x_range[1]+.3)
+        ax[0][n].vlines(pse_stat, -.1, .5, color = colors_combined[0], ls ='-', lw=2, alpha = .5)
+        ax[0][n].set_xlim(x_range[0], x_range[1]+.3)
 
         if (protocol != 'DoubleAMMultiSpeeds') and (protocol != 'DoubleAMMultiStrokes'):
             # Set the original y-axis ticks
@@ -646,9 +651,6 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
                 if ps in pses:
                     colors_ticks[num] = pse_colors[ps]
             
-
-
-
         # Calculate the slope of the line defined by the endpoints
         slope = (y_range[1] - y_range[0]) / (x_range[1] - x_range[0])
 
@@ -665,36 +667,36 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
             for k in pse_tmps.keys():
                 pse_dict[f'sub{i}'][k]     = y_range[0] + slope * (np.array(pse_tmps[k]) - x_range[0])   
         
-        ax[n][0].set_xticks(x_toplot)  # Include PSE in y-ticks
+        ax[0][n].set_xticks(x_toplot)  # Include PSE in y-ticks
 
         labels_ = [f'{value:.2f}' for value in x_ticks]
-        ax[n][0].set_xticklabels(labels_, fontsize=25, rotation = 45)
-        ax[n][0].set_xlabel('Space - dva', fontsize=30)
+        ax[0][n].set_xticklabels(labels_, fontsize=25, rotation = 45)
+        ax[0][n].set_xlabel('Space - dva', fontsize=30)
 
         # Loop through the ytick labels and set their colors individually
-        for label, color in zip(ax[n][0].get_xticklabels(), colors_ticks):
+        for label, color in zip(ax[0][n].get_xticklabels(), colors_ticks):
             label.set_color(color)
 
         # Plot the original data and the fitted curve
-        ax[n][0].set_yticks([0, .25, .5, .75, 1])
-        labels_y = [item.get_text() for item in ax[n][0].get_yticklabels()]
+        ax[0][n].set_yticks([0, .25, .5, .75, 1])
+        labels_y = [item.get_text() for item in ax[0][n].get_yticklabels()]
         labels_y[4] = '100%'
         labels_y[3] = '75%'
         labels_y[2] = '50%'
         labels_y[1] = '25%'
         labels_y[0] = '0%'
-        ax[n][0].set_yticklabels(labels_y, fontsize = 25)
-        ax[n][0].set_ylabel('% Motion extrapolated response', fontsize = 30)
+        ax[0][n].set_yticklabels(labels_y, fontsize = 25)
+        ax[0][n].set_ylabel('% Motion extrapolated response', fontsize = 30)
 
-        ax[n][0].set_ylim(-.1, 1.1)
+        ax[0][n].set_ylim(-.1, 1.1)
 
-        ax[n][0].set_title(f'{title}', fontsize = 30, color = 'k')
+        ax[0][n].set_title(f'{title}', fontsize = 30, color = 'k')
 
-        ax[n][0].legend(loc = 'lower right', fontsize = 20)
+        ax[0][n].legend(loc = 'lower right', fontsize = 20)
     
-        ax[n][0].text(-1, .75, f'sub{sub}', fontsize=30, color='k')#, rotation = 90)
-        ax[n][0].spines['top'].set_color('none')
-        ax[n][0].spines['right'].set_color('none')
+        ax[0][n].text(-1, .75, f'sub{sub}', fontsize=30, color='k')#, rotation = 90)
+        ax[0][n].spines['top'].set_color('none')
+        ax[0][n].spines['right'].set_color('none')
 
         # ---------------------------------------------------------
         # Figure 4 combined AM
@@ -704,12 +706,12 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
 
         if (protocol != 'DoubleAMMultiSpeeds') and (protocol != 'DoubleAMMultiStrokes'):
             asymmetric_error = [[abs(np.interp(.25, y_static, x_static)-pse_stat)], [abs(np.interp(.75, y_static, x_static)-pse_stat)]]
-            ax[n][1].errorbar(pse_stat, 1.5, xerr=asymmetric_error, fmt='o', 
+            ax[1][n].errorbar(pse_stat, 1.5, xerr=asymmetric_error, fmt='o', 
                               markersize = data_points_stat//4, color = colors_combined[0], 
                               markeredgecolor = 'k', label = 'static' )
 
             asymmetric_error = [[abs(np.interp(.25, y_am, x_am)-pse_am)], [abs(np.interp(.75, y_am, x_am)-pse_am)]]
-            ax[n][1].errorbar(pse_am, 3, xerr=asymmetric_error, fmt='o', 
+            ax[1][n].errorbar(pse_am, 3, xerr=asymmetric_error, fmt='o', 
                               markersize = data_points_am//4, color = colors_combined[1], 
                               markeredgecolor = 'k', label = 'NormAM' )
             
@@ -722,7 +724,7 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
             print(cond_colors)
             x_pos = np.linspace(0.5, len(cond_colors.keys())+1, len(cond_colors.keys()))
             asymmetric_error = [[abs(np.interp(.25, y_static, x_static)-pse_stat)], [abs(np.interp(.75, y_static, x_static)-pse_stat)]]
-            ax[n][1].errorbar(pse_stat, x_pos[0], xerr=asymmetric_error, fmt='o', 
+            ax[1][n].errorbar(pse_stat, x_pos[0], xerr=asymmetric_error, fmt='o', 
                               markersize = data_points_stat//4, color = cond_colors['static'], 
                               markeredgecolor = 'k', label = 'static' )
 
@@ -731,7 +733,7 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
                 list_conds.append(k)
                 asymmetric_error = [[abs(np.interp(.25, v[1], v[0]) -pse_tmps[k] )], 
                                     [abs(np.interp(.75, v[1], v[0]) -pse_tmps[k] )]]
-                ax[n][1].errorbar(pse_tmps[k], x_pos[col+1], xerr=asymmetric_error, fmt='o', 
+                ax[1][n].errorbar(pse_tmps[k], x_pos[col+1], xerr=asymmetric_error, fmt='o', 
                                   markersize = data_points_am//2, color = cond_colors[k], 
                                   markeredgecolor = 'k', label = 'NormAM' )
                 print((y_range[0] + slope * (abs(np.interp(.75, v[1], v[0]) - x_range[0]))), 
@@ -750,28 +752,28 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
         pse_dict[f'sub{i}']['stat datapoints']   = data_points_stat
         
         
-        ax[n][1].set_ylim(-2,6)
+        ax[1][n].set_ylim(-2,6)
 
         if (protocol != 'DoubleAMMultiSpeeds') and (protocol != 'DoubleAMMultiStrokes'):
-            ax[n][1].set_ylim(0, 4)
+            ax[1][n].set_ylim(0, 4)
             label_cond = ['Static', 'AM']
-            ax[n][1].set_yticks([1.5, 3])
-            ax[n][1].set_yticklabels(label_cond, fontsize = 25)
+            ax[1][n].set_yticks([1.5, 3])
+            ax[1][n].set_yticklabels(label_cond, fontsize = 25)
 
 
         else:
             print(x_pos)
-            ax[n][1].set_ylim(-1, x_pos[-1]+1)
+            ax[1][n].set_ylim(-1, x_pos[-1]+1)
             label_cond = list_conds
             print(label_cond)
-            ax[n][1].set_yticklabels(label_cond, fontsize = 25, rotation = 30)
-            ax[n][1].set_yticks(x_pos)
+            ax[1][n].set_yticklabels(label_cond, fontsize = 25, rotation = 30)
+            ax[1][n].set_yticks(x_pos)
             
-        ax[n][1].set_ylabel('Conditions', fontsize = 30)
+        ax[1][n].set_ylabel('Conditions', fontsize = 30)
         
         if (protocol != 'DoubleAMMultiSpeeds') and (protocol != 'DoubleAMMultiStrokes'):
-            ax[n][1].vlines(pse_stat, 0, 1.5, ls = '--', lw=.8, color = colors_combined[0])
-            ax[n][1].vlines(pse_am, 0, 3, ls = '--', lw=.8, color = colors_combined[1])
+            ax[1][n].vlines(pse_stat, 0, 1.5, ls = '--', lw=.8, color = colors_combined[0])
+            ax[1][n].vlines(pse_am, 0, 3, ls = '--', lw=.8, color = colors_combined[1])
             x_toplot = list(np.linspace(-2, 6, 9)) + [pse_stat, pse_am]
             # Set the original y-axis ticks
             x_toplot.sort()
@@ -785,9 +787,9 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
             text_coord  = (-1.8, 1.7)
 
         else:
-            ax[n][1].vlines(pse_stat, -1, x_pos[0], ls = '--', lw=.8, color = colors_combined[0])
+            ax[1][n].vlines(pse_stat, -1, x_pos[0], ls = '--', lw=.8, color = colors_combined[0])
             for num, k in enumerate(list_conds[1:]):
-                ax[n][1].vlines(pse_tmps[k], -1, x_pos[num+1], ls = '--', lw=.8, color = cond_colors[k])
+                ax[1][n].vlines(pse_tmps[k], -1, x_pos[num+1], ls = '--', lw=.8, color = cond_colors[k])
             x_toplot = list(np.linspace(-2, 6, 9)) + list(pse_tmps.values())            
             pses = [i for i in pse_colors.keys()]
             pses.sort()
@@ -806,18 +808,18 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
         # Extrapolate the corresponding values
         dva_ticks = y_range[0] + slope * (np.array(x_toplot) - x_range[0])
 
-        ax[n][1].set_xticks(x_toplot)  # Include PSE in y-ticks
+        ax[1][n].set_xticks(x_toplot)  # Include PSE in y-ticks
 
         labels_ = [f'{value:.2f}' for value in dva_ticks]
-        ax[n][1].set_xticklabels(labels_, fontsize=25, rotation = 45)
-        ax[n][1].set_xlabel('Space - dva', fontsize=30)
+        ax[1][n].set_xticklabels(labels_, fontsize=25, rotation = 45)
+        ax[1][n].set_xlabel('Space - dva', fontsize=30)
 
         # Loop through the ytick labels and set their colors individually
-        for label, color in zip(ax[n][1].get_xticklabels(), colors_ticks):
+        for label, color in zip(ax[1][n].get_xticklabels(), colors_ticks):
             label.set_color(color)    
 
 #         ax[n][1].legend(loc = 'lower right', fontsize = 15) 
-        ax[n][1].set_title(f'PSE & intercepts at 25%-75%', fontsize = 30, color = 'k')
+        ax[1][n].set_title(f'PSE & intercepts at 25%-75%', fontsize = 30, color = 'k')
 
         arrow = patches.FancyArrowPatch(
             arrow_start,  # Starting point (x, y)
@@ -827,8 +829,8 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
             lw = 5,
             color=colors_combined[1]  # Arrow color
         )
-        ax[n][1].add_patch(arrow)  # Add the arrow to the current axes
-        ax[n][1].text(text_coord[0], text_coord[1], "Motion\nextrapolation", fontsize=20, color=colors_combined[1])#, rotation = 90)
+        ax[1][n].add_patch(arrow)  # Add the arrow to the current axes
+        ax[1][n].text(text_coord[0], text_coord[1], "Motion\nextrapolation", fontsize=20, color=colors_combined[1])#, rotation = 90)
     
     
         # Set the desired size for the image annotation
@@ -841,10 +843,10 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
                                       pad=0, zorder=1)
         
         # Add the annotation to the plot
-        ax[n][1].add_artist(ab)
+        ax[1][n].add_artist(ab)
     
-        ax[n][1].spines['top'].set_color('none')
-        ax[n][1].spines['right'].set_color('none')
+        ax[1][n].spines['top'].set_color('none')
+        ax[1][n].spines['right'].set_color('none')
 
 
         # Create an OffsetImage for annotation
@@ -855,9 +857,9 @@ def plot_merged(path_mat_workspace, sub_list, extrapolation = [0, 4], protocol =
                                       pad=0, zorder=1)
         
         # Add the annotation to the plot
-        ax[n][1].add_artist(ab)
+        ax[1][n].add_artist(ab)
         if file_name is not None:
-            plt.savefig(os.path.join(file_name + '.eps'), format = 'eps', dpi =500)
+            plt.savefig(os.path.join(file_name + '.pdf'), format = 'pdf', dpi =500)
             plt.savefig(os.path.join(file_name + '.png'), format = 'png', dpi =500)
     return pse_dict
 
