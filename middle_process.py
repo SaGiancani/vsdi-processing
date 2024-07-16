@@ -463,7 +463,7 @@ class Session:
                 cond_name  = self.cond_dict[condition] 
                 cond_name  = cond_name.replace('-', '')
                 cond_name  = cond_name.replace('°', '')
-                cond_name  = cond_name.replace('0.', '0')
+                cond_name  = cond_name.replace('.', '')
                 path_store_2mat = dv.set_storage_folder(storage_path = t, name_analysis = 'pickle2MAT')
                 
                 path_tmp_raw    = os.path.join(path_store_2mat , f'raw_{cond_name}.mat')
