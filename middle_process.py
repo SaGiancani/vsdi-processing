@@ -1197,7 +1197,7 @@ if __name__=="__main__":
     parser.add_argument('--no-dtrend', 
                         dest='detrend_switch', 
                         action='store_false')
-    parser.set_defaults(deblank_switch=False)
+    parser.set_defaults(detrend_switch=False)
 
     parser.add_argument('--cid', 
                     action='append', 
