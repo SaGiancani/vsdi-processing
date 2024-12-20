@@ -249,22 +249,9 @@ class Session:
                                self.header['temporal_bin'],
                                detrend_switch    = self.detrend_switch,
                                filename_particle = self.filename_particle)
-        
-        # Sanity check on metadata infos
-        if blk.header['nframesperstim'] != blk.signal.shape[0]:
-            self.header['n_frames'] = blk.signal.shape[0]
-        else:
-            self.header['n_frames'] = blk.header['nframesperstim']
-
-        if blk.header['frameheight'] != blk.signal.shape[1]:
-            self.header['original_height'] = blk.signal.shape[1]
-        else:
-            self.header['original_height'] = blk.header['frameheight']
-
-        if blk.header['framewidth'] != blk.signal.shape[2]:
-            self.header['original_width'] = blk.signal.shape[2]
-        else:
-            self.header['original_width'] = blk.header['framewidth']
+        self.header['n_frames'] = blk.header['nframesperstim']
+        self.header['original_height'] = blk.header['frameheight']
+        self.header['original_width'] = blk.header['framewidth']
         
         # Setting key frames
         if end_frame is None:
@@ -385,7 +372,7 @@ class Session:
         # Blank signal extraction
         self.log.info(f'Trials of condition {condition} loading starts:')
         if condition == self.blank_id:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, detrend = self.detrend_switch, filename_particle = self.filename_particle)
+            sig, df_f0, conditions, raws, trials, blks = signal_extraction(self.header, blks, None, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, detrend = self.detrend_switch, filename_particle = self.filename_particle)
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
@@ -418,7 +405,7 @@ class Session:
             self.log.info('Blank signal computed')
                         
         else:
-            sig, df_f0, conditions, raws, trials = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, detrend= self.detrend_switch, filename_particle = self.filename_particle)
+            sig, df_f0, conditions, raws, trials, blks = signal_extraction(self.header, blks, self.f_f0_blank, self.header['deblank_switch'], self.base_report, self.blank_id, self.time_stamp, self.piezo, self.heart_beat, detrend= self.detrend_switch, filename_particle = self.filename_particle)
             mask = self.get_selection_trials(condition, sig)
             self.conditions = self.conditions + conditions
             self.auto_selected = np.array(self.auto_selected.tolist() + mask.tolist(), dtype=int)
@@ -943,10 +930,30 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                 #at the end something like (nblks, 70, 1)         
                 conditions.append(BLK.condition)
                 BLK.binned_signal[np.where(BLK.binned_signal==0)] = np.nan
-                raws[i, :, :, :] = BLK.binned_signal 
-                delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
-                sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
+                
+                # Sanity check for blks with wrong time dimension
+                if BLK.binned_signal.shape[0] != raws.shape[1]:
 
+                    if log is None:
+                        print(f'Trial n. {i+1}/{len(blks)} {blk_name} mismatch with time shape of the session. Discarded')      
+                        print(f'Shape of {blk_name} {BLK.binned_signal.shape} and shape of raws {raws.shape}')          
+                    else:
+                        log.info(f'Trial n. {i+1}/{len(blks)} {blk_name} mismatch with time shape of the session. Discarded')               
+                        log.info(f'Shape of {blk_name} {BLK.binned_signal.shape} and shape of raws {raws.shape}')          
+                    
+                    raws = raws[0:-2, :, :, :]
+                    delta_f = delta_f[0:-2, :, :, :]
+                    sig = sig[0:-2, :]     
+                    i = i-1
+                    blks.remove(blk_name)
+
+                    if base_report is not None:
+                        trials_dict[blk_name] = None   
+                else: 
+                    raws[i, :, :, :] = BLK.binned_signal 
+                    delta_f[i, :, :, :] =  process.deltaf_up_fzero(BLK.binned_signal, zero, deblank=blnk_switch, blank_sign = blank_s)
+                    sig[i, :] = process.time_course_signal(delta_f[i, :, :, :], roi_mask)     # Log prints
+                    
                 # Trial storing
                 start_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -995,7 +1002,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
             else:
                 zero = header['zero_frames']
         sig, delta_f, conditions, raws = None, None, None, None
-    return sig, delta_f, conditions, raws, trials_dict
+    return sig, delta_f, conditions, raws, trials_dict, blks
     
 def roi_strategy(matrix, tolerance, zero_frames):
     '''
