@@ -249,9 +249,22 @@ class Session:
                                self.header['temporal_bin'],
                                detrend_switch    = self.detrend_switch,
                                filename_particle = self.filename_particle)
-        self.header['n_frames'] = blk.header['nframesperstim']
-        self.header['original_height'] = blk.header['frameheight']
-        self.header['original_width'] = blk.header['framewidth']
+        
+        # Sanity check on metadata infos
+        if blk.header['nframesperstim'] != blk.signal.shape[0]:
+            self.header['n_frames'] = blk.signal.shape[0]
+        else:
+            self.header['n_frames'] = blk.header['nframesperstim']
+
+        if blk.header['frameheight'] != blk.signal.shape[1]:
+            self.header['original_height'] = blk.signal.shape[1]
+        else:
+            self.header['original_height'] = blk.header['frameheight']
+
+        if blk.header['framewidth'] != blk.signal.shape[2]:
+            self.header['original_width'] = blk.signal.shape[2]
+        else:
+            self.header['original_width'] = blk.header['framewidth']
         
         # Setting key frames
         if end_frame is None:
