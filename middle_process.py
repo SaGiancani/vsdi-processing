@@ -249,6 +249,7 @@ class Session:
                                self.header['temporal_bin'],
                                detrend_switch    = self.detrend_switch,
                                filename_particle = self.filename_particle)
+        print(f'n. frames in header { blk.header['nframesperstim']} and actual n. frames of signal {blk.signal.shape[0]} and binned signal {blk.binned_signal.shape[0]}')
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
