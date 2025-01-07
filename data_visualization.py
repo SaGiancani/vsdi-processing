@@ -380,6 +380,8 @@ def whole_time_sequence(data,
                         global_cntrds = None, 
                         colors_centr = ['black', 'purple', 'aqua'], 
                         centroids_labeling = 'dotted circles',
+                        width_line = 1.5,
+                        width_contour = .3,
                         cntrds = None, 
                         blbs = None, 
                         max=80, min=10, 
@@ -497,7 +499,7 @@ def whole_time_sequence(data,
 
         if second_contour is not None:
             second_contour = second_contour*mask
-            ax.contour(second_contour, 15, colors='white', ls = 'dotted', lw = .3)
+            ax.contour(second_contour, 15, colors='white', ls = 'dotted', lw = width_contour)
         
         ax.set_xticks([])
         ax.set_yticks([])
@@ -526,7 +528,7 @@ def whole_time_sequence(data,
             else:
                 blobs_ = blobs[i]                    
                 
-        ax.contour(blobs_, .5, colors=color_contour, levels=[1])
+        ax.contour(blobs_, width_contour, colors=color_contour, levels=[1])
 
         if centroids is not None:
             if len(centroids[i])>0:
@@ -541,9 +543,9 @@ def whole_time_sequence(data,
                                                         (k[1], k[0]), 
                                                         25, 
                                                         (0,360))
-                    ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=.2)
+                    ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=width_line)
                 elif centroids_labeling == 'vlines':
-                    ax.vlines(k[0], 0, blurred.shape[0], color = cc, lw= 1.5)
+                    ax.vlines(k[0], 0, blurred.shape[0], color = cc, lw= width_line)
 
     
     # print(centroids)
@@ -566,28 +568,23 @@ def whole_time_sequence(data,
 
         ax.add_artist(scalebar)
 
-    #cbar.ax.set_yticks(np.arange(0, 1.1, 0.5))
-
-
-
-    #plt.show()
     print(f'Limits values for heatmaps: {max_bord} - {min_bord}')   
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
         #plt.savefig(os.path.join(tmp, name +ext), dpi=1000)
         print(os.system('/usr/bin/sync'))
-        plt.savefig(os.path.join(tmp, name + '.'+ext), format = 'png', dpi =500)
+        plt.savefig(os.path.join(tmp, name + '.'+ext), format = ext, dpi =500)
         print(os.system('/usr/bin/sync'))
         plt.rc('figure', max_open_warning = 0)
         plt.rcParams.update({'font.size': 12})
         # plt.savefig(os.path.join(tmp, name + '.'+ext), format=ext, dpi =500)
         print(name + ext+ ' stored successfully!')
-    #else:
-    #    plt.show()
+
     if render_flag:
         plt.show()
+        plt.pause(1)
     plt.close('all')
-    return
+    return centroids
 
 def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_labels=None, fig_title=None):
     num_lines = len(args)
@@ -759,6 +756,19 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
         plt.close('all')
     else:
         plt.show()
+    return
+
+def plot_zmask(Mask, U, cutoff, path_folder):
+    # Histogram with cutoff line
+    plt.figure()
+    plt.hist(U.flatten(), bins=50)
+    plt.axvline(cutoff, color='r', linewidth=2)
+    plt.savefig(os.path.join(path_folder, 'histogram_cutoff.png'))
+
+    plt.figure()
+    plt.imshow(Mask)
+    plt.colorbar()
+    plt.savefig(os.path.join(path_folder, 'zmask.png'))
     return
 
 import st_builder as st
