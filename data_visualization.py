@@ -760,9 +760,16 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
 
 def plot_zmask(Mask, U, cutoff, path_folder):
     # Histogram with cutoff line
+    hist_values, bin_edges = np.histogram(U.ravel(), bins=50)
+
+    # Plot the histogram using the computed values
     plt.figure()
-    plt.hist(U.flatten(), bins=50)
-    plt.axvline(cutoff, color='r', linewidth=2)
+    plt.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
+
+    # Add the cutoff line
+    plt.axvline(cutoff, color='r', linewidth=2, label=f'Cutoff: {cutoff:.2f}')
+    plt.legend()
+
     plt.savefig(os.path.join(path_folder, 'histogram_cutoff.png'))
 
     plt.figure()
