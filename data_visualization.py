@@ -759,24 +759,31 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
     return
 
 def plot_zmask(Mask, U, cutoff, path_folder):
-    # Histogram with cutoff line
+    # Compute histogram with np.histogram
     hist_values, bin_edges = np.histogram(U.ravel(), bins=50)
 
-    # Plot the histogram using the computed values
+    # Plot the histogram using computed values
     plt.figure()
     plt.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
 
-    # Add the cutoff line
+    # Add the cutoff line, ensuring it aligns with the histogram's x-axis scale
     plt.axvline(cutoff, color='r', linewidth=2, label=f'Cutoff: {cutoff:.2f}')
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+    plt.title("Histogram with Cutoff")
     plt.legend()
 
+    # Save histogram plot
     plt.savefig(os.path.join(path_folder, 'histogram_cutoff.png'))
+    plt.close()
 
+    # Plot the mask
     plt.figure()
-    plt.imshow(Mask)
+    plt.imshow(Mask, cmap='viridis')
     plt.colorbar()
+    plt.title("Z-Score Mask")
     plt.savefig(os.path.join(path_folder, 'zmask.png'))
-    return
+    plt.close()
 
 import st_builder as st
 
