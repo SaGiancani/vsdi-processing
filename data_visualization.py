@@ -758,9 +758,9 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
         plt.show()
     return
 
-def plot_zmask(Mask, U, cutoff, path_folder):
+def plot_zmask(Mask, U, cutoff, path_folder, filename = None):
     # Compute histogram with np.histogram
-    hist_values, bin_edges = np.histogram(U.ravel(), bins=50)
+    hist_values, bin_edges = np.histogram(U.ravel(), bins=1500)
 
     # Plot the histogram using computed values
     plt.figure()
@@ -774,7 +774,14 @@ def plot_zmask(Mask, U, cutoff, path_folder):
     plt.legend()
 
     # Save histogram plot
-    plt.savefig(os.path.join(path_folder, 'histogram_cutoff.png'))
+    if filename is not None:
+        title_hist = f'histogram_cutoff_{filename}.png'
+        title_mask = f'zmask_{filename}.png'
+    else:
+        title_hist = f'histogram_cutoff.png'
+        title_mask = f'zmask.png'
+
+    plt.savefig(os.path.join(path_folder, title_hist))
     plt.close()
 
     # Plot the mask
@@ -782,7 +789,7 @@ def plot_zmask(Mask, U, cutoff, path_folder):
     plt.imshow(Mask, cmap='viridis')
     plt.colorbar()
     plt.title("Z-Score Mask")
-    plt.savefig(os.path.join(path_folder, 'zmask.png'))
+    plt.savefig(os.path.join(path_folder, title_mask))
     plt.close()
 
 import st_builder as st
