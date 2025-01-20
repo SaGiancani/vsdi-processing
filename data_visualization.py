@@ -398,6 +398,7 @@ def whole_time_sequence(data,
                         ext= 'png',
                         mappa = utils.PARULA_MAP,
                         titles = None,
+                        titles_rows = None,
                         pixel_spacing = None,
                         second_contour = None,
                         kern_median = 5,
@@ -408,6 +409,7 @@ def whole_time_sequence(data,
                         padding_axes = .05,
                         y_title = 1,
                         x_title = 1,
+                        coord_title_row = None,
                         font_size = 20,
                         color_contour = 'k'):
 
@@ -418,9 +420,11 @@ def whole_time_sequence(data,
 
     if titles is None:
         titles = ['']*len(data)
+
+    nrows = int(np.ceil(np.shape(data)[0]/n_columns))  
     
     grid = AxesGrid(fig, 111,
-                    nrows_ncols=(int(np.ceil(np.shape(data)[0]/n_columns)), n_columns),
+                    nrows_ncols=(nrows, n_columns),
                     axes_pad=padding_axes,
                     share_all=True,
                     label_mode="L",
@@ -478,7 +482,10 @@ def whole_time_sequence(data,
     else:
         centroids = cntrds
         blobs = blbs
-    
+
+        
+    counter_title = 0
+
     #fig.suptitle(name, fontsize=16)
     for i, (ax, l) in enumerate(zip(grid, data)):
         
@@ -510,6 +517,23 @@ def whole_time_sequence(data,
                     fontsize=font_size, color=color_text)
         ax.set_title("")  # Remove the default title
 
+        if (titles_rows is not None) and ((i%n_columns)==0):
+            if coord_title_row is None:
+                x_row_title = x_title + 100
+                y_row_title = y_title + 100           
+            else:
+                if isinstance(coord_title_row, tuple):
+                    x_row_title, y_row_title = coord_title_row                 
+                elif isinstance(coord_title_row, (int, float)):
+                    x_row_title = y_row_title = coord_title_row                 
+                else:
+                    print('Wrong dimension for title coordinates')
+
+            ax.annotate(titles_rows[counter_title], xy=(0.5, 1), xytext=(x_row_title, y_row_title), 
+                        textcoords='offset points', ha='center', 
+                        fontsize=round(font_size + font_size*.2), color='k')     
+            counter_title += 1
+                   
         if (manual_thresh is not None) and (flag_simple_thres) and (blobs is None):
             blobs_ = np.zeros(blurred.shape, dtype = bool)
             blobs_[np.where(blurred>manual_thresh)] = 1
