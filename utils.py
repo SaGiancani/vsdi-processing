@@ -402,3 +402,10 @@ def setup_custom_logger(name):
     logger.addHandler(handler)
     logger.addHandler(screen_handler)
     return logger
+
+def stampa(text, logger = None):
+    if logger is not None:
+        logger.info(text)      
+    else:
+        print(text)  
+    return
