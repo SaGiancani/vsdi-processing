@@ -784,7 +784,8 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
 
 def plot_zmask(Mask, U, cutoff, path_folder, filename = None):
     # Compute histogram with np.histogram
-    hist_values, bin_edges = np.histogram(U.ravel(), bins=1500)
+    U_filled = np.nan_to_num(U, nan=np.nanmean(U))  # Replace NaN with 0.0
+    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=1500)
 
     # Plot the histogram using computed values
     plt.figure()
