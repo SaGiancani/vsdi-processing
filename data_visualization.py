@@ -783,6 +783,15 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
     return
 
 def plot_zmask(Mask, U, cutoff, path_folder, filename = None):
+
+    # Plot the mask
+    plt.figure()
+    plt.imshow(Mask, cmap='viridis')
+    plt.colorbar()
+    plt.title("Z-Score Mask")
+    plt.savefig(os.path.join(path_folder, title_mask))
+    plt.close()
+
     # Compute histogram with np.histogram
     val_mean = np.nanmean(U)
     U_filled = np.nan_to_num(U, nan=val_mean)  # Replace NaN with the mean of non-NaN values
@@ -811,13 +820,6 @@ def plot_zmask(Mask, U, cutoff, path_folder, filename = None):
     plt.savefig(os.path.join(path_folder, title_hist))
     plt.close()
 
-    # Plot the mask
-    plt.figure()
-    plt.imshow(Mask, cmap='viridis')
-    plt.colorbar()
-    plt.title("Z-Score Mask")
-    plt.savefig(os.path.join(path_folder, title_mask))
-    plt.close()
 
 import st_builder as st
 
