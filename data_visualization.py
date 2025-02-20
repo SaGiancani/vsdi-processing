@@ -800,26 +800,28 @@ def plot_zmask(Mask, U, cutoff, path_folder, filename = None):
     plt.savefig(os.path.join(path_folder, title_mask))
     plt.close()
 
-    # Compute histogram with np.histogram
-    val_mean = np.nanmean(U)
-    U_filled = np.nan_to_num(U, nan=val_mean)  # Replace NaN with the mean of non-NaN values
-    U_filled[~np.isfinite(U_filled)] = val_mean  # Replace inf with the mean of non-NaN values
-    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=1500)
+    try:
+        # Compute histogram with np.histogram
+        val_mean = np.nanmean(U)
+        U_filled = np.nan_to_num(U, nan=val_mean)  # Replace NaN with the mean of non-NaN values
+        U_filled[~np.isfinite(U_filled)] = val_mean  # Replace inf with the mean of non-NaN values
+        hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=1500)
 
-    # Plot the histogram using computed values
-    plt.figure()
-    plt.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
+        # Plot the histogram using computed values
+        plt.figure()
+        plt.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
 
-    # Add the cutoff line, ensuring it aligns with the histogram's x-axis scale
-    plt.axvline(cutoff, color='r', linewidth=2, label=f'Cutoff: {cutoff:.2f}')
-    plt.xlabel("Value")
-    plt.ylabel("Frequency")
-    plt.title("Histogram with Cutoff")
-    plt.legend()
+        # Add the cutoff line, ensuring it aligns with the histogram's x-axis scale
+        plt.axvline(cutoff, color='r', linewidth=2, label=f'Cutoff: {cutoff:.2f}')
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.title("Histogram with Cutoff")
+        plt.legend()
 
-    plt.savefig(os.path.join(path_folder, title_hist))
-    plt.close()
-
+        plt.savefig(os.path.join(path_folder, title_hist))
+        plt.close()
+    except:
+        print('Unable to store histogram of pixels')
 
 import st_builder as st
 
