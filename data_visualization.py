@@ -783,6 +783,14 @@ def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, co
     return
 
 def plot_zmask(Mask, U, cutoff, path_folder, filename = None):
+    
+    # Save histogram plot
+    if filename is not None:
+        title_hist = f'histogram_cutoff_{filename}.png'
+        title_mask = f'zmask_{filename}.png'
+    else:
+        title_hist = f'histogram_cutoff.png'
+        title_mask = f'zmask.png'
 
     # Plot the mask
     plt.figure()
@@ -808,14 +816,6 @@ def plot_zmask(Mask, U, cutoff, path_folder, filename = None):
     plt.ylabel("Frequency")
     plt.title("Histogram with Cutoff")
     plt.legend()
-
-    # Save histogram plot
-    if filename is not None:
-        title_hist = f'histogram_cutoff_{filename}.png'
-        title_mask = f'zmask_{filename}.png'
-    else:
-        title_hist = f'histogram_cutoff.png'
-        title_mask = f'zmask.png'
 
     plt.savefig(os.path.join(path_folder, title_hist))
     plt.close()
