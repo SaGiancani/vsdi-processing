@@ -68,7 +68,8 @@ class RetinoSession(md.Session):
                 self.log = utils.setup_custom_logger('myapp')
             else:
                 self.log = logger        
-    
+            # If denoised data stored, it's gonna load those
+            self.denoise_switch = denoise_flag
             self.cond_names = None
             self.header = super().get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
             # All blks names loaded
@@ -91,7 +92,7 @@ class RetinoSession(md.Session):
                 self.header['zero_frames'] = int(round(self.header['n_frames']*0.2))
             else:
                 self.header['zero_frames'] = zero_frames
-            print(self.header)
+            utils.stampa(self.header, logger = self.log)            
             self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
 
             if len(self.all_blks) == 0:
@@ -99,13 +100,15 @@ class RetinoSession(md.Session):
             
             self.single_stroke_label = single_stroke_label
             self.multiple_stroke_label = multiple_stroke_label
-            print(self.single_stroke_label, self.multiple_stroke_label)
+            utils.stampa(f'{self.single_stroke_label} {self.multiple_stroke_label}', logger = self.log)            
+
             self.path_session = path_session
             self.path_md = path_md
 
             # Corresponding single stroke for each AM condition
             self.retino_pos_am = utils.get_conditions_correspondance(self.path_session)
-            print(self.retino_pos_am)
+            utils.stampa(f'{self.retino_pos_am}', logger = self.log)            
+
             # All the conditions    
             self.cond_dict = super().get_condition_name()
             self.cond_names = list(self.cond_dict.values())
@@ -120,9 +123,10 @@ class RetinoSession(md.Session):
             self.cond_dict = self.get_conditions_intersect()
             # Name condition extraction
             self.cond_names = list(self.cond_dict.values())
-            print(str(self.cond_dict) + '\n')
-            print(f'Only picked conditions: {self.cond_dict}\n')
-            print(f'All session conditions: {self.cond_dict_all}\n')
+            utils.stampa(f'{self.cond_dict}', logger = self.log)            
+            utils.stampa(f'Only picked conditions: {self.cond_dict}\n', logger = self.log)            
+            utils.stampa(f'All session conditions: {self.cond_dict_all}\n', logger = self.log)            
+
             self.acquisition_frequency = acquisition_fq
 
             # Metadata stimulus
@@ -139,7 +143,8 @@ class RetinoSession(md.Session):
             self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
             self.id_name = utils.get_session_id_name(self.path_session)
-            print('Session ID name: ' + self.id_name)
+            utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)            
+
             self.green = self.get_green(green_name)
             self.mask = self.get_mask()
 
@@ -149,7 +154,6 @@ class RetinoSession(md.Session):
 
             self.visualization_switch = data_vis_switch
             self.storage_switch = store_switch
-            self.denoise_switch = denoise_flag
     
 
         def get_conditions_pos(self):
@@ -232,14 +236,14 @@ class RetinoSession(md.Session):
             # Blank condition loading
             cd_blank = md.Condition()
             try:
-                print(os.path.join(path_md_files, 'md_data_blank'))
+                utils.stampa(f'{os.path.join(path_md_files, 'md_data_blank')}', logger=self.log)
                 cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
                 self.blank_condition = cd_blank
-                print('Blank condition loaded succesfully!\n')
+                utils.stampa(f'Blank condition loaded succesfully!\n', logger=self.log)
                 #mean_blank = np.nanmean(cd_blank.averaged_df[:20, :,:], axis=0)
                 #std_blank = np.nanstd(cd_blank.averaged_df[:20, :,:], axis=0)/np.sqrt(np.shape(cd_blank.averaged_df)[0]) 
             except:
-                print('Blank condition not found in ' + path_md_files+ '\n')
+                utils.stampa(f'Blank condition not found in {path_md_files} \n', logger=self.log)
                 # In case of absence of the blank condition, it processes and stores it
                 self.storage_switch = True
                 self.visualization_switch = False
@@ -258,7 +262,7 @@ class RetinoSession(md.Session):
                            time_limits, 
                            retinotopic_path_folder, 
                            dict_retino):
-            print('Start processing retinotopy analysis for condition ' + name_cond )
+            utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
             start_time = datetime.datetime.now().replace(microsecond=0)
 
             # Condition instance
@@ -268,20 +272,20 @@ class RetinoSession(md.Session):
                 # Loading or building the condition
                 try:
                     cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
-                    print('Condition ' + name_cond + ' loaded!\n')
+                    utils.stampa(f'Condition {name_cond} loaded!\n', logger=self.log)
 
                 except:
-                    print('Condition ' + name_cond + ' not found\n')
+                    utils.stampa(f'Condition {name_cond} not found\n', logger=self.log)
                     self.storage_switch = True
                     self.visualization_switch = False
                     # It is gonna get the blank signal automatically
-                    print('Processing ' + name_cond + ' signal\n')
+                    utils.stampa(f'Processing {name_cond} signal\n', logger=self.log)
                     id_cond = [k for k, v in self.cond_dict_all.items() if v == name_cond][0]
                     _ = self.get_signal(id_cond)
                     self.storage_switch = False
                     # It doesnt work at this line: no storage in case of exceptional run
                     cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond)) 
-                    print('Condition ' + name_cond + ' loaded!\n')
+                    utils.stampa(f'Condition {name_cond} loaded!\n', logger=self.log)
                 colrs = []
             
             else:
@@ -289,8 +293,9 @@ class RetinoSession(md.Session):
                 #here if the denoised files have to be loaded
                 try:
                     cd_sign  = np.load(path_rem)
+                    utils.stampa(f'Condition {name_cond} loaded!\n', logger=self.log)
                 except:
-                    print(f'Denoised files for {name_cond}, at {path_rem} does not exist!')
+                    utils.stampa(f'Denoised files for {name_cond}, at {path_rem} does not exist!\n', logger=self.log)
 
             # Single stroke condition
             if name_cond in list(self.cond_pos.values()):
@@ -321,7 +326,7 @@ class RetinoSession(md.Session):
                 # Storing variable
                 dict_retino[name_cond] = dict()
                 for i, j in enumerate(self.retino_pos_am[name_cond]):
-                    print('The stroke ' +j+f' is the number {i}')
+                    utils.stampa(f'The stroke {j} is the number {i}\n', logger=self.log)
                     retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, str_type = 'multiple stroke')
                     # Store single stroke within AM
                     dict_retino[name_cond][j] = retino_cond
@@ -337,8 +342,8 @@ class RetinoSession(md.Session):
                 if self.visualization_switch:
                     self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
                     print('Os system print: '+ str(os.system('/usr/bin/sync')))
-            print('End processing retinotopy analysis for condition ' + name_cond )
-            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')            
+            utils.stampa(f'End processing retinotopy analysis for condition {name_cond}')
+            utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
             return dict_retino
         
 
@@ -1088,10 +1093,8 @@ if __name__=="__main__":
     start_process_time = datetime.datetime.now().replace(microsecond=0)
     args = parser.parse_args()
 
-    print(args)
-
-    # Store time boundaries
-    #time_limits_single = ((args.bottom_time_window, args.upper_time_window))
+    log = utils.setup_custom_logger('myapp')
+    utils.stampa(f'{args}', logger = log)            
 
     # Session path extraction
     path_session = args.path_md.split('derivatives')[0]
@@ -1105,7 +1108,9 @@ if __name__=="__main__":
                                    multiple_stroke_label=args.apparent_motion_label,
                                    time_course_window_dim=args.tcwd,
                                    window_dim=args.wd,
+                                   logger=log,
                                    store_switch=args.store_switch,
                                    data_vis_switch=args.data_vis_switch) 
     
     retino_session.get_retino_session()
+    utils.stampa(f'Retinotopic analysis for session {retino_session.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
