@@ -146,7 +146,11 @@ class RetinoSession(md.Session):
             utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)            
 
             self.green = self.get_green(green_name)
-            self.mask  = self.get_mask()
+
+            if not self.denoise_switch:
+                self.mask  = self.get_mask()
+            else:
+                self.mask  = np.ones((self.std_blank.shape))
 
             # Single centroid mask dimension
             self.tc_window_dimension =  time_course_window_dim
