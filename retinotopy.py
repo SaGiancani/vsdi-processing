@@ -146,7 +146,7 @@ class RetinoSession(md.Session):
             utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)            
 
             self.green = self.get_green(green_name)
-            self.mask = self.get_mask()
+            self.mask  = self.get_mask()
 
             # Single centroid mask dimension
             self.tc_window_dimension =  time_course_window_dim
@@ -233,27 +233,35 @@ class RetinoSession(md.Session):
             #conds = list(session.cond_dict.keys())
             path_md_files = os.path.join(self.path_md,'md_data')
 
-            # Blank condition loading
             cd_blank = md.Condition()
-            try:
-                utils.stampa(f'{os.path.join(path_md_files, 'md_data_blank')}', logger=self.log)
-                cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
-                self.blank_condition = cd_blank
+
+            if not self.denoise_switch:
+                # Blank condition loading
+                try:
+                    tmp_folder = os.path.join(path_md_files, 'md_data_blank')
+                    utils.stampa(f'{tmp_folder}', logger=self.log)
+                    cd_blank.load_cond(tmp_folder)
+                    self.blank_condition = cd_blank
+                    utils.stampa(f'Blank condition loaded succesfully!\n', logger=self.log)
+
+                except:
+                    utils.stampa(f'Blank condition not found in {path_md_files} \n', logger=self.log)
+                    # In case of absence of the blank condition, it processes and stores it
+                    self.storage_switch = True
+                    self.visualization_switch = False
+                    # It is gonna get the blank signal automatically
+                    print('Processing blank signal\n')
+                    _ = self.get_signal(self.blank_id)
+                    self.storage_switch = False
+                    cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
+                    self.blank_condition = cd_blank
+                    print('Blank condition loaded succesfully!\n')
+            else:
+                cd_blank.df_fz         = utils.get_denoised_cond(self.path_md, 'blank', log = self.log) # formally incorrect but for sake of process
+                cd_blank.cond_name     = 'blank'
+                cd_blank.averaged_df   = np.nanmean(cd_blank.df_fz, axis = 0)
+                cd_blank.autoselection = np.ones(len(cd_blank.df_fz))
                 utils.stampa(f'Blank condition loaded succesfully!\n', logger=self.log)
-                #mean_blank = np.nanmean(cd_blank.averaged_df[:20, :,:], axis=0)
-                #std_blank = np.nanstd(cd_blank.averaged_df[:20, :,:], axis=0)/np.sqrt(np.shape(cd_blank.averaged_df)[0]) 
-            except:
-                utils.stampa(f'Blank condition not found in {path_md_files} \n', logger=self.log)
-                # In case of absence of the blank condition, it processes and stores it
-                self.storage_switch = True
-                self.visualization_switch = False
-                # It is gonna get the blank signal automatically
-                print('Processing blank signal\n')
-                _ = self.get_signal(self.blank_id)
-                self.storage_switch = False
-                cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
-                self.blank_condition = cd_blank
-                print('Blank condition loaded succesfully!\n')
             return 
         
 
@@ -289,13 +297,10 @@ class RetinoSession(md.Session):
                 colrs = []
             
             else:
-                path_rem = os.path.join(self.path_md, 'denoised', f'rem_{name_cond}.npy')
-                #here if the denoised files have to be loaded
-                try:
-                    cd_sign  = np.load(path_rem)
-                    utils.stampa(f'Condition {name_cond} loaded!\n', logger=self.log)
-                except:
-                    utils.stampa(f'Denoised files for {name_cond}, at {path_rem} does not exist!\n', logger=self.log)
+                cd.df_fz         = utils.get_denoised_cond(self.path_md, name_cond, log = self.log) # formally incorrect but for sake of process
+                cd.cond_name     = name_cond
+                cd.autoselection = np.ones(len(cd.df_fz))
+                utils.stampa(f'Condition {name_cond} loaded successfully!\n', logger=self.log)
 
             # Single stroke condition
             if name_cond in list(self.cond_pos.values()):
