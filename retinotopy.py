@@ -137,7 +137,8 @@ class RetinoSession(md.Session):
             self.get_blank()
             self.mean_blank = self.blank_condition.averaged_df
             # self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
-            self.std_blank = self.blank_condition.stde_f_f0_blank
+            tmp_blnk = md.get_selected(self.blank_condition.df_fz, self.blank_condition.autoselection)
+            self.std_blank = np.nanstd(tmp_blnk, axis=0)/np.sqrt(np.shape(tmp_blnk)[0])
 
             self.id_name = utils.get_session_id_name(self.path_session)
             print('Session ID name: ' + self.id_name)
