@@ -274,6 +274,7 @@ class RetinoSession(md.Session):
 
             # Condition instance
             cd = md.Condition()
+            colrs = []
             
             if not self.denoise_switch:
                 # Loading or building the condition
@@ -293,7 +294,6 @@ class RetinoSession(md.Session):
                     # It doesnt work at this line: no storage in case of exceptional run
                     cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond)) 
                     utils.stampa(f'Condition {name_cond} loaded!\n', logger=self.log)
-                colrs = []
             
             else:
                 cd.df_fz         = utils.get_denoised_cond(self.path_md, name_cond, log = self.log) # formally incorrect but for sake of process
