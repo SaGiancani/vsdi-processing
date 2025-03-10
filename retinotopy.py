@@ -136,9 +136,7 @@ class RetinoSession(md.Session):
             self.blank_condition = None            
             self.get_blank()
             self.mean_blank = self.blank_condition.averaged_df
-            # self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
-            tmp_blnk = md.get_selected(self.blank_condition.df_fz, self.blank_condition.autoselection)
-            self.std_blank = np.nanstd(tmp_blnk, axis=0)/np.sqrt(np.shape(tmp_blnk)[0])
+            self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
             self.id_name = utils.get_session_id_name(self.path_session)
             print('Session ID name: ' + self.id_name)
@@ -381,9 +379,9 @@ class RetinoSession(md.Session):
             avr_df = np.nanmean(df, axis = 0)
 
             # COUNTERCHECK THIS BLANK 
-            # mean_blank = np.nanmean(self.mean_blank, axis = 0)
-            print(f'The blank employed in the zscore has shape {self.mean_blank.shape}')
-            z_s = process.zeta_score(avr_df, self.mean_blank, self.std_blank, full_seq = True)
+            mean_blank = np.nanmean(self.mean_blank, axis = 0)
+            print(f'The blank employed in the zscore has shape {mean_blank.shape}')
+            z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
 
             # Instance retinotopy object: single stroke
             r = Retinotopy(self.path_session,
@@ -415,7 +413,7 @@ class RetinoSession(md.Session):
                                                                                            None, None,
                                                                                            begin_time,
                                                                                            end_time,
-                                                                                           sig_blank = self.mean_blank,
+                                                                                           sig_blank = mean_blank,
                                                                                            std_blank = self.std_blank,
                                                                                            lim_blob_detect = 70)
 
@@ -442,7 +440,7 @@ class RetinoSession(md.Session):
                                                               begin_time,
                                                               end_time,
                                                               df_f0_foi = foi,
-                                                              sig_blank = self.mean_blank,
+                                                              sig_blank = mean_blank,
                                                               std_blank = self.std_blank,
                                                               lim_blob_detect = 70) for i in df] 
 
