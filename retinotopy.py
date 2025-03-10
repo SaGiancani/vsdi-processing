@@ -40,6 +40,7 @@ class RetinoSession(md.Session):
                      time_course_window_dim = 10,
                      window_dim = 150,
                      acquisition_fq = 100,#Hz
+                     denoise_flag = False,
                      **kwargs):
             #path_session, logs_switch = False, deblank_switch = False
 
@@ -125,7 +126,7 @@ class RetinoSession(md.Session):
             self.acquisition_frequency = acquisition_fq
 
             # Metadata stimulus
-            self.stimulus_metadata = get_stimulus_metadata(self.path_session) 
+            self.stimulus_metadata = utils.get_stimulus_metadata(self.path_session) 
 
             # Blank condition loading
             # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
@@ -135,7 +136,8 @@ class RetinoSession(md.Session):
             self.blank_condition = None            
             self.get_blank()
             self.mean_blank = self.blank_condition.averaged_df
-            self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
+            # self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
+            self.std_blank = self.blank_condition.stde_f_f0_blank
 
             self.id_name = utils.get_session_id_name(self.path_session)
             print('Session ID name: ' + self.id_name)
@@ -148,17 +150,8 @@ class RetinoSession(md.Session):
 
             self.visualization_switch = data_vis_switch
             self.storage_switch = store_switch
+            self.denoise_switch = denoise_flag
     
-        # def get_condition_name(self):
-        #     self.cond_dict = super().get_condition_name()
-        #     print(self.single_stroke_label, self.multiple_stroke_label)
-        #     # Two dictionaries, for type of conditions -pos or am-
-        #     single_pos_conds = self.get_conditions_pos()
-        #     am_conds = self.get_conditions_am()
-
-        #     # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
-        #     return {**single_pos_conds, **am_conds}                           
-
 
         def get_conditions_pos(self):
             return {k: v for k,v in self.cond_dict.items() if self.single_stroke_label.lower() in v.lower()}
@@ -271,24 +264,35 @@ class RetinoSession(md.Session):
 
             # Condition instance
             cd = md.Condition()
-            # Loading or building the condition
-            try:
-                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
-                print('Condition ' + name_cond + ' loaded!\n')
+            
+            if not self.denoise_switch:
+                # Loading or building the condition
+                try:
+                    cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
+                    print('Condition ' + name_cond + ' loaded!\n')
 
-            except:
-                print('Condition ' + name_cond + ' not found\n')
-                self.storage_switch = True
-                self.visualization_switch = False
-                # It is gonna get the blank signal automatically
-                print('Processing ' + name_cond + ' signal\n')
-                id_cond = [k for k, v in self.cond_dict_all.items() if v == name_cond][0]
-                _ = self.get_signal(id_cond)
-                self.storage_switch = False
-                # It doesnt work at this line: no storage in case of exceptional run
-                cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond)) 
-                print('Condition ' + name_cond + ' loaded!\n')
-            colrs = []
+                except:
+                    print('Condition ' + name_cond + ' not found\n')
+                    self.storage_switch = True
+                    self.visualization_switch = False
+                    # It is gonna get the blank signal automatically
+                    print('Processing ' + name_cond + ' signal\n')
+                    id_cond = [k for k, v in self.cond_dict_all.items() if v == name_cond][0]
+                    _ = self.get_signal(id_cond)
+                    self.storage_switch = False
+                    # It doesnt work at this line: no storage in case of exceptional run
+                    cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond)) 
+                    print('Condition ' + name_cond + ' loaded!\n')
+                colrs = []
+            
+            else:
+                path_rem = os.path.join(self.path_md, 'denoised', f'rem_{name_cond}.npy')
+                #here if the denoised files have to be loaded
+                try:
+                    cd_sign  = np.load(path_rem)
+                except:
+                    print(f'Denoised files for {name_cond}, at {path_rem} does not exist!')
+
             # Single stroke condition
             if name_cond in list(self.cond_pos.values()):
                 # Try to check if retino_cond already exists
@@ -297,7 +301,7 @@ class RetinoSession(md.Session):
                     retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
                 # If does not, it build it
                 except:
-                    retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke')
+                    retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke') #get_stroke_retinotopy has to be modified for the rem_ files
                     # Store single stroke condition
                     dict_retino[name_cond] = retino_cond
                     # Extract visualization utility variables
@@ -323,8 +327,6 @@ class RetinoSession(md.Session):
                     # Store single stroke within AM
                     dict_retino[name_cond][j] = retino_cond
                     # Extract visualization utility variables
-                    #indeces_colors =[list(dict_retino.keys()).index(k) for k in self.retino_pos_am[name_cond]]
-                    #g_centers = [dict_retino[k] for k in self.retino_pos_am[name_cond]]
                     indeces_colors =[list(self.cond_pos.values()).index(j)][0]
                     colrs.append(dv.COLORS_7[indeces_colors])
 #                    g_centers.append(dict_retino[j].retino_pos)
@@ -378,9 +380,9 @@ class RetinoSession(md.Session):
             avr_df = np.nanmean(df, axis = 0)
 
             # COUNTERCHECK THIS BLANK 
-            mean_blank = np.nanmean(self.mean_blank, axis = 0)
-            print(f'The blank employed in the zscore has shape {mean_blank.shape}')
-            z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
+            # mean_blank = np.nanmean(self.mean_blank, axis = 0)
+            print(f'The blank employed in the zscore has shape {self.mean_blank.shape}')
+            z_s = process.zeta_score(avr_df, self.mean_blank, self.std_blank, full_seq = True)
 
             # Instance retinotopy object: single stroke
             r = Retinotopy(self.path_session,
@@ -412,7 +414,7 @@ class RetinoSession(md.Session):
                                                                                            None, None,
                                                                                            begin_time,
                                                                                            end_time,
-                                                                                           sig_blank = mean_blank,
+                                                                                           sig_blank = self.mean_blank,
                                                                                            std_blank = self.std_blank,
                                                                                            lim_blob_detect = 70)
 
@@ -439,7 +441,7 @@ class RetinoSession(md.Session):
                                                               begin_time,
                                                               end_time,
                                                               df_f0_foi = foi,
-                                                              sig_blank = mean_blank,
+                                                              sig_blank = self.mean_blank,
                                                               std_blank = self.std_blank,
                                                               lim_blob_detect = 70) for i in df] 
 
@@ -1074,6 +1076,15 @@ if __name__=="__main__":
                         dest='store_switch', 
                         action='store_false')
     parser.set_defaults(store_switch=False)   
+
+    parser.add_argument('--denoised', 
+                        dest='denoised_switch',
+                        action='store_true')
+    parser.add_argument('--no-denoised', 
+                        dest='denoised_switch', 
+                        action='store_false')
+    parser.set_defaults(denoised_switch=False)   
+
 
     start_process_time = datetime.datetime.now().replace(microsecond=0)
     args = parser.parse_args()
