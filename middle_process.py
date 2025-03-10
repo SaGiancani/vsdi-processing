@@ -249,6 +249,8 @@ class Session:
                                self.header['temporal_bin'],
                                detrend_switch    = self.detrend_switch,
                                filename_particle = self.filename_particle)
+        
+        # TO BE CONTROLLED: Some Sessions have a crazy blk.header['nframesperstim']
         tmp = blk.header['nframesperstim']
         print(f'n. frames header {tmp}')
         print(f'n. frames signal {blk.signal.shape[0]}')
