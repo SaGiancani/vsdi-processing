@@ -409,3 +409,13 @@ def stampa(text, logger = None):
     else:
         print(text)  
     return
+
+def get_denoised_cond(path_md, name_cond, log = None):
+    path_rem = os.path.join(path_md, 'denoised', f'rem_{name_cond}.npy')
+    #here if the denoised files have to be loaded
+    try:
+        cd_sign  = np.load(path_rem)
+        stampa(f'Condition {name_cond} loaded!\n', logger=log)
+    except:
+        stampa(f'Denoised files for {name_cond}, at {path_rem} does not exist!\n', logger=log)
+    return cd_sign
