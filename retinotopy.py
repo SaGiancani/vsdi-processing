@@ -241,8 +241,6 @@ class RetinoSession(md.Session):
                     tmp_folder = os.path.join(path_md_files, 'md_data_blank')
                     utils.stampa(f'{tmp_folder}', logger=self.log)
                     cd_blank.load_cond(tmp_folder)
-                    self.blank_condition = cd_blank
-                    utils.stampa(f'Blank condition loaded succesfully!\n', logger=self.log)
 
                 except:
                     utils.stampa(f'Blank condition not found in {path_md_files} \n', logger=self.log)
@@ -254,14 +252,15 @@ class RetinoSession(md.Session):
                     _ = self.get_signal(self.blank_id)
                     self.storage_switch = False
                     cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
-                    self.blank_condition = cd_blank
-                    print('Blank condition loaded succesfully!\n')
             else:
                 cd_blank.df_fz         = utils.get_denoised_cond(self.path_md, 'blank', log = self.log) # formally incorrect but for sake of process
                 cd_blank.cond_name     = 'blank'
                 cd_blank.averaged_df   = np.nanmean(cd_blank.df_fz, axis = 0)
                 cd_blank.autoselection = np.ones(len(cd_blank.df_fz))
                 utils.stampa(f'Blank condition loaded succesfully!\n', logger=self.log)
+
+            self.blank_condition = cd_blank
+            utils.stampa(f'Blank condition loaded succesfully!\n', logger=self.log)
             return 
         
 
