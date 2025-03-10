@@ -1115,6 +1115,7 @@ if __name__=="__main__":
                                    window_dim=args.wd,
                                    logger=log,
                                    store_switch=args.store_switch,
+                                   denoise_flag=args.denoised_switch,
                                    data_vis_switch=args.data_vis_switch) 
     
     retino_session.get_retino_session()
