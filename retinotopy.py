@@ -150,7 +150,7 @@ class RetinoSession(md.Session):
             if not self.denoise_switch:
                 self.mask  = self.get_mask()
             else:
-                self.mask  = np.ones((self.std_blank.shape))
+                self.mask  = np.ones((self.std_blank.shape), dtype=bool)
 
             # Single centroid mask dimension
             self.tc_window_dimension =  time_course_window_dim
