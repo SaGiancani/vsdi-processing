@@ -336,6 +336,7 @@ class RetinoSession(md.Session):
                     # Store single stroke within AM
                     dict_retino[name_cond][j] = retino_cond
                     # Extract visualization utility variables
+                    utils.stampa(self.cond_pos, logger=self.log)
                     indeces_colors =[list(self.cond_pos.values()).index(j)][0]
                     colrs.append(dv.COLORS_7[indeces_colors])
 #                    g_centers.append(dict_retino[j].retino_pos)
