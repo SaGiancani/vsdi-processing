@@ -142,15 +142,14 @@ class RetinoSession(md.Session):
             self.mean_blank = self.blank_condition.averaged_df
             self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
-            self.id_name = utils.get_session_id_name(self.path_session)
-            utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)            
-
             self.green = self.get_green(green_name)
-
+            self.id_name = utils.get_session_id_name(self.path_session)
             if not self.denoise_switch:
                 self.mask  = self.get_mask()
             else:
+                self.id_name = f'{self.id_name}_Denoise'
                 self.mask  = np.ones((self.std_blank.shape), dtype=bool)
+            utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)                        
 
             # Single centroid mask dimension
             self.tc_window_dimension =  time_course_window_dim
@@ -170,7 +169,7 @@ class RetinoSession(md.Session):
 
         def get_conditions_intersect(self):
             conditions_id = self.header['conditions_id']
-            print(f'The picked ID conditions are: {conditions_id}')
+            utils.stampa(f'The picked ID conditions are: {conditions_id}', logger=self.log)
             # Start from the single stroke conditions for storing and afterward showing the positions in AM conditions
             am_conds = self.cond_am
             single_conds = self.cond_pos
@@ -193,7 +192,7 @@ class RetinoSession(md.Session):
                 conds = {k: v for k,v in conds_full.items() if v in all_considered_conds}
             else:
                 conds = conds_full
-            print(f'Conditions picked: {conds}')
+            utils.stampa(f'Conditions picked: {conds}', logger=self.log)
             return conds
         
         
@@ -205,10 +204,10 @@ class RetinoSession(md.Session):
                 x_bnnd_size = x_size
                 y_bnnd_size = y_size
                 mask = mask[0:y_bnnd_size , 0:x_bnnd_size ]
-                print('Mask loaded succesfully!')
+                utils.stampa(f'Mask loaded succesfully!', logger=self.log)
 
             except:
-                print('No mask present in derivatives folder for session ' + self.id_name)
+                utils.stampa(f'No mask present in derivatives folder for session {self.id_name}', logger=self.log)
                 mask = None
             return mask
 
@@ -225,11 +224,11 @@ class RetinoSession(md.Session):
 
                 tmp = cv.resize(np.array(green, dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
                 green_ = np.copy(tmp)
-                print('Green '+green_name+' loaded succesfully!')
+                utils.stampa(f'Green {green_name} loaded succesfully!', logger=self.log)
                 return green_
 
             except:
-                print('No green '+ green_name+ ' present in rawdata folder for session ' + self.id_name)   
+                utils.stampa(f'No green {green_name} present in rawdata folder for session {self.id_name}', logger=self.log)
                 return None
 
 
@@ -247,12 +246,12 @@ class RetinoSession(md.Session):
                     cd_blank.load_cond(tmp_folder)
 
                 except:
-                    utils.stampa(f'Blank condition not found in {path_md_files} \n', logger=self.log)
+                    utils.stampa(f'Blank condition not found in {path_md_files}\n', logger=self.log)
                     # In case of absence of the blank condition, it processes and stores it
                     self.storage_switch = True
                     self.visualization_switch = False
                     # It is gonna get the blank signal automatically
-                    print('Processing blank signal\n')
+                    utils.stampa(f'Processing blank signal\n', logger=self.log)
                     _ = self.get_signal(self.blank_id)
                     self.storage_switch = False
                     cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
@@ -319,7 +318,6 @@ class RetinoSession(md.Session):
                     # Extract visualization utility variables
                     indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
                     colrs.append(dv.COLORS_7[indeces_colors])
-    #                g_centers = [retino_cond.retino_pos]
                     # If true, store pictures
                     print('Os system print: '+ str(os.system('/usr/bin/sync')))
                     if self.visualization_switch:
@@ -359,13 +357,13 @@ class RetinoSession(md.Session):
             start_time = datetime.datetime.now().replace(microsecond=0)
             # Create Retinotopic Analysis folder path
             retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(NAME_RETINO_ANALYSIS))
-            print('Retino session for data session ' + self.id_name + ' start to process...\n')                                            
-            print('Data are gonna be stored at ' + retinotopic_path_folder+ '\n')                                            
+            utils.stampa(f'Retino session for data session {self.id_name} start to process...\n', logger=self.log)
+            utils.stampa(f'Data are gonna be stored at {retinotopic_path_folder}\n', logger=self.log)                                         
             # Storing variable
             dict_retino = dict()
             for cond_id, cond_name in self.cond_dict.items():
                 dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
-            print('Retino session elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')                                
+            utils.stampa(f'Retino session elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                                         
             return
 
 
@@ -384,8 +382,8 @@ class RetinoSession(md.Session):
                 starting_time = a[name_cond]['start'] #In frames
                 time_step = np.ceil((1/self.stimulus_metadata['speed'])*space_step*self.acquisition_frequency)
                 time_step = int(time_step) # In frames                  
-                print(f'The interstimulus space is {space_step}, for a starting time of {starting_time}\n')                                     
-                print(f'Frame step between the appearance of one stroke and the other: {time_step}')  
+                utils.stampa(f'The interstimulus space is {space_step}, for a starting time of {starting_time}\n', logger=self.log)                                     
+                utils.stampa(f'Frame step between the appearance of one stroke and the other: {time_step}', logger=self.log)   
 
             # dF/F0 of only autoselected trials 
             df = md.get_selected(cd.df_fz, cd.autoselection)
@@ -393,7 +391,7 @@ class RetinoSession(md.Session):
 
             # COUNTERCHECK THIS BLANK 
             mean_blank = np.nanmean(self.mean_blank, axis = 0)
-            print(f'The blank employed in the zscore has shape {mean_blank.shape}')
+            utils.stampa(f'The blank employed in the zscore has shape {mean_blank.shape}', logger=self.log)   
             z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
 
             # Instance retinotopy object: single stroke
@@ -420,7 +418,7 @@ class RetinoSession(md.Session):
                 end_time = r.time_limits[1]
                 foi = None
 
-            print(f'Begin and end frames are: {(begin_time, end_time)}')
+            utils.stampa(f'Begin and end frames are: {(begin_time, end_time)}', logger=self.log)   
 
             _, blurred, blobs, centroids, norm_centroids, z_s, _ = r.single_seq_retinotopy(avr_df, 
                                                                                            None, None,
@@ -432,7 +430,7 @@ class RetinoSession(md.Session):
 
             r.blob = blobs
             r.retino_pos = centroids[0]
-            print(f'Retinotopic averaged position at: {r.retino_pos}\n')
+            utils.stampa(f'Retinotopic averaged position at: {r.retino_pos}\n', logger=self.log)   
             #min_bord = np.nanpercentile(blurred, 15)
             #max_bord = np.nanpercentile(blurred, 98)
             blurred[~r.mask] = np.NAN
@@ -441,11 +439,11 @@ class RetinoSession(md.Session):
             #dv.whole_time_sequence(z_s, mask = multiple_stroke.mask, max=85, min=15, n_columns=3, global_cntrds = [multiple_stroke.retino_pos], colors_centr = ['magenta'])
 
 
-            print('Condition ' +name_cond + ' elaborated in '+ str(datetime.datetime.now().replace(microsecond=0)-start_time)+'!\n')
+            utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n')
 
 
-            print(f'Shape of signal for single trial extracting centroids: {df.shape}\n')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-            print(f'Centroids and dimension of windows: {(r.retino_pos, self.window_dimension)}\n')
+            utils.stampa(f'Shape of signal for single trial extracting centroids: {df.shape}\n', logger=self.log)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+            utils.stampa(f'Centroids and dimension of windows: {(r.retino_pos, self.window_dimension)}\n', logger=self.log)   
             print(r.retino_pos, self.window_dimension, begin_time, end_time)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
             pos_single_trials_data = [r.single_seq_retinotopy(i, 
                                                               r.retino_pos,
