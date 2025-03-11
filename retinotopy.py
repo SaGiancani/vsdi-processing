@@ -203,7 +203,7 @@ class RetinoSession(md.Session):
                 (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
                 x_bnnd_size = x_size
                 y_bnnd_size = y_size
-                mask = mask[0:y_bnnd_size , 0:x_bnnd_size ]
+                mask = mask[0:y_bnnd_size , 0:x_bnnd_size ].astype(bool)
                 utils.stampa(f'Mask loaded succesfully!', logger=self.log)
 
             except:
@@ -431,17 +431,11 @@ class RetinoSession(md.Session):
             r.blob = blobs
             r.retino_pos = centroids[0]
             utils.stampa(f'Retinotopic averaged position at: {r.retino_pos}\n', logger=self.log)   
-            #min_bord = np.nanpercentile(blurred, 15)
-            #max_bord = np.nanpercentile(blurred, 98)
+
             blurred[~r.mask] = np.NAN
             r.map = blurred
 
-            #dv.whole_time_sequence(z_s, mask = multiple_stroke.mask, max=85, min=15, n_columns=3, global_cntrds = [multiple_stroke.retino_pos], colors_centr = ['magenta'])
-
-
             utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n')
-
-
             utils.stampa(f'Shape of signal for single trial extracting centroids: {df.shape}\n', logger=self.log)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
             utils.stampa(f'Centroids and dimension of windows: {(r.retino_pos, self.window_dimension)}\n', logger=self.log)   
             print(r.retino_pos, self.window_dimension, begin_time, end_time)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
