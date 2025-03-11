@@ -142,14 +142,15 @@ class RetinoSession(md.Session):
             self.mean_blank = self.blank_condition.averaged_df
             self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
-            self.green = self.get_green(green_name)
-            self.id_name = utils.get_session_id_name(self.path_session)
+            self.id_name = utils.get_session_id_name(self.path_session)                   
             if not self.denoise_switch:
                 self.mask  = self.get_mask()
             else:
                 self.id_name = f'{self.id_name}_Denoise'
                 self.mask  = np.ones((self.std_blank.shape), dtype=bool)
-            utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)                        
+            utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
+
+            self.green = self.get_green(green_name)
 
             # Single centroid mask dimension
             self.tc_window_dimension =  time_course_window_dim
