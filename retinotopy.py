@@ -11,8 +11,6 @@ from scipy.ndimage.filters import gaussian_filter
 
 COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal', 'orange', 'lime']
 
-NAME_RETINO_ANALYSIS = 'AMnbStrokes_Retinotopic_Analysis'
-
 class RetinoSession(md.Session):
         def __init__(self, 
                      path_session, 
@@ -357,7 +355,7 @@ class RetinoSession(md.Session):
         def get_retino_session(self):
             start_time = datetime.datetime.now().replace(microsecond=0)
             # Create Retinotopic Analysis folder path
-            retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(NAME_RETINO_ANALYSIS))
+            retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(utils.NAME_RETINO_ANALYSIS))
             utils.stampa(f'Retino session for data session {self.id_name} start to process...\n', logger=self.log)
             utils.stampa(f'Data are gonna be stored at {retinotopic_path_folder}\n', logger=self.log)                                         
             # Storing variable
