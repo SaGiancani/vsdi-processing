@@ -287,6 +287,7 @@ class SpatioTemporalSession:
         _, _, self.orient_traj  = trj.rotate_distribution(list(list(zip(*self.single_pos))[0]), 
                                                           list(list(zip(*self.single_pos))[1])) #in rad
         self.data_dictionary    = {}
+        self.data_pos_frame     = {}
 
     def get_session(self):
         utils.stampa(f'Start processing spatiotemporal profile analysis \n', logger=self.log)
@@ -302,7 +303,6 @@ class SpatioTemporalSession:
         start_time = datetime.datetime.now().replace(microsecond=0)
 
         cd = self.retino_session.get_data_to_process(name_cond)
-        dict_pos_time  = {}
 
         # Single stroke condition
         if name_cond in list(self.cond_pos.values()):
@@ -319,8 +319,8 @@ class SpatioTemporalSession:
             ISspacing     = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space'] #in dva
             ISinterval    = (ISspacing/self.stimulus_speed)*1000
             start_time_cd = self.timing_am_sequence[0]
-            positions     = [dict_pos_time[ss][0] for ss in self.retino_pos_am[name_cond]] 
-            times         = [dict_pos_time[ss][1] for ss in self.retino_pos_am[name_cond]] 
+            positions     = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[name_cond]] 
+            times         = [self.data_pos_frame[ss][1] for ss in self.retino_pos_am[name_cond]] 
             colors        = [self.color_pos[i] for i in self.cond_dict[name_cond]]
 
         try:
@@ -349,8 +349,8 @@ class SpatioTemporalSession:
     
         
         if name_cond in list(self.cond_pos.values()):
-            dict_pos_time[name_cond] = [st_map_cd.retino_pos, st_map_cd.retino_time]    
-            utils.stampa(f'Update to spatio-temporal dictionary: {dict_pos_time}', logger=self.log)
+            self.data_pos_frame[name_cond] = [st_map_cd.retino_pos[0], st_map_cd.retino_time[0]]    
+            utils.stampa(f'Update to spatio-temporal dictionary: {self.data_pos_frame}', logger=self.log)
 
         # If true store variables
         if self.store_switch:
