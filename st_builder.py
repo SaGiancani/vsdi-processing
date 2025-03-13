@@ -249,6 +249,8 @@ class SpatioTemporalSession:
         self.ny, self.nx       = self.retino_session.std_blank.shape 
         self.id_name           = self.retino_session.id_name
         self.cond_dict         = self.retino_session.cond_dict
+        self.cond_pos          = self.retino_session.cond_pos
+        self.cond_am           = self.retino_session.cond_am
         self.cond_names        = self.retino_session.cond_names
         self.retino_pos_am     = self.retino_session.retino_pos_am
         self.color_pos         = {i: dv.COLORS_7[n]  for n, i in enumerate(list(self.retino_session.cond_pos.values()))}
