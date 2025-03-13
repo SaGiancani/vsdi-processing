@@ -8,7 +8,8 @@ from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 import datetime
 
-NAME_RETINO_ANALYSIS = 'AMnbStrokes_Retinotopic_Analysis'
+NAME_RETINO_ANALYSIS    = 'AMnbStrokes_Retinotopic_Analysis'
+NAME_SPACETIME_ANALYSIS = 'AMnbStrokes_SpaceTime_Analysis'
 
 cm_data = [[0.2081, 0.1663, 0.5292], [0.2116238095, 0.1897809524, 0.5776761905], 
  [0.212252381, 0.2137714286, 0.6269714286], [0.2081, 0.2386, 0.6770857143], 
@@ -420,3 +421,27 @@ def get_denoised_cond(path_md, name_cond, log = None):
     except:
         stampa(f'Denoised files for {name_cond}, at {path_rem} does not exist!\n', logger=log)
     return cd_sign
+
+
+def get_green(green_name, path_session, size = None, log=None):
+    try:
+        # Loading green
+        green_path = find_thing(green_name, path_session)
+        green = cv.imread(green_path[0], cv.IMREAD_UNCHANGED)
+
+        # Resizing green
+        if (size is not None):
+            x_bnnd_size = size[1]
+            y_bnnd_size = size[0]
+
+            tmp = cv.resize(np.array(green, dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
+            green_ = np.copy(tmp)
+        else:
+            green_ = green
+
+        stampa(f'Green {green_name} loaded succesfully!', logger=log)
+        return green_
+
+    except:
+        stampa(f'No green {green_name} present in rawdata folder for session {get_session_id_name(path_session)}', logger=log)
+        return None
