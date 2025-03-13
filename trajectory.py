@@ -1,6 +1,35 @@
 import numpy as np
 import utils
 
+def distribution_coords_normalize(points_distribution, unity, center, rotation_theta):
+    '''
+    The method rotates, normalizes and recenters a distribution of points.
+    Input:
+        points_distribution: a list of two tuples, first x coordinates and second y coordinates of a distribution
+        of points. 
+        unity: float, itrepresents the unite against which normalize. 
+        center: tuple of two elements, respectively x and y coordinates of a point. 
+                It is used for recentering the distribution.
+        rotation theta: np.array with a float element inside, the corrective orientation to apply to the points.
+    Output:
+        x_dva_rotated, y_dva_rotated: list of float. The coordinates for the distribution of points, normalized and
+                                      recentered. 
+    Example of usage: 
+        x_test, y_test = distance_converter_pixel2dva(distribution_positions, x[0]-x[1], (x[-1], y[-1]), theta_h)
+    '''
+    # Linearize coordinates
+    xs = points_distribution[0]
+    ys = points_distribution[1]
+
+    # Rotate distribution according the rotation_theta provided
+    x_to_normalize, y_to_normalize, _ = rotate_distribution(xs, ys, theta = rotation_theta)
+
+    # Normalization of the coordinates for their center and the picked unity
+    x_dva_rotated = [(i-center[0])/unity for i in x_to_normalize]
+    y_dva_rotated = [(i-center[1])/unity for i in y_to_normalize]    
+    
+    return x_dva_rotated, y_dva_rotated
+
 def get_angle_distribution(points_distribution, dim_frame):
     '''
     Input:
@@ -66,3 +95,17 @@ def get_trajectory_mask(points_in_space, frame_dimension, extremities = (0,0)):
     traject_mask = get_mask_on_trajectory(frame_dimension, a, b, radius = 15)
     return traject_mask
 
+
+def rotate_distribution(xs, ys, theta = None):
+    if theta is None:
+        theta = get_rad(xs, ys)
+    print(theta)
+    # subtracting mean from original coordinates and saving result to X_new and Y_new 
+    X_new = xs - np.mean(xs)
+    Y_new = ys - np.mean(ys)
+
+    X_apu = [np.cos(theta)*i-np.sin(theta)*j for i, j in zip(X_new, Y_new) ]
+    Y_apu = [np.sin(theta)*i+np.cos(theta)*j for i, j in zip(X_new, Y_new) ]
+
+    # adding mean back to rotated coordinates
+    return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta

@@ -1,11 +1,9 @@
 import argparse, blk_file, datetime, json, os, utils
 import cv2 as cv
 import data_visualization as dv
-import matplotlib.pyplot as plt
 import middle_process as md
 import numpy as np
 import process_vsdi as process
-import trajectory as trj
 
 from scipy.ndimage.filters import gaussian_filter
 
@@ -96,29 +94,29 @@ class RetinoSession(md.Session):
             if len(self.all_blks) == 0:
                 print('Check the path: no blks found')
             
-            self.single_stroke_label = single_stroke_label
+            self.single_stroke_label   = single_stroke_label
             self.multiple_stroke_label = multiple_stroke_label
             utils.stampa(f'{self.single_stroke_label} {self.multiple_stroke_label}', logger = self.log)            
 
             self.path_session = path_session
-            self.path_md = path_md
+            self.path_md      = path_md
 
             # Corresponding single stroke for each AM condition
             self.retino_pos_am = utils.get_conditions_correspondance(self.path_session)
             utils.stampa(f'{self.retino_pos_am}', logger = self.log)            
 
             # All the conditions    
-            self.cond_dict = super().get_condition_name()
+            self.cond_dict  = super().get_condition_name()
             self.cond_names = list(self.cond_dict.values())
             # Extract blank condition id
-            self.blank_id = md.get_blank_id(self.cond_names, cond_id=condid)
+            self.blank_id   = md.get_blank_id(self.cond_names, cond_id=condid)
             # Store all conditions
             self.cond_dict_all = self.cond_dict
             # Separated dictionaries, for AM and single pos conditions
-            self.cond_pos = self.get_conditions_pos()
-            self.cond_am = self.get_conditions_am()
+            self.cond_pos   = self.get_conditions_pos()
+            self.cond_am    = self.get_conditions_am()
             # Pick only inserted conditions and corresponding single positions
-            self.cond_dict = self.get_conditions_intersect()
+            self.cond_dict  = self.get_conditions_intersect()
             # Name condition extraction
             self.cond_names = list(self.cond_dict.values())
             utils.stampa(f'{self.cond_dict}', logger = self.log)            
@@ -133,12 +131,13 @@ class RetinoSession(md.Session):
             # Blank condition loading
             # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
             self.time_course_blank = None
-            self.f_f0_blank = None
-            self.stde_f_f0_blank = None           
-            self.blank_condition = None            
-            self.get_blank()
-            self.mean_blank = self.blank_condition.averaged_df
-            self.std_blank = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
+            self.f_f0_blank        = None
+            self.stde_f_f0_blank   = None           
+            cd_blank = self.get_data_to_process('blank')            
+            self.blank_condition = cd_blank
+
+            self.mean_blank        = self.blank_condition.averaged_df
+            self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
             self.id_name = utils.get_session_id_name(self.path_session)                   
             if not self.denoise_switch:
@@ -148,14 +147,14 @@ class RetinoSession(md.Session):
                 self.mask  = np.ones((self.std_blank.shape), dtype=bool)
             utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
 
-            self.green = self.get_green(green_name)
-
+            (ny, nx)                  = self.mean_blank [0, :,:].shape            
+            self.green                = utils.get_green(green_name, self.path_session, size = (ny, nx), log=None)
             # Single centroid mask dimension
-            self.tc_window_dimension =  time_course_window_dim
-            self.window_dimension = window_dim
+            self.tc_window_dimension  = time_course_window_dim
+            self.window_dimension     = window_dim
 
             self.visualization_switch = data_vis_switch
-            self.storage_switch = store_switch
+            self.storage_switch       = store_switch
     
 
         def get_conditions_pos(self):
@@ -210,74 +209,13 @@ class RetinoSession(md.Session):
                 mask = None
             return mask
 
-        def get_green(self, green_name):
-            try:
-                # Loading green
-                green_path = utils.find_thing(green_name, self.path_session)
-                green = cv.imread(green_path[0], cv.IMREAD_UNCHANGED)
 
-                # Resizing green
-                (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
-                x_bnnd_size = x_size
-                y_bnnd_size = y_size
-
-                tmp = cv.resize(np.array(green, dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
-                green_ = np.copy(tmp)
-                utils.stampa(f'Green {green_name} loaded succesfully!', logger=self.log)
-                return green_
-
-            except:
-                utils.stampa(f'No green {green_name} present in rawdata folder for session {self.id_name}', logger=self.log)
-                return None
-
-
-        def get_blank(self):
-            #conds = list(session.cond_dict.keys())
-            path_md_files = os.path.join(self.path_md,'md_data')
-
-            cd_blank = md.Condition()
-
-            if not self.denoise_switch:
-                # Blank condition loading
-                try:
-                    tmp_folder = os.path.join(path_md_files, 'md_data_blank')
-                    utils.stampa(f'{tmp_folder}', logger=self.log)
-                    cd_blank.load_cond(tmp_folder)
-
-                except:
-                    utils.stampa(f'Blank condition not found in {path_md_files}\n', logger=self.log)
-                    # In case of absence of the blank condition, it processes and stores it
-                    self.storage_switch = True
-                    self.visualization_switch = False
-                    # It is gonna get the blank signal automatically
-                    utils.stampa(f'Processing blank signal\n', logger=self.log)
-                    _ = self.get_signal(self.blank_id)
-                    self.storage_switch = False
-                    cd_blank.load_cond(os.path.join(path_md_files, 'md_data_blank'))
-            else:
-                cd_blank.df_fz         = utils.get_denoised_cond(self.path_md, 'blank', log = self.log) # formally incorrect but for sake of process
-                cd_blank.cond_name     = 'blank'
-                cd_blank.averaged_df   = np.nanmean(cd_blank.df_fz, axis = 0)
-                cd_blank.autoselection = np.ones(len(cd_blank.df_fz))
-                utils.stampa(f'Blank condition loaded succesfully!\n', logger=self.log)
-
-            self.blank_condition = cd_blank
-            utils.stampa(f'Blank condition loaded succesfully!\n', logger=self.log)
-            return 
-        
-
-        def get_retinotopy(self,
-                           name_cond, 
-                           time_limits, 
-                           retinotopic_path_folder, 
-                           dict_retino):
-            utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
+        def get_data_to_process(self, name_cond):
+            utils.stampa(f'Start to load condition {name_cond} \n', logger=self.log)
             start_time = datetime.datetime.now().replace(microsecond=0)
 
             # Condition instance
             cd = md.Condition()
-            colrs = []
-            
             if not self.denoise_switch:
                 # Loading or building the condition
                 try:
@@ -300,9 +238,24 @@ class RetinoSession(md.Session):
             else:
                 cd.df_fz         = utils.get_denoised_cond(self.path_md, name_cond, log = self.log) # formally incorrect but for sake of process
                 cd.cond_name     = name_cond
+                cd.averaged_df   = np.nanmean(cd.df_fz, axis = 0)
                 cd.autoselection = np.ones(len(cd.df_fz))
                 utils.stampa(f'Condition {name_cond} loaded successfully!\n', logger=self.log)
 
+            utils.stampa(f'Condition {name_cond} loaded in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)    
+            return cd
+
+
+        def get_retinotopy(self,
+                           name_cond, 
+                           time_limits, 
+                           retinotopic_path_folder, 
+                           dict_retino):
+            utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
+            start_time = datetime.datetime.now().replace(microsecond=0)            
+            colrs = []
+            cd    = self.get_data_to_process(name_cond)
+           
             # Single stroke condition
             if name_cond in list(self.cond_pos.values()):
                 # Try to check if retino_cond already exists
@@ -339,7 +292,6 @@ class RetinoSession(md.Session):
                     utils.stampa(self.cond_pos, logger=self.log)
                     indeces_colors =[list(self.cond_pos.values()).index(j)][0]
                     colrs.append(dv.COLORS_7[indeces_colors])
-#                    g_centers.append(dict_retino[j].retino_pos)
                     # If true store variables
                     if self.storage_switch:
                         retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j + '_'+str(i+1)))
@@ -822,20 +774,6 @@ def get_assess_centroid(centroids, mask):
     '''
     return [i for i in centroids if mask[i[1],i[0]]]
 
-def rotate_distribution(xs, ys, theta = None):
-    if theta is None:
-        theta = trj.get_rad(xs, ys)
-    print(theta)
-    # subtracting mean from original coordinates and saving result to X_new and Y_new 
-    X_new = xs - np.mean(xs)
-    Y_new = ys - np.mean(ys)
-
-    X_apu = [np.cos(theta)*i-np.sin(theta)*j for i, j in zip(X_new, Y_new) ]
-    Y_apu = [np.sin(theta)*i+np.cos(theta)*j for i, j in zip(X_new, Y_new) ]
-
-    # adding mean back to rotated coordinates
-    return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
- 
 
 def centroid_max(X, Y, data):
     '''
@@ -988,36 +926,22 @@ def subtraction_among_conditions(path_session,
     # pos_inferred_averaged.store_retino(os.path.join(dv.STORAGE_PATH, NAME_ANALYSIS, tmp))
 
     return params, pos_inferred_averaged 
-
-def distribution_coords_normalize(points_distribution, unity, center, rotation_theta):
-    '''
-    The method rotates, normalizes and recenters a distribution of points.
-    Input:
-        points_distribution: a list of two tuples, first x coordinates and second y coordinates of a distribution
-        of points. 
-        unity: float, itrepresents the unite against which normalize. 
-        center: tuple of two elements, respectively x and y coordinates of a point. 
-                It is used for recentering the distribution.
-        rotation theta: np.array with a float element inside, the corrective orientation to apply to the points.
-    Output:
-        x_dva_rotated, y_dva_rotated: list of float. The coordinates for the distribution of points, normalized and
-                                      recentered. 
-    Example of usage: 
-        x_test, y_test = distance_converter_pixel2dva(distribution_positions, x[0]-x[1], (x[-1], y[-1]), theta_h)
-    '''
-    # Linearize coordinates
-    xs = points_distribution[0]
-    ys = points_distribution[1]
-
-    # Rotate distribution according the rotation_theta provided
-    x_to_normalize, y_to_normalize, _ = rotate_distribution(xs, ys, theta = rotation_theta)
-
-    # Normalization of the coordinates for their center and the picked unity
-    x_dva_rotated = [(i-center[0])/unity for i in x_to_normalize]
-    y_dva_rotated = [(i-center[1])/unity for i in y_to_normalize]    
-    
-    return x_dva_rotated, y_dva_rotated
                 
+def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, path_session):
+    single_pos_retinotopy = []
+    session_id_name = utils.get_session_id_name(path_session)   
+    print(path_session)
+    print(session_id_name)
+    print(single_pos_cd_names)
+    for v in single_pos_cd_names:
+        single_pos_tmp           = Retinotopy(path_session)
+        tmp_folder               = os.path.join(retinotopic_path_folder, session_id_name, v, 'retino', f'retinotopy_{v}')
+        print(f'Load retinotopy for {v} at {tmp_folder}')
+        single_pos_tmp.load_retino(tmp_folder)
+        single_pos_retinotopy.append(single_pos_tmp.retino_pos)
+    return single_pos_retinotopy
+
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')
 
@@ -1043,7 +967,8 @@ if __name__=="__main__":
                         dest='apparent_motion_label',
                         type=str,
                         default = 'am',
-                        required=False)  
+                        required=False)
+      
     parser.add_argument('--cid', 
                         action='append', 
                         dest='conditions_id',
