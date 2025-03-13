@@ -49,11 +49,12 @@ class SpatioTemporalMap:
                                                                               self.rotation_angle, 
                                                                               correction_factor = self.rotate_correction_factor, 
                                                                               discard_thresh = self.discard_thresh)
-            self.maps, self.masked_data_trials  = np.array([ get_spatio_temporal_profile(i,
-                                                                                         self.trajectory_mask, 
-                                                                                         self.rotation_angle, 
-                                                                                         correction_factor = self.rotate_correction_factor, 
-                                                                                         discard_thresh = self.discard_thresh) for i in self.signal])
+            tmp                                 = np.array([get_spatio_temporal_profile(i,
+                                                                                        self.trajectory_mask, 
+                                                                                        self.rotation_angle, 
+                                                                                        correction_factor = self.rotate_correction_factor, 
+                                                                                        discard_thresh = self.discard_thresh) for i in self.signal])
+            self.maps, self.masked_data_trials  = np.array(list(zip(*tmp))[0]), np.array(list(zip(*tmp))[1])           
             self.signal                         = None 
         else:
             self.map, self.masked_data    = None, None
