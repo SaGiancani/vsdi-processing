@@ -760,17 +760,21 @@ def plot_retinotopic_positions(dictionar, titles = ['Inferred centroids', 'Singl
         plt.close('all')
     return
 
-def plot_averaged_map(name_cond, retino_obj, map, center, min_bord, max_bord, color, session_name, col_distr, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, store_pic = True):
+def plot_averaged_map(name_cond, blob, retino_pos, distribution_positions, map, center, min_bord, max_bord, color, session_name, col_distr, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, store_pic = True):
     # Plotting retinotopic positions over averaged maps
     fig, ax = plt.subplots(1,1, figsize=(9,7), dpi=300)
-    ax.contour(retino_obj.blob, 4, colors='k', linestyles = 'dotted')
+    if blob is not None:
+        ax.contour(blob, 4, colors='k', linestyles = 'dotted')
     pc = ax.pcolormesh(map, vmin=min_bord,vmax=max_bord, cmap=utils.PARULA_MAP)
     ax.set_xticks([])
     ax.set_yticks([])
     fig.colorbar(pc, shrink=1, ax=ax)
-    ax.scatter(retino_obj.retino_pos[0],retino_obj.retino_pos[1],color='r', marker = '+', s=150)
-    ax.scatter(retino_obj.distribution_positions[0],retino_obj.distribution_positions[1], color=col_distr, marker = '.', s=150)
-    ax.vlines(center[0], 0, map.shape[0], color = color, lw= 3, ls='--', alpha=1)
+    if retino_pos is not None:
+        ax.scatter(retino_pos[0], retino_pos[1],color='r', marker = '+', s=150)
+    if distribution_positions is not None:
+        ax.scatter(distribution_positions[0], distribution_positions[1], color=col_distr, marker = '.', s=150)
+    if center is not None:
+        ax.vlines(center[0], 0, map.shape[0], color = color, lw= 3, ls='--', alpha=1)
     ax.set_title(session_name + ' condition: ' + name_cond )
 
     if store_pic:

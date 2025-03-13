@@ -423,7 +423,17 @@ class RetinoSession(md.Session):
                 min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
                 max_bord = np.nanpercentile(dict_retino[name_cond].map, 98)
                 # Averaged hetmap plot
-                dv.plot_averaged_map(name_cond, dict_retino[name_cond], dict_retino[name_cond].map, dict_retino[name_cond].retino_pos, min_bord, max_bord, colrs, self.id_name, colrs, name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), store_path = retinotopic_path_folder)
+                dv.plot_averaged_map(name_cond, 
+                                     dict_retino[name_cond].blob, 
+                                     dict_retino[name_cond].retino_pos, 
+                                     dict_retino[name_cond].distribution_positions, 
+                                     dict_retino[name_cond].map, 
+                                     dict_retino[name_cond].retino_pos, 
+                                     min_bord, max_bord, colrs, 
+                                     self.id_name, colrs, 
+                                     name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
+                                     store_path = retinotopic_path_folder)
+            
             elif name_cond in list(self.cond_am.values()):
                 if len(list(self.retino_pos_am[name_cond])) <3:
                     col_distr = COLORS_STROKE_WITHIN_AM[0]
@@ -435,7 +445,9 @@ class RetinoSession(md.Session):
                     max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
                     # Averaged hetmap plot
                     dv.plot_averaged_map(name_cond+name_pos+'_'+str(c+1), 
-                                         dict_retino[name_cond][name_pos], 
+                                         dict_retino[name_cond][name_pos].blob, 
+                                         dict_retino[name_cond][name_pos].retino_pos, 
+                                         dict_retino[name_cond][name_pos].distribution_positions, 
                                          dict_retino[name_cond][name_pos].map, 
                                          dict_retino[name_pos].retino_pos, 
                                          min_bord, max_bord, 
