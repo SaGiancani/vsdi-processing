@@ -1,22 +1,26 @@
-import datetime, utils
+import argparse, datetime, utils
 import data_visualization as dv
 import numpy as np
 import os
 import process_vsdi as process
+from middle_process import Condition
+import retinotopy 
 from scipy.ndimage.filters import gaussian_filter, median_filter
 from scipy.ndimage import gaussian_filter1d, rotate
 from scipy.stats import norm
+import trajectory as trj 
+import utils
 
 AREA_MAXIMI_FOR_PEAK = 5
 
 class SpatioTemporalMap:
     def __init__(self, 
-                 data,
                  path_session,
-                 trajectory_mask,
-                 rotation_theta,
-                 onset_time,
-                 condition_name,
+                 trajectory_mask = None,
+                 rotation_theta = None,
+                 onset_time = None,
+                 condition_name = None,
+                 data = None,
                  condition_type = 'ss',
                  retino_pos = None,
                  retino_time = None,
@@ -30,7 +34,7 @@ class SpatioTemporalMap:
                  colors_ret = ['grey'],
                  bounds_for_max_seek = (None, None, None, None), 
                  storing_path = None):
-        self.signal                   = data
+        self.signal                   = data                           #MODIFY THIS. It could get the full matrix, and then run the get_spatio_temporal_profile iteratively on single trials and on average across trials
         self.path_session             = path_session
         self.storing_path             = storing_path
         self.session_name             = utils.get_session_id_name(self.path_session)
@@ -39,11 +43,21 @@ class SpatioTemporalMap:
         self.rotate_correction_factor = rotate_correction_factor
         self.discard_thresh           = discard_thresh
 
-        self.map, self.masked_data    = get_spatio_temporal_profile(self.signal, 
-                                                                    self.trajectory_mask, 
-                                                                    self.rotation_angle, 
-                                                                    correction_factor = self.rotate_correction_factor, 
-                                                                    discard_thresh = self.discard_thresh)
+        if self.signal is not None:
+            self.map, self.masked_data          = get_spatio_temporal_profile(np.nanmean(self.signal, axis = 0), 
+                                                                              self.trajectory_mask, 
+                                                                              self.rotation_angle, 
+                                                                              correction_factor = self.rotate_correction_factor, 
+                                                                              discard_thresh = self.discard_thresh)
+            self.maps, self.masked_data_trials  = np.array([ get_spatio_temporal_profile(i,
+                                                                                         self.trajectory_mask, 
+                                                                                         self.rotation_angle, 
+                                                                                         correction_factor = self.rotate_correction_factor, 
+                                                                                         discard_thresh = self.discard_thresh) for i in self.signal])
+            self.signal                         = None 
+        else:
+            self.map, self.masked_data    = None, None
+
         # Pos and timing of peak
         if (retino_pos is not None) and (retino_time is not None):
             self.retino_pos                    = retino_pos
@@ -106,23 +120,23 @@ class SpatioTemporalMap:
             color_peak = 'w'
             peak_traj = False
 
-        dv.plot_st(self.map, 
-                   threshold_contour, 
-                   self.trajectory_mask,
-                   self.pixel_spacing,
-                   retinotopic_pos  = retino_pos,
-                   retinotopic_time = retino_time, 
-                   map_type   = color_mappa,
-                   st_title   = self.condition_name,
-                   onset_time = self.onset_time,
-                   colors_retinotopy = colors_retinotopy,
-                   draw_peak_traj    = peak_traj,
-                   is_delay    = self.interstimulus_delay,#ms
-                   sampling_fq = self.sampling_rate,#Hz
-                   high_level  = high_level,
-                   color_peak  = color_peak,
-                   low_level   = low_level,
-                   store_path  = new_storing_path)
+        plot_st(self.map, 
+                threshold_contour, 
+                self.trajectory_mask,
+                self.pixel_spacing,
+                retinotopic_pos  = retino_pos,
+                retinotopic_time = retino_time, 
+                map_type   = color_mappa,
+                st_title   = self.condition_name,
+                onset_time = self.onset_time,
+                colors_retinotopy = colors_retinotopy,
+                draw_peak_traj    = peak_traj,
+                is_delay    = self.interstimulus_delay,#ms
+                sampling_fq = self.sampling_rate,#Hz
+                high_level  = high_level,
+                color_peak  = color_peak,
+                low_level   = low_level,
+                store_path  = new_storing_path)
         return
     
     def store_stmap(self, t):
@@ -179,9 +193,166 @@ class SpatioTemporalMap:
         return
 
 class SpatioTemporalSession:
-    def __init__(self,):
-        # self.threshold = 
-        pass
+    def __init__(self,
+                 path_session,
+                 logger          = None,  
+                 store_switch    = False,
+                 vis_switch      = True, 
+                 conditions_id   = None, 
+                 green_name      = '',
+                 single_stroke_label   = 'pos',
+                 multiple_stroke_label = 'am',
+                 acquisition_fq  = 100, #Hz
+                 optical_ratio   = 85/50, #Optical magnification
+                 cortical_dim    = 14.5, #mm 
+                 denoise_flag    = False,
+                 retin_fold_path = None,
+                 **kwargs):
+
+        self.acquisition_frequency = acquisition_fq #Hz
+        self.time_bin              = (1/self.acquisition_frequency)*1000 #ms
+
+        self.denoise_switch        = denoise_flag
+        self.vis_switch            = vis_switch
+        self.store_switch          = store_switch
+        if retin_fold_path is None:
+            self.retin_folder      = os.path.join(dv.STORAGE_PATH, utils.NAME_RETINO_ANALYSIS)
+        else:
+            self.retin_folder      = retin_fold_path  
+
+        self.storing_folder        = dv.set_storage_folder(storage_path  = dv.STORAGE_PATH, 
+                                                           name_analysis = utils.NAME_SPACETIME_ANALYSIS)
+        self.path_to_derivatives   = path_session
+        self.path_session          = path_session.split('derivatives')[0]
+        if logger is None:
+            self.log = utils.setup_custom_logger('myapp')
+        else:
+            self.log = logger     
+        self.green                 = utils.get_green(green_name, self.path_session, log=self.log)
+
+        self.single_stroke_label   = single_stroke_label
+        self.multiple_stroke_label = multiple_stroke_label
+
+        # Create an instance of RetinoSession instead of inheriting
+        self.retino_session = retinotopy.RetinoSession(path_session=self.path_session,
+                                                       logger=self.log,
+                                                       path_md=self.path_to_derivatives,
+                                                       green_name=green_name,
+                                                       single_stroke_label=self.single_stroke_label,
+                                                       multiple_stroke_label=self.multiple_stroke_label,
+                                                       conditions_id=conditions_id,
+                                                       store_switch=self.store_switch,
+                                                       data_vis_switch=self.vis_switch,
+                                                       denoise_flag=self.denoise_switch ,
+                                                       **kwargs)
+        
+        self.ny, self.nx       = self.retino_session.std_blank.shape 
+        self.id_name           = self.retino_session.id_name
+        self.cond_dict         = self.retino_session.cond_dict
+        self.cond_names        = self.retino_session.cond_names
+        self.retino_pos_am     = self.retino_session.retino_pos_am
+        self.color_pos         = {i: dv.COLORS_7[n]  for n, i in enumerate(list(self.retino_session.cond_pos.values()))}
+
+        self.stimulus_metadata       = self.retino_session.stimulus_metadata
+        self.stimulus_speed          = self.stimulus_metadata['speed']
+        self.timing_single_stroke    = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
+        self.timing_am_sequence      = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
+        self.time_sequence           = self.retino_session.header['n_frames']
+        self.time_ss                 = np.linspace(-(self.timing_single_stroke[0]-1)*self.time_bin, 
+                                                   (self.time_sequence-(self.timing_single_stroke[0]))*self.time_bin, 
+                                                   self.time_sequence)
+        self.time_am                 = np.linspace(-(self.timing_am_sequence[0]-1)*self.time_bin, 
+                                                   (self.time_sequence-(self.timing_am_sequence[0]))*self.time_bin, 
+                                                   self.time_sequence)
+
+        # Get original data shape 
+        try:
+            self.original_frame_shape = self.green.shape
+        except:
+            self.original_frame_shape = (1312, 1312)
+
+        self.spatial_bin        = np.nanmax(self.original_frame_shape)/np.nanmax([self.ny, self.nx])  #Import green and import an md file and check the difference in frame shape
+        self.pixel_spacing      = self.spatial_bin*(cortical_dim*(optical_ratio))/np.nanmax(self.original_frame_shape)         
+        self.single_pos         = retinotopy.get_retinotopic_single_pos(self.retin_folder, 
+                                                                        list(self.retino_session.cond_pos.values()), 
+                                                                        self.path_session)
+        utils.stampa(f'{self.single_pos}', logger = self.log)  
+        self.trajectory_mask    = trj.get_trajectory_mask(self.single_pos, (self.ny, self.nx), extremities = (0,0))        
+        _, _, self.orient_traj  = trj.rotate_distribution(list(list(zip(*self.single_pos))[0]), 
+                                                          list(list(zip(*self.single_pos))[1])) #in rad
+        self.data_dictionary    = {}
+
+    def get_session(self):
+        utils.stampa(f'Start processing spatiotemporal profile analysis \n', logger=self.log)
+        start_time = datetime.datetime.now().replace(microsecond=0)       
+        for cond_id, cond_name in self.cond_dict.items():
+            self.get_spatiotemporal_maps(cond_name)
+        utils.stampa(f'End processing spatiotemporal profile analysis', logger=self.log)   
+        utils.stampa(f'Analysis elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                 
+        return
+    
+    def get_spatiotemporal_maps(self, name_cond):
+        utils.stampa(f'Get spatiotemporal profiles for condition {name_cond} \n', logger=self.log)
+        start_time = datetime.datetime.now().replace(microsecond=0)
+
+        cd = self.retino_session.get_data_to_process(self, name_cond)
+        dict_pos_time  = {}
+
+        # Single stroke condition
+        if name_cond in list(self.cond_pos.values()):
+            cd_type_flag = 'ss'
+            ISinterval   = 30 # does not matter
+            start_time   = self.time_ss[0]
+            positions, times = None, None
+            colors       = ['w']
+
+        # Multiple stroke condition
+        elif name_cond in list(self.cond_am.values()):
+            # Try to check if retino_cond already exists
+            cd_type_flag = 'am'
+            ISspacing    = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space'] #in dva
+            ISinterval   = (ISspacing/self.stimulus_speed)*1000
+            start_time   = self.time_am[0]
+            positions    = [dict_pos_time[ss][0] for ss in self.retino_pos_am[name_cond]] 
+            times        = [dict_pos_time[ss][1] for ss in self.retino_pos_am[name_cond]] 
+            colors       = [self.color_pos[i] for i in self.cond_dict[name_cond]]
+
+        try:
+            st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag)
+            st_map_cd.load_stmap(os.path.join(self.storing_folder, self.id_name, name_cond, 'spatiotemporal_profile'))    
+
+        # If does not, it build it
+        except:            
+            st_map_cd = SpatioTemporalMap(self.path_session, 
+                                          trajectory_mask = self.trajectory_mask,
+                                          rotation_theta  = self.orient_traj,
+                                          onset_time      = start_time,
+                                          condition_name  = name_cond,
+                                          data            = cd.df_fz,
+                                          condition_type  = cd_type_flag,
+                                          is_delay        = ISinterval, #math to do with speed, and interstimulus spacing 
+                                          pixel_spacing   = self.pixel_spacing,#mm 
+                                          sampling_rate   = self.acquisition_frequency, 
+                                          storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond))
+        if self.vis_switch:
+            st_map_cd.plot_maps(colors, np.nanpercentile(st_map_cd.maps, 50), 
+                                retino_pos = positions, retino_time = times,
+                                high_level = np.nanpercentile(st_map_cd.maps, 95), 
+                                low_level = np.nanpercentile(st_map_cd.maps, 15))
+    
+        
+        if name_cond in list(self.cond_pos.values()):
+            dict_pos_time[name_cond] = [st_map_cd.retino_pos, st_map_cd.retino_time]    
+
+
+        # If true store variables
+        if self.store_switch:
+            st_map_cd.store_stmap(os.path.join(self.storing_folder, self.id_name, name_cond))                
+
+        self.data_dictionary[name_cond] = st_map_cd               
+        utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}')
+        utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
+        return 
 
 def derivative_filter(arr, threshold):
     # Compute the derivative of the array
@@ -356,14 +527,236 @@ def rotate_map(profile_1, theta, correction_factor = 0, discard_thresh = 1e-5, k
     rotated[np.where(abs(rotated) <= discard_thresh*20)] = np.nan
     return rotated
 
-def get_threshold(data_maps, zero_of_cond, start_n_end=False, percentile = 99):
+def get_threshold(data_maps, zero_of_cond, start_n_end=False, percentile = 99, full_seq = False):
     '''
     data_maps: n°conditions, space, time
     
     '''
-    if start_n_end:
-        threshold_contour = np.nanpercentile(np.append(data_maps[:, :, :zero_of_cond].ravel(),
-                                                       data_maps[:, :, -zero_of_cond:].ravel()), percentile)  
+    if not full_seq:
+        if start_n_end:
+            threshold_contour = np.nanpercentile(np.append(data_maps[:, :, :zero_of_cond].ravel(),
+                                                        data_maps[:, :, -zero_of_cond:].ravel()), percentile)  
+        else:
+            threshold_contour = np.nanpercentile(data_maps[:, :, :zero_of_cond].ravel(), percentile)      
     else:
-        threshold_contour = np.nanpercentile(data_maps[:, :, :zero_of_cond].ravel(), percentile)      
+        if start_n_end:
+            threshold_contour = np.nanpercentile(np.append(data_maps[:, :zero_of_cond, :].ravel(),
+                                                        data_maps[:, -zero_of_cond:, :].ravel()), percentile)  
+        else:
+            threshold_contour = np.nanpercentile(data_maps[:, :zero_of_cond, :].ravel(), percentile)              
     return threshold_contour
+
+import matplotlib.pyplot as plt
+
+def plot_st(profilemap,  
+            threshold_contour, 
+            traj_mask,
+            pixel_spacing,
+            retinotopic_pos = None,
+            retinotopic_time = None, 
+            map_type = utils.PARULA_MAP,
+            st_title = None,
+            onset_time = 4,
+            colors_retinotopy = ['crimson', 'tomato', 'magenta'],
+            draw_peak_traj = True,
+            is_delay = 30,#ms
+            sampling_fq = 100,#Hz
+            high_level = 5,
+            color_peak = 'teal',
+            low_level = -1,
+            store_path = None):
+    
+    # Safety checks
+#     if (retinotopic_pos is not None) and (retinotopic_time is not None):
+#         assert len(retinotopic_pos) == len(colors_retinotopy), 'Mismatch in retinotopic positions numbers and colors available'
+    space, time  = profilemap.shape
+    timing_frame = int((1/sampling_fq)*1000)
+    assert (is_delay/timing_frame)>1, 'Something weird: sampling frequency and timing of a frame incompatible'
+    isi_frames   = int(is_delay/timing_frame)
+
+    # Plot colormap
+    fig, ax = plt.subplots(1,1, figsize=(9,7))
+    fig.set_facecolor('white')
+    pc_ = ax.pcolormesh(profilemap, cmap= map_type, vmax = high_level, vmin=low_level)
+    
+    # Plot intensity contour
+    blobs = np.zeros(profilemap.shape, dtype = bool)
+#     blobs[np.where(median_filter(profilemap, size=(5,5))>=threshold_contour)] = 1
+    blobs[np.where(profilemap>=threshold_contour)] = 1
+    ax.contour(blobs, 4, colors='k', alpha = .5, levels=[1])
+    
+    blobs_ = np.copy(blobs)
+    blobs_[np.where(median_filter(profilemap, size=(5,5))>=threshold_contour)] = 1
+    
+    # Draw peak's trajectory
+    if draw_peak_traj:
+        a = maximi_inda_blob(profilemap, blobs_)
+        ax.scatter(list(list(zip(*a))[1]), list(list(zip(*a))[0]), marker = '.', color = 'k')
+        ax.plot(list(list(zip(*a))[1]), list(list(zip(*a))[0]), ls = '-', color = 'k', alpha = .3)
+    
+    if (retinotopic_pos is not None) and (retinotopic_time is not None):
+        number_strokes = len(retinotopic_pos)
+        # Plot timelines and retinotopic positions
+        for n in range(number_strokes):
+            print(f'stroke\'s peak {retinotopic_time[n]+n*isi_frames} coordinate')
+            ax.scatter(retinotopic_time[n]+n*isi_frames, retinotopic_pos[n], marker = 'o', color = colors_retinotopy[n], s= 100)
+
+    else:
+        colors_retinotopy = [color_peak]
+        number_strokes = 1
+        
+    for n in range(number_strokes):
+        plt.vlines(onset_time+n*isi_frames, 
+                   np.where(traj_mask != 0)[1].min(), 
+                   np.where(traj_mask != 0)[1].max(), 
+                   color = colors_retinotopy[n], ls ='--', lw=2)
+    
+    # Plot highest spot
+    if len(retinotopic_pos)>0:
+        a, b = process.find_highest_sum_area(profilemap*blobs_, 5, None, None, onset_time, 45)
+        ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
+        print(a, b)
+
+    # Custom axis
+    strokes_onset_times = [onset_time+i*isi_frames for i in range(number_strokes)]
+    strokes_onset_times.sort()
+    print(strokes_onset_times)
+    start_time_instants = [0] + strokes_onset_times
+    tmp = start_time_instants + list(np.linspace(start_time_instants[-1], time, (2+(time-start_time_instants[-1])//10)))
+
+    print(tmp)
+    ax.set_xticks(tmp)
+    labels_ = [item.get_text() for item in ax.get_xticklabels()]
+    # x_tmp = np.arange((zero_of_cond-12), (zero_of_cond+30+12), len(tmp))
+    list_x = list()
+    for i, x in zip(labels_, tmp):
+        list_x.append(f'{int((x-(onset_time))*timing_frame)}')
+    ax.set_xticklabels(list_x, fontsize = 12)
+    ax.set_xlabel('Time - ms', fontsize = 15)
+
+    tmp_y = np.linspace(0, space-10, 9) 
+    ax.set_yticks(tmp_y)
+    labels_ = [item.get_text() for item in ax.get_yticklabels()]
+    list_y = list()
+    for y in np.linspace(0, (pixel_spacing*space) , 9):
+        list_y.append(f'{y:.1f}')
+    ax.set_yticklabels(list_y, fontsize = 12)
+    ax.set_ylabel('Space - mm', fontsize = 15)
+    ax.set_ylim((np.where(traj_mask != 0)[1].min(), np.where(traj_mask != 0)[1].max()))
+    fig.colorbar(pc_) 
+                   
+    if st_title is not None:
+        plt.title(st_title, fontsize = 15)
+        if store_path is not None:
+            plt.savefig(os.path.join(store_path+ '.pdf'), format = 'pdf', dpi =500)
+            plt.savefig(os.path.join(store_path+ '.png'), format = 'png', dpi =500)
+    plt.show()
+    return (a,b)
+
+if __name__=="__main__":
+    parser = argparse.ArgumentParser(description='Launching spatio-temporal profile analysis pipeline')
+
+    parser.add_argument('--path', 
+                        dest='path',
+                        type=str,
+                        required=True,
+                        help='The middle process datafolder path: point at the folder inside derivatives')
+    
+    parser.add_argument('--ss_label', 
+                        dest='single_stroke_label',
+                        type=str,
+                        default = 'pos',
+                        required=False)  
+
+    parser.add_argument('--am_label', 
+                        dest='apparent_motion_label',
+                        type=str,
+                        default = 'am',
+                        required=False)  
+    
+    parser.add_argument('--green_name', 
+                        dest='green_name',
+                        type=str,
+                        default = 'green01.bmp',
+                        required=False)  
+    
+    parser.add_argument('--cid', 
+                        action='append', 
+                        dest='conditions_id',
+                        default=None,
+                        type=int,
+                        help='Conditions to analyze: None by default -all the conditions-')   
+    
+    parser.add_argument('--wd_dim', 
+                        dest='wd',
+                        type=int,
+                        default = 150,
+                        required=False,
+                        help='Window dimension for single stroke centroid detection -pixels side of a square-') 
+
+    parser.add_argument('--fq', 
+                        dest='sampling_fq',
+                        default=100,
+                        type=int,
+                        required=False,
+                        help='Acquisition sampling fq: to recover in the lab books. Either 100 or 110Hz usually')  
+    
+    parser.add_argument('--opt_magn', 
+                        dest='optical_magnification',
+                        default=85/50,
+                        type=float,
+                        required=False,
+                        help='Optical magnification as ratio of the objectives focal length')  
+    
+    parser.add_argument('--brain_mm', 
+                        dest='recorded_diameter',
+                        default=14.5, #mm
+                        type=float,
+                        required=False,
+                        help='Dimension of the optical recording chamber -the diameter in mm-')  
+    
+    parser.add_argument('--vis', 
+                        dest='data_vis_switch', 
+                        action='store_true')
+    parser.add_argument('--no-vis', 
+                        dest='data_vis_switch', 
+                        action='store_false')
+    parser.set_defaults(data_vis_switch=False)  
+    
+    parser.add_argument('--store', 
+                        dest='store_switch',
+                        action='store_true')
+    parser.add_argument('--no-store', 
+                        dest='store_switch', 
+                        action='store_false')
+    parser.set_defaults(store_switch=False)   
+
+    parser.add_argument('--denoised', 
+                        dest='denoised_switch',
+                        action='store_true')
+    parser.add_argument('--no-denoised', 
+                        dest='denoised_switch', 
+                        action='store_false')
+    parser.set_defaults(denoised_switch=False)   
+
+    
+    start_process_time = datetime.datetime.now().replace(microsecond=0)
+    args = parser.parse_args()
+
+    log = utils.setup_custom_logger('myapp')
+    utils.stampa(f'{args}', logger = log)            
+
+    # Instance of the retinotopy session
+    st_session   = SpatioTemporalSession(args.path, 
+                                         logger          = log,
+                                         store_switch    = args.store_switch,
+                                         vis_switch      = args.data_vis_switch, 
+                                         conditions_id   = args.conditions_id, 
+                                         acquisition_fq  = args.sampling_fq, #Hz
+                                         optical_ratio   = args.optical_magnification, #Optical magnification
+                                         cortical_dim    = args.recorded_diameter, #mm 
+                                         denoise_flag    = args.denoised_switch,                                         
+                                         green_name      = args.green_name,                                         
+                                         single_stroke_label   = args.single_stroke_label, 
+                                         multiple_stroke_label = args.apparent_motion_label) 
+    st_session.get_session()
