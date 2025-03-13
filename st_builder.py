@@ -350,14 +350,14 @@ class SpatioTemporalSession:
         
         if name_cond in list(self.cond_pos.values()):
             dict_pos_time[name_cond] = [st_map_cd.retino_pos, st_map_cd.retino_time]    
-
+            utils.stampa(f'Update to spatio-temporal dictionary: {dict_pos_time}', logger=self.log)
 
         # If true store variables
         if self.store_switch:
             st_map_cd.store_stmap(os.path.join(self.storing_folder, self.id_name, name_cond))                
 
         self.data_dictionary[name_cond] = st_map_cd               
-        utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}')
+        utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}', logger=self.log)
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                     
         return 
 
