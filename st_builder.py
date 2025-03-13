@@ -306,22 +306,22 @@ class SpatioTemporalSession:
 
         # Single stroke condition
         if name_cond in list(self.cond_pos.values()):
-            cd_type_flag = 'ss'
-            ISinterval   = 30 # does not matter
-            start_time   = self.timing_single_stroke[0]
+            cd_type_flag  = 'ss'
+            ISinterval    = 30 # does not matter
+            start_time_cd = self.timing_single_stroke[0]
             positions, times = None, None
-            colors       = ['w']
+            colors        = ['w']
 
         # Multiple stroke condition
         elif name_cond in list(self.cond_am.values()):
             # Try to check if retino_cond already exists
-            cd_type_flag = 'am'
-            ISspacing    = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space'] #in dva
-            ISinterval   = (ISspacing/self.stimulus_speed)*1000
-            start_time   = self.timing_am_sequence[0]
-            positions    = [dict_pos_time[ss][0] for ss in self.retino_pos_am[name_cond]] 
-            times        = [dict_pos_time[ss][1] for ss in self.retino_pos_am[name_cond]] 
-            colors       = [self.color_pos[i] for i in self.cond_dict[name_cond]]
+            cd_type_flag  = 'am'
+            ISspacing     = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space'] #in dva
+            ISinterval    = (ISspacing/self.stimulus_speed)*1000
+            start_time_cd = self.timing_am_sequence[0]
+            positions     = [dict_pos_time[ss][0] for ss in self.retino_pos_am[name_cond]] 
+            times         = [dict_pos_time[ss][1] for ss in self.retino_pos_am[name_cond]] 
+            colors        = [self.color_pos[i] for i in self.cond_dict[name_cond]]
 
         try:
             st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
@@ -332,7 +332,7 @@ class SpatioTemporalSession:
             st_map_cd = SpatioTemporalMap(self.path_session, 
                                           trajectory_mask = self.trajectory_mask,
                                           rotation_theta  = self.orient_traj,
-                                          onset_time      = start_time,
+                                          onset_time      = start_time_cd,
                                           condition_name  = name_cond,
                                           data            = cd.df_fz,
                                           condition_type  = cd_type_flag,
@@ -342,7 +342,7 @@ class SpatioTemporalSession:
                                           storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond), 
                                           logger = self.log)
         if self.vis_switch:
-            st_map_cd.plot_maps(colors, np.nanpercentile(st_map_cd.maps, 50), 
+            st_map_cd.plot_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
                                 retino_pos = positions, retino_time = times,
                                 high_level = np.nanpercentile(st_map_cd.maps, 95), 
                                 low_level = np.nanpercentile(st_map_cd.maps, 15))
@@ -358,7 +358,7 @@ class SpatioTemporalSession:
 
         self.data_dictionary[name_cond] = st_map_cd               
         utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}')
-        utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
+        utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                     
         return 
 
 def derivative_filter(arr, threshold):
@@ -655,7 +655,7 @@ def plot_st(profilemap,
     if st_title is not None:
         plt.title(st_title, fontsize = 15)
         if store_path is not None:
-            plt.savefig(os.path.join(store_path+ '.pdf'), format = 'pdf', dpi =500)
+            # plt.savefig(os.path.join(store_path+ '.pdf'), format = 'pdf', dpi =500)
             plt.savefig(os.path.join(store_path+ '.png'), format = 'png', dpi =500)
     plt.show()
     return (a,b)
