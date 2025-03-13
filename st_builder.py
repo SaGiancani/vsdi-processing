@@ -295,7 +295,7 @@ class SpatioTemporalSession:
         utils.stampa(f'Get spatiotemporal profiles for condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)
 
-        cd = self.retino_session.get_data_to_process(self, name_cond)
+        cd = self.retino_session.get_data_to_process(name_cond)
         dict_pos_time  = {}
 
         # Single stroke condition
