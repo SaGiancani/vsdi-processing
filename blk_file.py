@@ -5,7 +5,7 @@
 # Modified by Isabelle Racicot <racicot.isabelle@gmail.com> on 12/2019 
 # Python3 portability by Salvatore Giancani <sa.giancani@gmail.com>
 import cv2 as cv
-from denoise import correction_windowframe
+from process_vsdi import correction_windowframe
 import itertools as it
 import io
 import numpy as np

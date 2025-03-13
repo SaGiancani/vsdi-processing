@@ -1,8 +1,50 @@
 import cv2 as cv
+
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
 import numpy as np
 from scipy import optimize
 from scipy.ndimage.filters import convolve, gaussian_filter, median_filter, uniform_filter1d
 from scipy.special import erf
+
+from trajectory import get_trajectory
+
+
+def correction_windowframe(signal3d_, start, end):
+    """
+    ----------------------------------------------------------------------------------------------------------------------
+    Author: Salvatore Giancani
+    Email: sa.giancani@gmail.com
+    ----------------------------------------------------------------------------------------------------------------------
+
+    Perform correction on a 3D or 4D signal along the time axis by extrapolating and subtracting.
+
+    Args:
+    signal3d_ (ndarray): The input signal, which can be 3D (time, space_y, space_x) or 4D (frames, time, space_y, space_x).
+    start (int): The start point for extrapolation.
+    end (int): The endpoint for extrapolation.
+
+    Returns:
+    ndarray: The corrected signal with extrapolated data subtracted along the time axis.
+    """
+    if (len(signal3d_.shape) == 3) or (len(signal3d_.shape) == 1):
+        signal3d = linear_extrapolation(signal3d_, end, start)
+        outcome  = (signal3d_ - signal3d)+np.nanmean(signal3d) # Safety shift up of the subtraction
+
+    elif len(signal3d_.shape) == 4:
+        signal3d = list()
+        for j, i in enumerate(signal3d_):
+            signal3d.append(linear_extrapolation(i, end, start))
+            print(f'Trial {j+1} linearly detrended')
+        signal3d = np.array(signal3d)            
+        outcome = (signal3d_ - signal3d)+np.nanmean(signal3d) # Safety shift up of the subtraction
+    else:
+        print('Error: shape incompatible. Either 3d or 4d')
+        outcome = None
+    return outcome 
+
 
 def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None):
     '''F/F0 computation with -or without- demean of n_frames_zero and killing of outlier 
@@ -205,6 +247,40 @@ def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
     # print(np.nanmin(blurred), np.nanmax(blurred))
     return blurred
 
+
+def linear_extrapolation(signal, stop, start = 0):
+    """
+    ----------------------------------------------------------------------------------------------------------------------
+    Author: Salvatore Giancani
+    Email: sa.giancani@gmail.com
+    ----------------------------------------------------------------------------------------------------------------------
+    
+    Perform linear extrapolation on a 3D data cube along the time axis.
+
+    Args:
+    signal (ndarray): The 3D data cube to extrapolate. Dimensions are (time, space_y, space_x).
+    stop (int): The endpoint for extrapolation.
+    start (int): The start point for extrapolation (default is 0).
+
+    Returns:
+    ndarray: The extrapolated 3D data cube with the same shape as the input.
+    """
+    # assert len(signal) != 3, 'Datacube required'
+    if len(signal.shape) == 3:
+        time, space_y, space_x = signal.shape
+        fitted_cube = np.empty((time, space_y, space_x))
+        for i in range(space_y):
+            for j in range(space_x):
+                tmp = get_trajectory(np.arange(start, stop, 1), signal[start:stop, i, j], (0, time))
+                fitted_cube[:, i, j] = tmp[1]
+    elif (len(signal.shape) == 1) or ((len(signal.shape) >10)):
+        data_bins = signal.shape[0]
+        fitted_cube = np.empty((data_bins))
+        tmp = get_trajectory(np.arange(start, stop, 1), signal[start:stop], (0, data_bins))
+
+    return fitted_cube
+
+
 def manual_thresholding(data, threshold, filter_kernel = 30):
     assert len(data.shape) == 2, 'The data matrix has to be 2D'
     tmp = median_filter(data, (filter_kernel, filter_kernel))
@@ -250,19 +326,19 @@ def gaussian3d(data , size = 3, std = .65):
     smoothed_data = convolve(data, kernel, mode='reflect')
     return smoothed_data
 
-def gaussian1d(x, A, mu, sigma, alpha):
-    return A * np.exp(-(x - mu)**2 / (2 * sigma**2)) * (1 + erf(alpha * (x - mu) / (np.sqrt(2) * sigma)))
+def gaussian1d(x, A, mu, sigma, alpha = 0, beta = 0):
+    return A * np.exp(-(x - mu)**2 / (2 * sigma**2)) * (1 + erf(alpha * (x - mu) / (np.sqrt(2) * sigma))) * (1 + beta * ((x - mu) / sigma)**4)
 
-def gaussian2d(xy_mesh, A, x0, y0, sigma_x, sigma_y, theta, skewness):
+def gaussian2d(xy_mesh, A, mu_x, mu_y, sigma_x, sigma_y, alpha_x, alpha_y, kurtosis_x = 0, kurtosis_y = 0):
     x, y = xy_mesh
-    x_diff = x - x0
-    y_diff = y - y0
-    x_rot = np.cos(theta) * x_diff - np.sin(theta) * y_diff
-    y_rot = np.sin(theta) * x_diff + np.cos(theta) * y_diff
-    a = np.cos(theta)**2 / (2 * sigma_x**2) + np.sin(theta)**2 / (2 * sigma_y**2)
-    b = -np.sin(2 * theta) / (4 * sigma_x**2) + np.sin(2 * theta) / (4 * sigma_y**2)
-    c = np.sin(theta)**2 / (2 * sigma_x**2) + np.cos(theta)**2 / (2 * sigma_y**2)
-    return A * np.exp(-(a * x_rot**2 + 2 * b * x_rot * y_rot * (1 + skewness) + c * y_rot**2))
+    exponent_x = -(x - mu_x)**2 / (2 * sigma_x**2)
+    exponent_y = -(y - mu_y)**2 / (2 * sigma_y**2)
+    erf_term_x = 1 + erf(alpha_x * (x - mu_x) / (np.sqrt(2) * sigma_x))
+    erf_term_y = 1 + erf(alpha_y * (y - mu_y) / (np.sqrt(2) * sigma_y))
+    kurtosis_term_x = (x - mu_x)**4 / (sigma_x**4)
+    kurtosis_term_y = (y - mu_y)**4 / (sigma_y**4)
+    return A * np.exp(exponent_x + exponent_y) * erf_term_x * erf_term_y * np.exp(-0.5 * (kurtosis_x * kurtosis_term_x + kurtosis_y * kurtosis_term_y))
+
 
 def gaussian_fitting(td_mat, ax_to_fit, perc_wind = 3):
     if len(np.shape(td_mat)) > 2:
@@ -382,4 +458,109 @@ def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 2
     # B = np.sqrt(stder_signblnk_overcond**2 + stder_sign_overcond**2)
     zscore = A/B
     return zscore
+
+
+def fig_to_img(fig):
+    canvas = FigureCanvas(fig)
+    canvas.draw()
+    img = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
+    img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    return img
+
+
+def make_video(datacube, contours, centroids = None, global_x= None, global_y= None, timing_onset = None, fps = 3.0, frame_titles = None, title = 'annotated_heatmap_video.avi', dpi = 200):
+    (time_steps, height, width) = datacube.shape
+    
+    if frame_titles is not None:
+        assert len(frame_titles) == np.shape(datacube)[0], 'frame_titles and datacube lengths have to be same'
+
+    # Normalize the heatmaps globally for consistent coloring
+    global_min = np.nanmin(datacube)
+    global_max = np.nanmax(datacube)
+    print(global_min, global_max)
+    heatmaps_normalized = np.divide((datacube - global_min),(global_max - global_min))
+    # Define the output video file parameters
+    output_file = title
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec for the video
+      # Frames per second
+        
+    new_height = int(height * (dpi / 100))
+    new_width = int(width * (dpi / 100))
+
+
+    # Create a VideoWriter object
+    video_writer = cv2.VideoWriter(output_file, fourcc, fps, (new_width, new_height), isColor=True)
+    
+#     counter = 0
+    colors = ['crimson', 'tomato', 'magenta']
+    # Write each frame to the video
+    for i in range(time_steps):
+        heatmap = heatmaps_normalized[i]
+
+        # Create a Matplotlib figure
+        fig = Figure(figsize=(width / 100, height / 100), dpi=dpi)
+        ax = fig.add_subplot(111)
+
+        # Plot the heatmap
+        cax = ax.imshow(heatmap, cmap=utils.PARULA_MAP, origin='lower', vmax = 1.1, vmin = .15)
+
+        # Add a colorbar
+#         fig.colorbar(cax, ax=ax)
+
+        # Add annotations (customize as needed)
+        ax.contour(contours[i, :, :], colors='k', linewidths=0.5)
+        
+        if centroids is not None:
+            ax.scatter(centroids[i, 0], centroids[i, 1], color = 'r', marker = 'X')
+
+        if timing_onset is not None:
+            for count, t in enumerate(timing_onset):
+                if i >= t:
+                    ax.hlines(global_x[count],0, heatmap.shape[1], colors=colors[count], linestyles = '-', lw=1.5)    
+                    
+        
+        # Remove axes for cleaner visualization
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.axis('off')
+        
+#         if frame_titles is not None:
+#             ax.annotate(frame_titles[i], xy=(20, 20), xytext=(50, datacube.shape[1]-50), 
+#                         textcoords='offset points', ha='center', 
+#                         fontsize=50, color='k')            
+        if frame_titles is not None:
+            ax.text(10, datacube.shape[1]-30, frame_titles[i], color='white', fontsize=15, ha='left', va='top')
+
+        # Convert Matplotlib figure to an image
+        img = fig_to_img(fig)
+
+        # Convert from RGB to BGR (OpenCV expects BGR)
+        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+        # Resize the image to the new dimensions
+        img_bgr_resized = cv2.resize(img_bgr, (new_width, new_height))
+
+        # Write the frame to the video
+        video_writer.write(img_bgr_resized)
+
+    # Release the VideoWriter object
+    video_writer.release()
+
+
+    print(f"Video saved as {output_file}")    
+    return
+
+def get_blobs_n_centroids(datacube, manual_thresh):
+    blobs, centroids = list(), list()
+    for frame in datacube:
+        blob = np.zeros(frame.shape, dtype = bool)
+        blob[np.where(frame>manual_thresh)] = 1
+        # If there is a mask, it looks for maximi inside the blob
+        if np.nansum(blob)>0:
+            (x_, y_) = find_highest_sum_area(frame*blob, 20)
+            centroids.append(np.array([y_, x_]))
+        else:
+            centroids.append(np.array([np.nan, np.nan]))
+        blobs.append(blob)
+    return np.array(blobs), np.array(centroids)
 
