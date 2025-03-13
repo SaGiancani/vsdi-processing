@@ -250,11 +250,7 @@ class Session:
                                detrend_switch    = self.detrend_switch,
                                filename_particle = self.filename_particle)
         
-        # TO BE CONTROLLED: Some Sessions have a crazy blk.header['nframesperstim']
-        tmp = blk.header['nframesperstim']
-        print(f'n. frames header {tmp}')
-        print(f'n. frames signal {blk.signal.shape[0]}')
-        print(f'n. frames binned signal {blk.binned_signal.shape[0]}')
+
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
