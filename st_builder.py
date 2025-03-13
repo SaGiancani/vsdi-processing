@@ -33,6 +33,7 @@ class SpatioTemporalMap:
                  discard_thresh = 1e-7,
                  colors_ret = ['grey'],
                  bounds_for_max_seek = (None, None, None, None), 
+                 logger = None,
                  storing_path = None):
         self.signal                   = data                           #MODIFY THIS. It could get the full matrix, and then run the get_spatio_temporal_profile iteratively on single trials and on average across trials
         self.path_session             = path_session
@@ -42,6 +43,7 @@ class SpatioTemporalMap:
         self.rotation_angle           = rotation_theta
         self.rotate_correction_factor = rotate_correction_factor
         self.discard_thresh           = discard_thresh
+        self.logger                   = logger
 
         if self.signal is not None:
             self.map, self.masked_data          = get_spatio_temporal_profile(np.nanmean(self.signal, axis = 0), 
@@ -120,7 +122,8 @@ class SpatioTemporalMap:
         else:
             color_peak = 'w'
             peak_traj = False
-
+        
+        utils.stampa(f'Onset time {self.onset_time}', logger = self.logger)
         plot_st(self.map, 
                 threshold_contour, 
                 self.trajectory_mask,
@@ -305,7 +308,7 @@ class SpatioTemporalSession:
         if name_cond in list(self.cond_pos.values()):
             cd_type_flag = 'ss'
             ISinterval   = 30 # does not matter
-            start_time   = self.time_ss[0]
+            start_time   = self.timing_single_stroke[0]
             positions, times = None, None
             colors       = ['w']
 
@@ -315,13 +318,13 @@ class SpatioTemporalSession:
             cd_type_flag = 'am'
             ISspacing    = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space'] #in dva
             ISinterval   = (ISspacing/self.stimulus_speed)*1000
-            start_time   = self.time_am[0]
+            start_time   = self.timing_am_sequence[0]
             positions    = [dict_pos_time[ss][0] for ss in self.retino_pos_am[name_cond]] 
             times        = [dict_pos_time[ss][1] for ss in self.retino_pos_am[name_cond]] 
             colors       = [self.color_pos[i] for i in self.cond_dict[name_cond]]
 
         try:
-            st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag)
+            st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
             st_map_cd.load_stmap(os.path.join(self.storing_folder, self.id_name, name_cond, 'spatiotemporal_profile'))    
 
         # If does not, it build it
@@ -336,7 +339,8 @@ class SpatioTemporalSession:
                                           is_delay        = ISinterval, #math to do with speed, and interstimulus spacing 
                                           pixel_spacing   = self.pixel_spacing,#mm 
                                           sampling_rate   = self.acquisition_frequency, 
-                                          storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond))
+                                          storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond), 
+                                          logger = self.log)
         if self.vis_switch:
             st_map_cd.plot_maps(colors, np.nanpercentile(st_map_cd.maps, 50), 
                                 retino_pos = positions, retino_time = times,
