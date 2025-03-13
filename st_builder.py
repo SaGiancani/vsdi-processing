@@ -321,7 +321,7 @@ class SpatioTemporalSession:
             start_time_cd = self.timing_am_sequence[0]
             positions     = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[name_cond]] 
             times         = [self.data_pos_frame[ss][1] for ss in self.retino_pos_am[name_cond]] 
-            colors        = [self.color_pos[i] for i in self.cond_dict[name_cond]]
+            colors        = [self.color_pos[i] for i in self.retino_pos_am[name_cond]]
 
         try:
             st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
