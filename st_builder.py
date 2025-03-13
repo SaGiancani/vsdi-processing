@@ -346,6 +346,19 @@ class SpatioTemporalSession:
                                 retino_pos = positions, retino_time = times,
                                 high_level = np.nanpercentile(st_map_cd.maps, 95), 
                                 low_level = np.nanpercentile(st_map_cd.maps, 15))
+            
+            # Sanity check on rotation
+            dv.plot_averaged_map(f'{name_cond}_SanityCheck', None, None, None, 
+                                 st_map_cd.masked_data, None, 
+                                 np.nanpercentile(st_map_cd.masked_data, 15), 
+                                 np.nanpercentile(st_map_cd.masked_data, 95), 
+                                 None, 
+                                 f'{self.id_name}', 
+                                 None, 
+                                 name_analysis_ = os.path.join(self.storing_folder, self.id_name, name_cond), 
+                                 store_path = '')
+
+            # Implement the single trial plotting
     
         
         if name_cond in list(self.cond_pos.values()):
