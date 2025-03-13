@@ -347,9 +347,10 @@ class SpatioTemporalSession:
                                 high_level = np.nanpercentile(st_map_cd.maps, 95), 
                                 low_level = np.nanpercentile(st_map_cd.maps, 15))
             
+            utils.stampa(f'{st_map_cd.masked_data.shape}', logger=self.log)
             # Sanity check on rotation
             dv.plot_averaged_map(f'{name_cond}_SanityCheck', None, None, None, 
-                                 st_map_cd.masked_data, None, 
+                                 st_map_cd.masked_data[st_map_cd.masked_data.shape[0]//2, :, :], None, 
                                  np.nanpercentile(st_map_cd.masked_data, 15), 
                                  np.nanpercentile(st_map_cd.masked_data, 95), 
                                  None, 
@@ -584,6 +585,7 @@ def plot_st(profilemap,
             high_level = 5,
             color_peak = 'teal',
             low_level = -1,
+            visualize_figure = False,
             store_path = None):
     
     # Safety checks
@@ -670,7 +672,9 @@ def plot_st(profilemap,
         if store_path is not None:
             # plt.savefig(os.path.join(store_path+ '.pdf'), format = 'pdf', dpi =500)
             plt.savefig(os.path.join(store_path+ '.png'), format = 'png', dpi =500)
-    plt.show()
+
+    if visualize_figure:
+        plt.show()
     return (a,b)
 
 if __name__=="__main__":
