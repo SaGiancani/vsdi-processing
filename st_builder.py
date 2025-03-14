@@ -350,7 +350,8 @@ class SpatioTemporalSession:
         try:
             st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
             st_map_cd.load_stmap(os.path.join(self.storing_folder, self.id_name, name_cond, 'spatiotemporal_profile', f'st_map_{name_cond}'))    
-            utils.stampa(f'{os.path.join(self.id_name, name_cond, 'spatiotemporal_profile', f'st_map_{name_cond}.pickle')} loaded!', logger = self.log)
+            tmp_name =  f'st_map_{name_cond}.pickle'
+            utils.stampa(f'{os.path.join(self.id_name, name_cond, 'spatiotemporal_profile', tmp_name)} loaded!', logger = self.log)
         # If does not, it build it
         except:            
             st_map_cd = SpatioTemporalMap(self.path_session, 
