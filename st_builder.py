@@ -145,7 +145,7 @@ class SpatioTemporalMap:
         
         tmp = dv.set_storage_folder(storage_path  = tmp, 
                                     name_analysis = 'single_trials')
-        utils.stampa(f'Store maps single trials at {tmp}', logger = self.log)
+        utils.stampa(f'Store maps single trials at {tmp}', logger = self.logger)
         for n, i in enumerate(self.maps):
             plot_st(i, 
                     threshold_contour, 
