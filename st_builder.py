@@ -702,6 +702,7 @@ def plot_st(profilemap,
 
     if visualize_figure:
         plt.show()
+    plt.close('all')
     return (a,b)
 
 if __name__=="__main__":
