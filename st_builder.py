@@ -92,14 +92,15 @@ class SpatioTemporalMap:
         else:
             self.colors_retinotopy = colors_ret
 
-    def plot_maps(self, 
-                  colors_retinotopy, 
-                  threshold_contour, 
-                  high_level  = None, 
-                  low_level   = None, 
-                  retino_pos  = None,
-                  retino_time = None, 
-                  color_mappa = utils.PARULA_MAP):
+    def visualize_maps(self, 
+                       colors_retinotopy, 
+                       threshold_contour, 
+                       high_level  = None, 
+                       low_level   = None, 
+                       retino_pos  = None,
+                       retino_time = None, 
+                       color_mappa = utils.PARULA_MAP):
+        
         if self.storing_path is not None:
             tmp = dv.set_storage_folder(storage_path = self.storing_path, name_analysis = 'STProfiles')
             new_storing_path = os.path.join(tmp, f'STProfile_{self.condition_name}_{self.session_name}')  
@@ -141,6 +142,26 @@ class SpatioTemporalMap:
                 color_peak  = color_peak,
                 low_level   = low_level,
                 store_path  = new_storing_path)
+        
+        for n, i in enumerate(self.maps):
+            plot_st(i, 
+                    threshold_contour, 
+                    self.trajectory_mask,
+                    self.pixel_spacing,
+                    retinotopic_pos  = retino_pos,
+                    retinotopic_time = retino_time, 
+                    map_type   = color_mappa,
+                    st_title   = self.condition_name,
+                    onset_time = self.onset_time,
+                    colors_retinotopy = colors_retinotopy,
+                    draw_peak_traj    = peak_traj,
+                    is_delay    = self.interstimulus_delay,#ms
+                    sampling_fq = self.sampling_rate,#Hz
+                    high_level  = high_level,
+                    color_peak  = color_peak,
+                    low_level   = low_level,
+                    store_path  = os.path.join(tmp, 'single_trials', f'STProfile_{self.condition_name}_{n}_{self.session_name}')  )
+                        
         return
     
     def store_stmap(self, t):
@@ -299,7 +320,7 @@ class SpatioTemporalSession:
         utils.stampa(f'Analysis elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                 
         return
     
-    def get_spatiotemporal_maps(self, name_cond):
+    def get_spatiotemporal_maps(self, name_cond, synaptic_latency = 6):
         utils.stampa(f'Get spatiotemporal profiles for condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -323,11 +344,13 @@ class SpatioTemporalSession:
             positions     = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[name_cond]] 
             times         = [self.data_pos_frame[ss][1] for ss in self.retino_pos_am[name_cond]] 
             colors        = [self.color_pos[i] for i in self.retino_pos_am[name_cond]]
+        
+        start_time_cd -= synaptic_latency
 
         try:
             st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
-            st_map_cd.load_stmap(os.path.join(self.storing_folder, self.id_name, name_cond, 'spatiotemporal_profile'))    
-
+            st_map_cd.load_stmap(os.path.join(self.storing_folder, self.id_name, name_cond, 'spatiotemporal_profile', f'st_map_{name_cond}'))    
+            utils.stampa(f'{os.path.join(self.id_name, name_cond, 'spatiotemporal_profile', f'st_map_{name_cond}.pickle')} loaded!', logger = self.log)
         # If does not, it build it
         except:            
             st_map_cd = SpatioTemporalMap(self.path_session, 
@@ -342,13 +365,15 @@ class SpatioTemporalSession:
                                           sampling_rate   = self.acquisition_frequency, 
                                           storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond), 
                                           logger = self.log)
-        if self.vis_switch:
-            st_map_cd.plot_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
-                                retino_pos = positions, retino_time = times,
-                                high_level = np.nanpercentile(st_map_cd.maps, 95), 
-                                low_level = np.nanpercentile(st_map_cd.maps, 15))
+            utils.stampa(f'{name_cond} elaborated!', logger = self.log)
             
-            utils.stampa(f'{st_map_cd.masked_data.shape}', logger=self.log)
+        if self.vis_switch:
+            st_map_cd.visualize_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
+                                     retino_pos = positions, retino_time = times,
+                                     high_level = np.nanpercentile(st_map_cd.maps, 95), 
+                                     low_level = np.nanpercentile(st_map_cd.maps, 15))
+            utils.stampa(f'Data shape {st_map_cd.masked_data.shape}', logger=self.log)
+
             # Sanity check on rotation
             dv.plot_averaged_map(f'{name_cond}_SanityCheck', None, None, None, 
                                  st_map_cd.masked_data[st_map_cd.masked_data.shape[0]//2, :, :], None, 
@@ -358,10 +383,7 @@ class SpatioTemporalSession:
                                  f'{self.id_name}', 
                                  None, 
                                  name_analysis_ = os.path.join(self.storing_folder, self.id_name, name_cond), 
-                                 store_path = '')
-
-            # Implement the single trial plotting
-    
+                                 store_path = '')    
         
         if name_cond in list(self.cond_pos.values()):
             self.data_pos_frame[name_cond] = [st_map_cd.retino_pos[0], st_map_cd.retino_time[0]]    
