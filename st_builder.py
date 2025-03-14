@@ -667,7 +667,7 @@ def plot_st(profilemap,
                    color = colors_retinotopy[n], ls ='--', lw=2)
     
     # Plot highest spot
-    if len(retinotopic_pos)>0:
+    if len(retinotopic_pos)>1:
         a, b = process.find_highest_sum_area(profilemap*blobs_, 5, None, None, onset_time, 45)
         ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
         print(a, b)
