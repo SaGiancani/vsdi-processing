@@ -281,7 +281,8 @@ class SpatioTemporalSession:
         self.pixel_spacing      = self.spatial_bin*(cortical_dim*(optical_ratio))/np.nanmax(self.original_frame_shape)         
         self.single_pos         = retinotopy.get_retinotopic_single_pos(self.retin_folder, 
                                                                         list(self.retino_session.cond_pos.values()), 
-                                                                        self.path_session)
+                                                                        self.path_session, 
+                                                                        denoise_flag = self.denoise_switch)
         utils.stampa(f'{self.single_pos}', logger = self.log)  
         self.trajectory_mask    = trj.get_trajectory_mask(self.single_pos, (self.ny, self.nx), extremities = (0,0))        
         _, _, self.orient_traj  = trj.rotate_distribution(list(list(zip(*self.single_pos))[0]), 

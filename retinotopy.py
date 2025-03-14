@@ -939,9 +939,11 @@ def subtraction_among_conditions(path_session,
 
     return params, pos_inferred_averaged 
                 
-def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, path_session):
+def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, path_session, denoise_flag = False):
     single_pos_retinotopy = []
-    session_id_name = utils.get_session_id_name(path_session)   
+    session_id_name = utils.get_session_id_name(path_session)
+    if denoise_flag:
+        session_id_name = f'{session_id_name}_Denoise'
     print(path_session)
     print(session_id_name)
     print(single_pos_cd_names)
