@@ -302,7 +302,12 @@ class SpatioTemporalSession:
             self.original_frame_shape = (1312, 1312)
 
         self.spatial_bin        = np.nanmax(self.original_frame_shape)/np.nanmax([self.ny, self.nx])  #Import green and import an md file and check the difference in frame shape
-        self.pixel_spacing      = self.spatial_bin*(cortical_dim*(optical_ratio))/np.nanmax(self.original_frame_shape)         
+        self.pixel_spacing      = self.spatial_bin*(cortical_dim*(optical_ratio))/np.nanmax(self.original_frame_shape)        
+        utils.stampa(f'Spatial bin: {self.spatial_bin}\n', logger = self.log)  
+        utils.stampa(f'Cortical dim: {cortical_dim}\n', logger = self.log)  
+        utils.stampa(f'Optical ratio: {optical_ratio}\n', logger = self.log)  
+        utils.stampa(f'Original frame shape: {self.original_frame_shape}\n', logger = self.log)  
+ 
         self.single_pos         = retinotopy.get_retinotopic_single_pos(self.retin_folder, 
                                                                         list(self.retino_session.cond_pos.values()), 
                                                                         self.path_session, 
@@ -686,7 +691,7 @@ def plot_st(profilemap,
     tmp_y = np.linspace(0, space-10, 9) 
     ax.set_yticks(tmp_y)
     labels_ = [item.get_text() for item in ax.get_yticklabels()]
-    list_y = list()
+    list_y  = list()
     for y in np.linspace(0, (pixel_spacing*space) , 9):
         list_y.append(f'{y:.1f}')
     ax.set_yticklabels(list_y, fontsize = 12)
