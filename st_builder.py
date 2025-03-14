@@ -143,9 +143,9 @@ class SpatioTemporalMap:
                 low_level   = low_level,
                 store_path  = new_storing_path)
         
+        tmp = dv.set_storage_folder(storage_path  = tmp, 
+                                    name_analysis = 'single_trials')
         for n, i in enumerate(self.maps):
-            tmp = dv.set_storage_folder(storage_path = tmp, name_analysis = 'single_trials')
-
             plot_st(i, 
                     threshold_contour, 
                     self.trajectory_mask,
@@ -162,7 +162,7 @@ class SpatioTemporalMap:
                     high_level  = high_level,
                     color_peak  = color_peak,
                     low_level   = low_level,
-                    store_path  = os.path.join(tmp, f'STProfile_{self.condition_name}_{n}_{self.session_name}')  )
+                    store_path  = os.path.join(tmp, f'STProfile_{self.condition_name}_{n}_{self.session_name}'))
                         
         return
     
