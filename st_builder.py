@@ -671,6 +671,9 @@ def plot_st(profilemap,
         a, b = process.find_highest_sum_area(profilemap*blobs_, 5, None, None, onset_time, 45)
         ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
         print(a, b)
+    else:
+        a = retinotopic_pos 
+        b = retinotopic_time             
 
     # Custom axis
     strokes_onset_times = [onset_time+i*isi_frames for i in range(number_strokes)]
