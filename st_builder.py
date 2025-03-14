@@ -760,7 +760,7 @@ if __name__=="__main__":
     
     parser.add_argument('--brain_mm', 
                         dest='recorded_diameter',
-                        default=14.5, #mm
+                        default=16, #mm
                         type=float,
                         required=False,
                         help='Dimension of the optical recording chamber -the diameter in mm-')  
