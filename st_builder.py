@@ -307,6 +307,7 @@ class SpatioTemporalSession:
         utils.stampa(f'Cortical dim: {cortical_dim}\n', logger = self.log)  
         utils.stampa(f'Optical ratio: {optical_ratio}\n', logger = self.log)  
         utils.stampa(f'Original frame shape: {self.original_frame_shape}\n', logger = self.log)  
+        utils.stampa(f'Pixel Spacing: {self.pixel_spacing}\n', logger = self.log)  
  
         self.single_pos         = retinotopy.get_retinotopic_single_pos(self.retin_folder, 
                                                                         list(self.retino_session.cond_pos.values()), 
