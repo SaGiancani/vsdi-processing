@@ -744,13 +744,6 @@ if __name__=="__main__":
                         type=int,
                         help='Conditions to analyze: None by default -all the conditions-')   
     
-    parser.add_argument('--wd_dim', 
-                        dest='wd',
-                        type=int,
-                        default = 150,
-                        required=False,
-                        help='Window dimension for single stroke centroid detection -pixels side of a square-') 
-
     parser.add_argument('--fq', 
                         dest='sampling_fq',
                         default=100,
@@ -760,7 +753,7 @@ if __name__=="__main__":
     
     parser.add_argument('--opt_magn', 
                         dest='optical_magnification',
-                        default=85/50,
+                        default=50/50,
                         type=float,
                         required=False,
                         help='Optical magnification as ratio of the objectives focal length')  
