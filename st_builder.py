@@ -5,9 +5,8 @@ import os
 import process_vsdi as process
 from middle_process import Condition
 import retinotopy 
-from scipy.ndimage.filters import gaussian_filter, median_filter
-from scipy.ndimage import gaussian_filter1d, rotate
-from scipy.stats import norm
+from scipy.ndimage.filters import median_filter
+from scipy.ndimage import rotate
 import trajectory as trj 
 import utils
 
@@ -46,7 +45,11 @@ class SpatioTemporalMap:
         self.logger                   = logger
 
         if self.signal is not None:
-            self.map, self.masked_data          = get_spatio_temporal_profile(np.nanmean(self.signal, axis = 0), 
+            # Filtering of average across trials
+            tmp_signal                          = np.nanmean(self.signal, axis = 0)
+            tmp_signal                          = np.array([median_filter(i, size=(5,5)) for i in tmp_signal])
+            tmp_signal                          = process.gaussian3d(tmp_signal, std = 1.5, size = 5)
+            self.map, self.masked_data          = get_spatio_temporal_profile(tmp_signal, 
                                                                               self.trajectory_mask, 
                                                                               self.rotation_angle, 
                                                                               correction_factor = self.rotate_correction_factor, 
