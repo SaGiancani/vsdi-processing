@@ -144,6 +144,8 @@ class SpatioTemporalMap:
                 store_path  = new_storing_path)
         
         for n, i in enumerate(self.maps):
+            tmp = dv.set_storage_folder(storage_path = tmp, name_analysis = 'single_trials')
+
             plot_st(i, 
                     threshold_contour, 
                     self.trajectory_mask,
@@ -160,7 +162,7 @@ class SpatioTemporalMap:
                     high_level  = high_level,
                     color_peak  = color_peak,
                     low_level   = low_level,
-                    store_path  = os.path.join(tmp, 'single_trials', f'STProfile_{self.condition_name}_{n}_{self.session_name}')  )
+                    store_path  = os.path.join(tmp, f'STProfile_{self.condition_name}_{n}_{self.session_name}')  )
                         
         return
     
@@ -350,8 +352,8 @@ class SpatioTemporalSession:
         try:
             st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
             tmp_name =  os.path.join(self.id_name, name_cond, 'spatiotemporal_profile', f'st_map_{name_cond}') 
-            st_map_cd.load_stmap(tmp_name)    
             utils.stampa(f'{tmp_name} loaded!', logger = self.log)
+            st_map_cd.load_stmap(tmp_name)    
         # If does not, it build it
         except:            
             st_map_cd = SpatioTemporalMap(self.path_session, 
