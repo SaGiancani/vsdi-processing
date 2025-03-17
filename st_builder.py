@@ -46,7 +46,22 @@ class SpatioTemporalMap:
 
         if self.signal is not None:
             # Filtering of average across trials
-            tmp_signal                          = np.nanmean(self.signal, axis = 0)
+            if len(self.signal.shape) == 4:
+                tmp_signal                          = np.nanmean(self.signal, axis = 0)
+                tmp                                 = np.array([get_spatio_temporal_profile(i,
+                                                                                            self.trajectory_mask, 
+                                                                                            self.rotation_angle, 
+                                                                                            correction_factor = self.rotate_correction_factor, 
+                                                                                            discard_thresh = self.discard_thresh) for i in self.signal])
+                self.maps, self.masked_data_trials  = np.array(list(zip(*tmp))[0]), np.array(list(zip(*tmp))[1])           
+                
+            elif len(self.signal.shape) == 3:
+                tmp_signal                          = self.signal
+                self.maps, self.masked_data_trials  = None, None
+            
+            else:
+                utils.stampa('Something wrong with signal shape', logger=self.logger)
+
             tmp_signal                          = np.array([median_filter(i, size=(5,5)) for i in tmp_signal])
             tmp_signal                          = process.gaussian3d(tmp_signal, std = 1.5, size = 5)
             self.map, self.masked_data          = get_spatio_temporal_profile(tmp_signal, 
@@ -54,15 +69,10 @@ class SpatioTemporalMap:
                                                                               self.rotation_angle, 
                                                                               correction_factor = self.rotate_correction_factor, 
                                                                               discard_thresh = self.discard_thresh)
-            tmp                                 = np.array([get_spatio_temporal_profile(i,
-                                                                                        self.trajectory_mask, 
-                                                                                        self.rotation_angle, 
-                                                                                        correction_factor = self.rotate_correction_factor, 
-                                                                                        discard_thresh = self.discard_thresh) for i in self.signal])
-            self.maps, self.masked_data_trials  = np.array(list(zip(*tmp))[0]), np.array(list(zip(*tmp))[1])           
             self.signal                         = None 
         else:
-            self.map, self.masked_data    = None, None
+            self.map, self.masked_data          = None, None
+            self.maps, self.masked_data_trials  = None, None
 
         # Pos and timing of peak
         if (retino_pos is not None) and (retino_time is not None):
@@ -157,7 +167,7 @@ class SpatioTemporalMap:
                     retinotopic_pos  = retino_pos,
                     retinotopic_time = retino_time, 
                     map_type   = color_mappa,
-                    st_title   = self.condition_name,
+                    st_title   = f'{self.condition_name}_trial{n}',
                     onset_time = self.onset_time,
                     colors_retinotopy = colors_retinotopy,
                     draw_peak_traj    = peak_traj,
@@ -191,7 +201,9 @@ class SpatioTemporalMap:
               self.onset_time,
               self.condition_name,
               self.condition_type,
-              self.colors_retinotopy]
+              self.colors_retinotopy,
+              self.maps, 
+              self.masked_data_trials]
         
         storage_path = os.path.join(t, 'spatiotemporal_profile')
         tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
@@ -221,6 +233,8 @@ class SpatioTemporalMap:
         self.condition_name             = tp[18]
         self.condition_type             = tp[19]
         self.colors_retinotopy          = tp[20]
+        self.maps                       = tp[21]
+        self.masked_data_trials         = tp[22]        
         return
 
 class SpatioTemporalSession:
@@ -325,14 +339,21 @@ class SpatioTemporalSession:
 
     def get_session(self):
         utils.stampa(f'Start processing spatiotemporal profile analysis \n', logger=self.log)
-        start_time = datetime.datetime.now().replace(microsecond=0)       
-        for cond_id, cond_name in self.cond_dict.items():
-            self.get_spatiotemporal_maps(cond_name)
+        start_time = datetime.datetime.now().replace(microsecond=0)     
+        dict_ss    = {}   
+        # Single stroke conditions
+        for cond_id, cond_name in self.cond_pos.items():
+            cd                 = self.get_spatiotemporal_maps(cond_name) 
+            dict_ss[cond_name] = cd.averaged_df
+        # Apparent motion conditions
+        for cond_id, cond_name in self.cond_am.items():
+            _                  = self.get_spatiotemporal_maps(cond_name, single_pos_dict = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
+        
         utils.stampa(f'End processing spatiotemporal profile analysis', logger=self.log)   
         utils.stampa(f'Analysis elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                 
         return
     
-    def get_spatiotemporal_maps(self, name_cond, synaptic_latency = 6):
+    def get_spatiotemporal_maps(self, name_cond, synaptic_latency = 6, single_pos_cds = None):
         utils.stampa(f'Get spatiotemporal profiles for condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -373,13 +394,28 @@ class SpatioTemporalSession:
                                           condition_name  = name_cond,
                                           data            = cd.df_fz,
                                           condition_type  = cd_type_flag,
-                                          is_delay        = ISinterval, #math to do with speed, and interstimulus spacing 
+                                          is_delay        = ISinterval,
                                           pixel_spacing   = self.pixel_spacing,#mm 
                                           sampling_rate   = self.acquisition_frequency, 
                                           storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond), 
-                                          logger = self.log)
+                                          logger          = self.log)
             utils.stampa(f'{name_cond} elaborated!', logger = self.log)
-            
+        
+        # Linear prediction logic added
+        if (single_pos_cds is not None) and (name_cond in list(self.cond_am.values())):
+            st_map_linear_pred, time_step = self.get_linear_predicted_maps(name_cond, 
+                                                                           start_time_cd, 
+                                                                           ISinterval = ISinterval, 
+                                                                           single_pos_cds = single_pos_cds, 
+                                                                           cd_type_flag = cd_type_flag)
+            if self.vis_switch:
+                st_map_linear_pred.visualize_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
+                                                  retino_pos = positions, 
+                                                  retino_time = times - time_step,
+                                                  high_level = np.nanpercentile(st_map_cd.maps, 95), 
+                                                  low_level = np.nanpercentile(st_map_cd.maps, 15))
+                utils.stampa(f'Data shape of linear prediction sequence {st_map_linear_pred.masked_data.shape}', logger=self.log)            
+
         if self.vis_switch:
             st_map_cd.visualize_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
                                      retino_pos = positions, retino_time = times,
@@ -409,7 +445,41 @@ class SpatioTemporalSession:
         self.data_dictionary[name_cond] = st_map_cd               
         utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}', logger=self.log)
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                     
-        return 
+        return cd
+    
+    def get_linear_predicted_maps(self, name_cond, start_time_cd, ISinterval = None, single_pos_cds = None, cd_type_flag = 'am'):
+        name_cond_pred          = ''
+
+        for i in self.retino_pos_am[name_cond]:
+            name_cond_pred     += i 
+
+        try:
+            st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
+            tmp_name =  os.path.join(self.id_name, name_cond, 'spatiotemporal_profile', f'st_map_{name_cond_pred}') 
+            utils.stampa(f'Linear prediction {tmp_name} loaded!', logger = self.log)
+            st_map_cd.load_stmap(tmp_name)   
+
+        # If does not, it build it
+        except:          
+            time_step          = int(np.ceil(ISinterval/self.time_bin))
+            linear_prediction  = get_linear_expectation(single_pos_cds, 
+                                                        time_step, 
+                                                        nonlinear_zeroframe = start_time_cd-time_step)
+                                                                        
+            st_map_cd = SpatioTemporalMap(self.path_session, 
+                                          trajectory_mask = self.trajectory_mask,
+                                          rotation_theta  = self.orient_traj,
+                                          onset_time      = start_time_cd,
+                                          condition_name  = name_cond,
+                                          data            = linear_prediction,
+                                          condition_type  = cd_type_flag,
+                                          is_delay        = ISinterval, 
+                                          pixel_spacing   = self.pixel_spacing,#mm 
+                                          sampling_rate   = self.acquisition_frequency, 
+                                          storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond), 
+                                          logger          = self.log)
+            utils.stampa(f'Linear prediction {name_cond_pred} elaborated!', logger = self.log)
+        return st_map_cd, time_step
 
 def derivative_filter(arr, threshold):
     # Compute the derivative of the array
