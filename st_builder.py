@@ -414,7 +414,11 @@ class SpatioTemporalSession:
                                                   retino_time = np.array(times) - time_step,
                                                   high_level = np.nanpercentile(st_map_linear_pred.map, 95), 
                                                   low_level = np.nanpercentile(st_map_linear_pred.map, 15))
-                utils.stampa(f'Data shape of linear prediction sequence {st_map_linear_pred.masked_data.shape}', logger=self.log)            
+                utils.stampa(f'Data shape of linear prediction sequence {st_map_linear_pred.masked_data.shape}', logger=self.log)  
+            
+            if self.store_switch:
+                st_map_linear_pred.store_stmap(os.path.join(self.storing_folder, self.id_name, st_map_linear_pred.condition_name))                
+
 
         if self.vis_switch:
             st_map_cd.visualize_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
@@ -455,7 +459,7 @@ class SpatioTemporalSession:
 
         try:
             st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
-            tmp_name =  os.path.join(self.id_name, name_cond, 'spatiotemporal_profile', f'st_map_{name_cond_pred}') 
+            tmp_name =  os.path.join(self.id_name, name_cond_pred, 'spatiotemporal_profile', f'st_map_{name_cond_pred}') 
             utils.stampa(f'Linear prediction {tmp_name} loaded!', logger = self.log)
             st_map_cd.load_stmap(tmp_name)   
 
@@ -470,7 +474,7 @@ class SpatioTemporalSession:
                                           trajectory_mask = self.trajectory_mask,
                                           rotation_theta  = self.orient_traj,
                                           onset_time      = start_time_cd,
-                                          condition_name  = name_cond,
+                                          condition_name  = name_cond_pred,
                                           data            = linear_prediction,
                                           condition_type  = cd_type_flag,
                                           is_delay        = ISinterval, 
