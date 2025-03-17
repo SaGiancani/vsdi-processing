@@ -411,7 +411,7 @@ class SpatioTemporalSession:
             if self.vis_switch:
                 st_map_linear_pred.visualize_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
                                                   retino_pos = positions, 
-                                                  retino_time = times - time_step,
+                                                  retino_time = np.array(times) - time_step,
                                                   high_level = np.nanpercentile(st_map_cd.maps, 95), 
                                                   low_level = np.nanpercentile(st_map_cd.maps, 15))
                 utils.stampa(f'Data shape of linear prediction sequence {st_map_linear_pred.masked_data.shape}', logger=self.log)            
