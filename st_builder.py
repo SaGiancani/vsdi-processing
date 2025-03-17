@@ -347,7 +347,7 @@ class SpatioTemporalSession:
             dict_ss[cond_name] = cd.averaged_df
         # Apparent motion conditions
         for cond_id, cond_name in self.cond_am.items():
-            _                  = self.get_spatiotemporal_maps(cond_name, single_pos_dict = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
+            _                  = self.get_spatiotemporal_maps(cond_name, single_pos_cds = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
         
         utils.stampa(f'End processing spatiotemporal profile analysis', logger=self.log)   
         utils.stampa(f'Analysis elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                 
