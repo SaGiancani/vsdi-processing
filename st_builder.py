@@ -159,24 +159,25 @@ class SpatioTemporalMap:
         tmp = dv.set_storage_folder(storage_path  = tmp, 
                                     name_analysis = 'single_trials')
         utils.stampa(f'Store maps single trials at {tmp}', logger = self.logger)
-        for n, i in enumerate(self.maps):
-            plot_st(i, 
-                    threshold_contour, 
-                    self.trajectory_mask,
-                    self.pixel_spacing,
-                    retinotopic_pos  = retino_pos,
-                    retinotopic_time = retino_time, 
-                    map_type   = color_mappa,
-                    st_title   = f'{self.condition_name}_trial{n}',
-                    onset_time = self.onset_time,
-                    colors_retinotopy = colors_retinotopy,
-                    draw_peak_traj    = peak_traj,
-                    is_delay    = self.interstimulus_delay,#ms
-                    sampling_fq = self.sampling_rate,#Hz
-                    high_level  = high_level,
-                    color_peak  = color_peak,
-                    low_level   = low_level,
-                    store_path  = os.path.join(tmp, f'STProfile_{self.condition_name}_{n}_{self.session_name}'))
+        if self.maps is not None:
+            for n, i in enumerate(self.maps):
+                plot_st(i, 
+                        threshold_contour, 
+                        self.trajectory_mask,
+                        self.pixel_spacing,
+                        retinotopic_pos  = retino_pos,
+                        retinotopic_time = retino_time, 
+                        map_type   = color_mappa,
+                        st_title   = f'{self.condition_name}_trial{n}',
+                        onset_time = self.onset_time,
+                        colors_retinotopy = colors_retinotopy,
+                        draw_peak_traj    = peak_traj,
+                        is_delay    = self.interstimulus_delay,#ms
+                        sampling_fq = self.sampling_rate,#Hz
+                        high_level  = high_level,
+                        color_peak  = color_peak,
+                        low_level   = low_level,
+                        store_path  = os.path.join(tmp, f'STProfile_{self.condition_name}_{n}_{self.session_name}'))
                         
         return
     
