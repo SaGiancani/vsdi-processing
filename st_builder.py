@@ -471,11 +471,13 @@ class SpatioTemporalSession:
             linear_prediction  = get_linear_expectation(single_pos_cds, 
                                                         time_step, 
                                                         nonlinear_zeroframe = start_time_cd-time_step)
-                                                                        
+
+            time_cut_out =  (single_pos_cds[0].shape[0] - linear_prediction.shape[0])*self.time_bin  
+                                                                                  
             st_map_cd = SpatioTemporalMap(self.path_session, 
                                           trajectory_mask = self.trajectory_mask,
                                           rotation_theta  = self.orient_traj,
-                                          onset_time      = start_time_cd - time_step,
+                                          onset_time      = start_time_cd - time_cut_out,
                                           condition_name  = name_cond_pred,
                                           data            = linear_prediction,
                                           condition_type  = cd_type_flag,
