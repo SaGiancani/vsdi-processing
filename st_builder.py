@@ -473,7 +473,7 @@ class SpatioTemporalSession:
                                                         nonlinear_zeroframe = start_time_cd-time_step)
 
             time_cut_out =  (single_pos_cds[0].shape[0] - linear_prediction.shape[0])*self.time_bin  
-                                                                                  
+            utils.stampa(f'Time bins to remove: {time_cut_out}, Time step: {time_step}, Starting time {start_time_cd}', logger = self.log)                                                                                  
             st_map_cd = SpatioTemporalMap(self.path_session, 
                                           trajectory_mask = self.trajectory_mask,
                                           rotation_theta  = self.orient_traj,
