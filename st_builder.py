@@ -472,12 +472,12 @@ class SpatioTemporalSession:
                                                         time_step, 
                                                         nonlinear_zeroframe = start_time_cd-time_step)
 
-            time_cut_out =  (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
-            utils.stampa(f'Time bins to remove: {time_cut_out}, Time step: {time_step}, Starting time {start_time_cd}', logger = self.log)                                                                                  
+            time_slide =  (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
+            utils.stampa(f'Time bins to remove: {time_slide}, Time step: {time_step}, Starting time {start_time_cd}', logger = self.log)                                                                                  
             st_map_cd = SpatioTemporalMap(self.path_session, 
                                           trajectory_mask = self.trajectory_mask,
                                           rotation_theta  = self.orient_traj,
-                                          onset_time      = start_time_cd - time_cut_out,
+                                          onset_time      = start_time_cd - time_slide,
                                           condition_name  = name_cond_pred,
                                           data            = linear_prediction,
                                           condition_type  = cd_type_flag,
@@ -487,7 +487,7 @@ class SpatioTemporalSession:
                                           storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond), 
                                           logger          = self.log)
             utils.stampa(f'Linear prediction {name_cond_pred} elaborated!', logger = self.log)
-        return st_map_cd, time_step
+        return st_map_cd, time_slide
 
 def derivative_filter(arr, threshold):
     # Compute the derivative of the array
