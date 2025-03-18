@@ -373,10 +373,11 @@ class SpatioTemporalSession:
             # Try to check if retino_cond already exists
             cd_type_flag  = 'am'
             ISspacing     = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space'] #in dva
-            ISinterval    = (ISspacing/self.stimulus_speed)*1000
+            ISinterval    = int(np.ceil((ISspacing/self.stimulus_speed)*1000))
             start_time_cd = self.timing_am_sequence[0]
             positions     = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[name_cond]] 
             times         = [self.data_pos_frame[ss][1] for ss in self.retino_pos_am[name_cond]] 
+            utils.stampa(f'InterStimulus spacing: {ISspacing}, ISI: {ISinterval}, Starting time {start_time_cd}', logger = self.log)
             colors        = [self.color_pos[i] for i in self.retino_pos_am[name_cond]]
         
         start_time_cd -= synaptic_latency
