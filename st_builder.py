@@ -461,7 +461,7 @@ class SpatioTemporalSession:
 
         try:
             st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
-            tmp_name =  os.path.join(self.id_name, name_cond_pred, 'spatiotemporal_profile', f'st_map_{name_cond_pred}') 
+            tmp_name =  os.path.join(self.storing_folder, self.id_name, name_cond_pred, 'spatiotemporal_profile', f'st_map_{name_cond_pred}') 
             utils.stampa(f'Linear prediction {tmp_name} loaded!', logger = self.log)
             st_map_cd.load_stmap(tmp_name)   
 
@@ -484,7 +484,7 @@ class SpatioTemporalSession:
                                           is_delay        = ISinterval, 
                                           pixel_spacing   = self.pixel_spacing,#mm 
                                           sampling_rate   = self.acquisition_frequency, 
-                                          storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond), 
+                                          storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond_pred), 
                                           logger          = self.log)
             utils.stampa(f'Linear prediction {name_cond_pred} elaborated!', logger = self.log)
         return st_map_cd, time_slide
