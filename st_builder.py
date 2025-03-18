@@ -405,16 +405,16 @@ class SpatioTemporalSession:
         # Linear prediction logic added
         if (single_pos_cds is not None) and (name_cond in list(self.cond_am.values())):
             st_map_linear_pred, time_step = self.get_linear_predicted_maps(name_cond, 
-                                                                           start_time_cd, 
+                                                                           start_time_cd  - time_step, 
                                                                            ISinterval = ISinterval, 
                                                                            single_pos_cds = single_pos_cds, 
                                                                            cd_type_flag = cd_type_flag)
             if self.vis_switch:
-                st_map_linear_pred.visualize_maps(colors, np.nanpercentile(st_map_linear_pred.map, 70), 
+                st_map_linear_pred.visualize_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
                                                   retino_pos = positions, 
                                                   retino_time = np.array(times) - time_step,
-                                                  high_level = np.nanpercentile(st_map_linear_pred.map, 95), 
-                                                  low_level = np.nanpercentile(st_map_linear_pred.map, 15))
+                                                  high_level = np.nanpercentile(st_map_cd.maps, 95), 
+                                                  low_level = np.nanpercentile(st_map_cd.maps, 15))
                 utils.stampa(f'Data shape of linear prediction sequence {st_map_linear_pred.masked_data.shape}', logger=self.log)  
             
             if self.store_switch:
