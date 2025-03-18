@@ -706,9 +706,9 @@ def plot_st(profilemap,
 #     if (retinotopic_pos is not None) and (retinotopic_time is not None):
 #         assert len(retinotopic_pos) == len(colors_retinotopy), 'Mismatch in retinotopic positions numbers and colors available'
     space, time  = profilemap.shape
-    timing_frame = int((1/sampling_fq)*1000)
+    timing_frame = (1/sampling_fq)*1000
     assert (is_delay/timing_frame)>1, 'Something weird: sampling frequency and timing of a frame incompatible'
-    isi_frames   = int(is_delay/timing_frame)
+    isi_frames   = int(np.ceil(is_delay/timing_frame))
 
     # Plot colormap
     fig, ax = plt.subplots(1,1, figsize=(9,7))
