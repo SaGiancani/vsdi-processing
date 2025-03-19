@@ -412,14 +412,13 @@ class SpatioTemporalSession:
                                    name_analysis_ = os.path.join(self.storing_folder, self.id_name, name_cond_sub), 
                                    store_path = '')
                    
-            st_map_cd.visualize_maps(colors, np.nanpercentile(map_cond.maps, 40), 
+            st_map_cd.visualize_maps(colors, np.nanpercentile(map_cond.maps, 60), 
                                      retino_pos = positions, retino_time = times,
-                                     high_level = np.nanpercentile(map_cond.maps, 60), 
-                                     low_level  = -np.nanpercentile(map_cond.maps, 60))
+                                     high_level = np.nanpercentile(map_cond.maps, 80), 
+                                     low_level  = -np.nanpercentile(map_cond.maps, 80))
         
         if self.store_switch:
             st_map_cd.store_stmap(os.path.join(self.storing_folder, self.id_name, name_cond_sub))                
-
         return
 
     def get_condition_map(self, cd, name_cond, synaptic_latency = 6):
@@ -512,15 +511,17 @@ class SpatioTemporalSession:
             linear_prediction  = get_linear_expectation(single_pos_cds, 
                                                         time_step, 
                                                         nonlinear_zeroframe = start_time_cd-time_step)
-
-            time_slide =  (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
+            # Filtering linear_prediction
+            filtered_pred      = np.array([median_filter(i, size=(5,5)) for i in linear_prediction])
+            filtered_pred      = process.gaussian3d(filtered_pred, std = 1.5, size = 5)
+            time_slide         = (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
             utils.stampa(f'Time bins to remove: {time_slide}, Time step: {time_step}, Starting time {start_time_cd}', logger = self.log)                                                                                  
             st_map_cd = SpatioTemporalMap(self.path_session, 
                                           trajectory_mask = self.trajectory_mask,
                                           rotation_theta  = self.orient_traj,
                                           onset_time      = start_time_cd - time_slide,
                                           condition_name  = name_cond_pred,
-                                          data            = linear_prediction,
+                                          data            = filtered_pred,
                                           condition_type  = cd_type_flag,
                                           is_delay        = ISinterval, 
                                           pixel_spacing   = self.pixel_spacing,#mm 
