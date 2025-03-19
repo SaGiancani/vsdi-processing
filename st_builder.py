@@ -360,8 +360,7 @@ class SpatioTemporalSession:
         start_time = datetime.datetime.now().replace(microsecond=0)
 
         cd = self.retino_session.get_data_to_process(name_cond)
-
-        st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(self, cd, name_cond, synaptic_latency = synaptic_latency)
+        st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(cd, name_cond, synaptic_latency = synaptic_latency)
 
         # Linear prediction
         if (single_pos_cds is not None) and (name_cond in list(self.cond_am.values())):
