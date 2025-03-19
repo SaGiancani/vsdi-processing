@@ -367,19 +367,22 @@ class SpatioTemporalSession:
 
         # Linear prediction
         if (single_pos_cds is not None) and (name_cond in list(self.cond_am.values())):
-            st_map_linear_pred, time_slide = self.get_linear_predicted_maps(name_cond, 
-                                                                            start_time_cd, 
-                                                                            colors, times, positions, 
-                                                                            (max_level, min_level, thresh),
-                                                                            ISinterval = ISinterval, 
-                                                                            single_pos_cds = single_pos_cds, 
-                                                                            cd_type_flag = cd_type_flag)
+            st_map_linear_pred, time_slide, time_step = self.get_linear_predicted_maps(name_cond, 
+                                                                                       start_time_cd, 
+                                                                                       colors, times, positions, 
+                                                                                       (max_level, min_level, thresh),
+                                                                                        ISinterval = ISinterval, 
+                                                                                        single_pos_cds = single_pos_cds, 
+                                                                                        cd_type_flag = cd_type_flag)
             
             # Subtraction between maps goes here
             self.get_subtraction_condition(st_map_linear_pred, 
                                            st_map_cd, 
-                                           time_slide, start_time_cd, ISinterval, 
-                                           colors, positions, times)     
+                                           time_slide, 
+                                           start_time_cd - time_slide, 
+                                           ISinterval, 
+                                           colors, positions, 
+                                           np.array(times)-time_step)     
 
         self.data_dictionary[name_cond] = st_map_cd               
         utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}', logger=self.log)
@@ -413,7 +416,8 @@ class SpatioTemporalSession:
                                    store_path = '')
                    
             st_map_cd.visualize_maps(colors, np.nanpercentile(map_cond.maps, 60), 
-                                     retino_pos = positions, retino_time = times,
+                                     retino_pos = positions, 
+                                     retino_time = times,
                                      high_level = np.nanpercentile(map_cond.maps, 80), 
                                      low_level  = -np.nanpercentile(map_cond.maps, 80))
         
@@ -552,7 +556,7 @@ class SpatioTemporalSession:
         if self.store_switch:
             st_map_cd.store_stmap(os.path.join(self.storing_folder, self.id_name, st_map_cd.condition_name))                
 
-        return st_map_cd, time_slide
+        return st_map_cd, time_slide, time_step
 
 def derivative_filter(arr, threshold):
     # Compute the derivative of the array
