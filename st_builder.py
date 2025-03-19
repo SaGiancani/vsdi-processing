@@ -397,7 +397,7 @@ class SpatioTemporalSession:
           
         if self.vis_switch:
             dv.whole_time_sequence(st_map_cd.avrg_signal, 
-                                   mask = np.ones((st_map_cd.avrg_signal.shape[-2], st_map_cd.avrg_signal.shape[-1])),
+                                   mask = np.ones((st_map_cd.avrg_signal.shape[-2], st_map_cd.avrg_signal.shape[-1]), dtype = bool),
                                    name=f'time_sequence_subtraction_{name_cond_sub}_{self.id_name}', 
                                    max = 80, min = 20,
                                    ext = 'png',
@@ -524,7 +524,7 @@ class SpatioTemporalSession:
         # Visualize linear prediction
         if self.vis_switch:
             dv.whole_time_sequence(st_map_cd.avrg_signal, 
-                                   mask = np.ones((st_map_cd.avrg_signal.shape[-2], st_map_cd.avrg_signal.shape[-1])),
+                                   mask = np.ones((st_map_cd.avrg_signal.shape[-2], st_map_cd.avrg_signal.shape[-1]), dtype = bool),
                                    name = f'time_sequence_subtraction_{st_map_cd.condition_name}_{self.id_name}', 
                                    max = 80, 
                                    min = 20,
