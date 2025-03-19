@@ -361,17 +361,25 @@ class SpatioTemporalSession:
 
         cd = self.retino_session.get_data_to_process(name_cond)
         st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(cd, name_cond, synaptic_latency = synaptic_latency)
+        min_level = np.nanpercentile(st_map_cd.maps, 15)
+        max_level = np.nanpercentile(st_map_cd.maps, 95)
+        thresh    = np.nanpercentile(st_map_cd.maps, 60)
 
         # Linear prediction
         if (single_pos_cds is not None) and (name_cond in list(self.cond_am.values())):
             st_map_linear_pred, time_slide = self.get_linear_predicted_maps(name_cond, 
-                                                                            start_time_cd, colors, times, positions, 
+                                                                            start_time_cd, 
+                                                                            colors, times, positions, 
+                                                                            (max_level, min_level, thresh),
                                                                             ISinterval = ISinterval, 
                                                                             single_pos_cds = single_pos_cds, 
                                                                             cd_type_flag = cd_type_flag)
             
             # Subtraction between maps goes here
-            self.get_subtraction_condition(st_map_linear_pred, st_map_cd, time_slide, start_time_cd, ISinterval, colors, positions, times)     
+            self.get_subtraction_condition(st_map_linear_pred, 
+                                           st_map_cd, 
+                                           time_slide, start_time_cd, ISinterval, 
+                                           colors, positions, times)     
 
         self.data_dictionary[name_cond] = st_map_cd               
         utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}', logger=self.log)
@@ -486,7 +494,7 @@ class SpatioTemporalSession:
 
         return st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag
 
-    def get_linear_predicted_maps(self, name_cond, start_time_cd, colors, times, positions, ISinterval = None, single_pos_cds = None, cd_type_flag = 'am'):
+    def get_linear_predicted_maps(self, name_cond, start_time_cd, colors, times, positions, thresholds, ISinterval = None, single_pos_cds = None, cd_type_flag = 'am'):
         name_cond_pred          = ''
 
         for i in self.retino_pos_am[name_cond]:
@@ -533,11 +541,11 @@ class SpatioTemporalSession:
                                    store_path = '')    
 
 
-            st_map_cd.visualize_maps(colors, np.nanpercentile(st_map_cd.maps, 70), 
+            st_map_cd.visualize_maps(colors, thresholds[2], 
                                      retino_pos = positions, 
                                      retino_time = np.array(times) - time_step,
-                                     high_level = np.nanpercentile(st_map_cd.maps, 95), 
-                                     low_level = np.nanpercentile(st_map_cd.maps, 15))
+                                     high_level = thresholds[0], 
+                                     low_level = thresholds[1])
             utils.stampa(f'Data shape of linear prediction sequence {st_map_cd.masked_data.shape}', logger=self.log)  
         
         if self.store_switch:
