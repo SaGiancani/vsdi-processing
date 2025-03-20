@@ -378,7 +378,6 @@ class SpatioTemporalSession:
             # Subtraction between maps goes here
             self.get_subtraction_condition(st_map_linear_pred, 
                                            st_map_cd, 
-                                           time_slide, 
                                            start_time_cd - time_slide, 
                                            ISinterval, 
                                            colors, positions, 
@@ -389,9 +388,12 @@ class SpatioTemporalSession:
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                     
         return cd
     
-    def get_subtraction_condition(self, map_linear_pred, map_cond, time_slide, start_time_cd, ISinterval, colors, positions, times):
+    def get_subtraction_condition(self, map_linear_pred, map_cond, start_time_cd, ISinterval, colors, positions, times):
         adjust_frame  = self.timing_single_stroke[0] - self.timing_am_sequence[0]  
-        subtraction   = map_cond.avrg_signal[time_slide:, :, :] - map_linear_pred.avrg_signal[adjust_frame:, :, :]
+        tmp_map       = map_cond.avrg_signal[:, :, :]
+        tmp_linear    = map_linear_pred.avrg_signal[adjust_frame:, :, :]
+        frames_to_fix = -(tmp_map.shape[0] - tmp_linear.shape[0]+1)
+        subtraction   = map_cond.avrg_signal[:frames_to_fix, :, :] - map_linear_pred.avrg_signal
         name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
         st_map_cd = SpatioTemporalMap(self.path_session, 
                                       trajectory_mask = self.trajectory_mask,
