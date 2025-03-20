@@ -393,7 +393,11 @@ class SpatioTemporalSession:
         # Sanity check in dimensions
         tmp_map       = map_cond.avrg_signal
         tmp_linear    = map_linear_pred.avrg_signal
-        frames_to_fix = -(tmp_map.shape[0] - tmp_linear.shape[0]+1)
+        utils.stampa(f'Linear prediction map shape {tmp_linear.shape}', logger = self.log)
+        utils.stampa(f'AM sequence map shape {tmp_map.shape}', logger = self.log)
+        frames_to_fix = -(1 + (tmp_map.shape[0] - tmp_linear.shape[0]))
+        utils.stampa(f'N° frames to fix {(frames_to_fix-1)*(-1)}', logger = self.log)
+        utils.stampa(f'Index to frames {frames_to_fix}', logger = self.log)
         subtraction   = map_cond.avrg_signal[:frames_to_fix, :, :] - map_linear_pred.avrg_signal
         name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
         st_map_cd = SpatioTemporalMap(self.path_session, 
