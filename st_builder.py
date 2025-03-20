@@ -411,7 +411,7 @@ class SpatioTemporalSession:
             dv.whole_time_sequence(st_map_cd.avrg_signal, 
                                    mask = np.ones((st_map_cd.avrg_signal.shape[-2], st_map_cd.avrg_signal.shape[-1]), dtype = bool),
                                    name=f'time_sequence_subtraction_{name_cond_sub}_{self.id_name}', 
-                                   max = 80, min = 20,
+                                   max = 97, min = 15,
                                    ext = 'png',
                                    name_analysis_ = os.path.join(self.storing_folder, self.id_name, name_cond_sub), 
                                    store_path = '')
@@ -443,7 +443,7 @@ class SpatioTemporalSession:
             ISinterval    = int(np.ceil((ISspacing/self.stimulus_speed)*1000))
             start_time_cd = self.timing_am_sequence[0]
             positions     = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[name_cond]] 
-            times         = [self.data_pos_frame[ss][1] for ss in self.retino_pos_am[name_cond]] 
+            times         = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) for ss in self.retino_pos_am[name_cond]] 
             utils.stampa(f'InterStimulus spacing: {ISspacing}, ISI: {ISinterval}, Starting time {start_time_cd}', logger = self.log)
             colors        = [self.color_pos[i] for i in self.retino_pos_am[name_cond]]
         
@@ -540,12 +540,10 @@ class SpatioTemporalSession:
             dv.whole_time_sequence(st_map_cd.avrg_signal, 
                                    mask = np.ones((st_map_cd.avrg_signal.shape[-2], st_map_cd.avrg_signal.shape[-1]), dtype = bool),
                                    name = f'time_sequence_subtraction_{st_map_cd.condition_name}_{self.id_name}', 
-                                   max = 80, 
-                                   min = 20,
+                                   max = 97, min = 15,
                                    ext = 'png',
                                    name_analysis_ = os.path.join(self.storing_folder, self.id_name, st_map_cd.condition_name), 
                                    store_path = '')    
-
 
             st_map_cd.visualize_maps(colors, thresholds[2], 
                                      retino_pos = positions, 
