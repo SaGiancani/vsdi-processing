@@ -382,7 +382,7 @@ class SpatioTemporalSession:
                                            start_time_cd - time_slide, 
                                            ISinterval, 
                                            colors, positions, 
-                                           np.array(times)-time_step)     
+                                           np.array(times)-time_slide)     
 
         self.data_dictionary[name_cond] = st_map_cd               
         utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}', logger=self.log)
@@ -548,7 +548,7 @@ class SpatioTemporalSession:
 
             st_map_cd.visualize_maps(colors, thresholds[2], 
                                      retino_pos = positions, 
-                                     retino_time = np.array(times) - time_step,
+                                     retino_time = np.array(times) - time_slide,
                                      high_level = thresholds[0], 
                                      low_level = thresholds[1])
             utils.stampa(f'Data shape of linear prediction sequence {st_map_cd.masked_data.shape}', logger=self.log)  
