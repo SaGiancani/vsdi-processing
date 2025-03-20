@@ -401,9 +401,9 @@ class SpatioTemporalSession:
         terminal_correction = tmp_map.shape[0] - time_pred
         # Drop out of the last frames for shape coherency
         if terminal_correction > 0:
-            subtraction   = tmp_map[:terminal_correction, :, :] - map_linear_pred.avrg_signal
+            subtraction   = tmp_map[:(time_pred-1), :, :] - map_linear_pred.avrg_signal
         else:
-            subtraction   = tmp_map - map_linear_pred.avrg_signal[:abs(terminal_correction), :, :]
+            subtraction   = tmp_map - map_linear_pred.avrg_signal[:(tmp_map.shape[0]-1), :, :]
 
         name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
         st_map_cd = SpatioTemporalMap(self.path_session, 
