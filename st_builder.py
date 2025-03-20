@@ -304,7 +304,7 @@ class SpatioTemporalSession:
 
         self.stimulus_metadata       = self.retino_session.stimulus_metadata
         self.stimulus_speed          = self.stimulus_metadata['speed']
-        self.timing_single_stroke    = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
+        self.timing_single_stroke    = (self.stimulus_metadata['single stroke']['bottom limit'], self.stimulus_metadata['single stroke']['upper limit'])
         self.timing_am_sequence      = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
         self.time_sequence           = self.retino_session.header['n_frames']
         self.time_ss                 = np.linspace(-(self.timing_single_stroke[0]-1)*self.time_bin, 
@@ -390,7 +390,8 @@ class SpatioTemporalSession:
         return cd
     
     def get_subtraction_condition(self, map_linear_pred, map_cond, time_slide, start_time_cd, ISinterval, colors, positions, times):
-        subtraction   = map_cond.avrg_signal[time_slide:, :, :] - map_linear_pred.avrg_signal
+        adjust_frame  = self.timing_single_stroke[0] - self.timing_am_sequence[0]  
+        subtraction   = map_cond.avrg_signal[time_slide:, :, :] - map_linear_pred[adjust_frame:, :, :].avrg_signal
         name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
         st_map_cd = SpatioTemporalMap(self.path_session, 
                                       trajectory_mask = self.trajectory_mask,
