@@ -396,14 +396,16 @@ class SpatioTemporalSession:
         utils.stampa(f'AM sequence map shape {tmp_map.shape}', logger = self.log)
         frames_to_fix = map_cond.onset_time - map_linear_pred.onset_time
         utils.stampa(f'Mismatch between two stimuli onset (for linear pred and actual am seq) {frames_to_fix}', logger = self.log)
-        time_pred           = map_linear_pred.avrg_signal.shape[0]
+        time_pred           = tmp_linear.shape[0]
         tmp_map             = tmp_map[frames_to_fix:, :, :]
         terminal_correction = tmp_map.shape[0] - time_pred
+        utils.stampa(f'AM sequence map reshape {tmp_map.shape}', logger = self.log)
+
         # Drop out of the last frames for shape coherency
         if terminal_correction > 0:
-            subtraction   = tmp_map[:(time_pred-1), :, :] - map_linear_pred.avrg_signal
+            subtraction   = tmp_map[:(time_pred), :, :] - tmp_linear
         else:
-            subtraction   = tmp_map - map_linear_pred.avrg_signal[:(tmp_map.shape[0]-1), :, :]
+            subtraction   = tmp_map - tmp_linear[:(tmp_map.shape[0]), :, :]
 
         name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
         st_map_cd = SpatioTemporalMap(self.path_session, 
