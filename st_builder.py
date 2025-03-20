@@ -389,9 +389,10 @@ class SpatioTemporalSession:
         return cd
     
     def get_subtraction_condition(self, map_linear_pred, map_cond, start_time_cd, ISinterval, colors, positions, times):
-        adjust_frame  = self.timing_single_stroke[0] - self.timing_am_sequence[0]  
-        tmp_map       = map_cond.avrg_signal[:, :, :]
-        tmp_linear    = map_linear_pred.avrg_signal[adjust_frame:, :, :]
+        # adjust_frame  = self.timing_single_stroke[0] - self.timing_am_sequence[0]  
+        # Sanity check in dimensions
+        tmp_map       = map_cond.avrg_signal
+        tmp_linear    = map_linear_pred.avrg_signal
         frames_to_fix = -(tmp_map.shape[0] - tmp_linear.shape[0]+1)
         subtraction   = map_cond.avrg_signal[:frames_to_fix, :, :] - map_linear_pred.avrg_signal
         name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
@@ -521,6 +522,8 @@ class SpatioTemporalSession:
             # Filtering linear_prediction
             filtered_pred      = np.array([median_filter(i, size=(5,5)) for i in linear_prediction])
             filtered_pred      = process.gaussian3d(filtered_pred, std = 1.5, size = 5)
+            slide_ss_am        = self.timing_single_stroke[0] - self.timing_am_sequence[0]
+            filtered_pred      = filtered_pred[slide_ss_am:, :, :]
             time_slide         = (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
             utils.stampa(f'Time bins to remove: {time_slide}, Time step: {time_step}, Starting time {start_time_cd}', logger = self.log)                                                                                  
             st_map_cd = SpatioTemporalMap(self.path_session, 
