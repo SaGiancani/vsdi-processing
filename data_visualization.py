@@ -766,8 +766,8 @@ def plot_averaged_map(name_cond, blob, retino_pos, distribution_positions, map, 
     if blob is not None:
         ax.contour(blob, 4, colors='k', linestyles = 'dotted')
     pc = ax.pcolormesh(map, vmin=min_bord,vmax=max_bord, cmap=utils.PARULA_MAP)
-    ax.set_xticks([])
-    ax.set_yticks([])
+    # ax.set_xticks([])
+    # ax.set_yticks([])
     fig.colorbar(pc, shrink=1, ax=ax)
     if retino_pos is not None:
         ax.scatter(retino_pos[0], retino_pos[1],color='r', marker = '+', s=150)
