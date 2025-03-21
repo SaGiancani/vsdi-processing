@@ -343,10 +343,12 @@ class SpatioTemporalSession:
         start_time = datetime.datetime.now().replace(microsecond=0)     
         dict_ss    = {}   
         # Single stroke conditions
+        utils.stampa(f'Start processing single stroke conditions\n', logger=self.log)
         for cond_id, cond_name in self.cond_pos.items():
             cd                 = self.get_spatiotemporal_maps(cond_name) 
             dict_ss[cond_name] = cd.averaged_df
         # Apparent motion conditions
+        utils.stampa(f'Start processing apparent motion conditions\n', logger=self.log)
         for cond_id, cond_name in self.cond_am.items():
             _                  = self.get_spatiotemporal_maps(cond_name, single_pos_cds = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
         
@@ -561,7 +563,8 @@ class SpatioTemporalSession:
             time_step          = int(np.ceil(ISinterval/self.time_bin))
             linear_prediction  = get_linear_expectation(single_pos_cds, 
                                                         time_step, 
-                                                        nonlinear_zeroframe = start_time_cd-time_step)
+                                                        nonlinear_zeroframe = start_time_cd-time_step,
+                                                        log = self.log)
             # Filtering linear_prediction
             # filtered_pred      = np.array([median_filter(i, size=(5,5)) for i in linear_prediction])
             # filtered_pred      = process.gaussian3d(filtered_pred, std = 1.5, size = 5)
@@ -668,7 +671,7 @@ def get_spatio_temporal_profile(frames, trajectory_mask, theta, correction_facto
         b = np.nanmean(rotated, axis=0)
     return b, rotated
 
-def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe=5):
+def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe=5 , log = None):
     """
     Calculate the linear expectation of a sequence of arrays.
 
@@ -690,6 +693,9 @@ def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe
     # step = int(np.ceil(global_shift/2))
     step = int(global_shift)
     
+    utils.stampa(f'N° strokes {n_strokes}\n', logger=log)
+    utils.stampa(f'Global shift {global_shift}\n', logger=log)
+
     # Copy the input sequences to avoid modifying the original data
     ppp = [np.copy(i) for i in array_of_sequences]
     
@@ -697,8 +703,14 @@ def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe
     for i in range(len(ppp)-1):
         if i == 0:
             tmp = ppp[i][step:, :] + ppp[i+1][:-step, :]
+            utils.stampa(f'Index first stroke: {i}\n', logger=log)
+            utils.stampa(f'Index second stroke: {i+1}\n', logger=log)
+            utils.stampa(f'Shape temporary matrix {tmp.shape}\n', logger=log)
         else:
+            utils.stampa(f'Index {i+1}-th stroke: {i}\n', logger=log)            
             tmp = tmp[step:, :] + ppp[i+1][:-(i+1)*step, :]
+            utils.stampa(f'Shape temporary matrix {tmp.shape}\n', logger=log)
+
     
     # Calculate the mean of the first few frames for nonlinear zeroing
     zero_tmp = np.nanmean(tmp[:nonlinear_zeroframe, :, :], axis=0)
