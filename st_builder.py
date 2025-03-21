@@ -387,7 +387,7 @@ class SpatioTemporalSession:
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                     
         return cd
     
-    def get_subtraction_condition(self, map_linear_pred, map_cond, ISinterval, colors, positions, times):
+    def get_subtraction_condition(self, map_linear_pred, map_cond, ISinterval, colors, positions, times, safety_switch = True):
         # adjust_frame  = self.timing_single_stroke[0] - self.timing_am_sequence[0]  
         # Sanity check in dimensions
         tmp_map       = map_cond.avrg_signal
@@ -400,14 +400,43 @@ class SpatioTemporalSession:
         tmp_map             = tmp_map[frames_to_fix:, :, :]
         terminal_correction = tmp_map.shape[0] - time_pred
         utils.stampa(f'AM sequence map reshape {tmp_map.shape}', logger = self.log)
+        name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
 
         # Drop out of the last frames for shape coherency
         if terminal_correction > 0:
             subtraction   = tmp_map[:(time_pred), :, :] - tmp_linear
+            if safety_switch:
+                sanity_tmp_map, _          = get_spatio_temporal_profile(tmp_map[:(time_pred), :, :], 
+                                                                         map_cond.trajectory_mask, 
+                                                                         map_cond.rotation_angle, 
+                                                                         correction_factor = map_cond.rotate_correction_factor, 
+                                                                         discard_thresh = map_cond.discard_thresh)
+                dv.plot_averaged_map(f'Subtraction_SanityCheck_{map_cond.condition_name}', None, None, None, 
+                                    sanity_tmp_map, None, 
+                                    np.nanpercentile(tmp_map[:(time_pred), :, :], 15), 
+                                    np.nanpercentile(tmp_map[:(time_pred), :, :], 95), 
+                                    None, 
+                                    f'{self.id_name}', 
+                                    None, 
+                                    name_analysis_ = os.path.join(self.storing_folder, self.id_name, name_cond_sub), 
+                                    store_path = '')        
+                sanity_tmp_lin, _          = get_spatio_temporal_profile(tmp_linear, 
+                                                                         map_linear_pred.trajectory_mask, 
+                                                                         map_linear_pred.rotation_angle, 
+                                                                         correction_factor = map_linear_pred.rotate_correction_factor, 
+                                                                         discard_thresh = map_linear_pred.discard_thresh)
+                dv.plot_averaged_map(f'Subtraction_SanityCheck_{map_linear_pred.condition_name}', None, None, None, 
+                                    sanity_tmp_lin, None, 
+                                    np.nanpercentile(tmp_linear, 15), 
+                                    np.nanpercentile(tmp_linear, 95), 
+                                    None, 
+                                    f'{self.id_name}', 
+                                    None, 
+                                    name_analysis_ = os.path.join(self.storing_folder, self.id_name, name_cond_sub), 
+                                    store_path = '')                                
         else:
             subtraction   = tmp_map - tmp_linear[:(tmp_map.shape[0]), :, :]
 
-        name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
         st_map_cd = SpatioTemporalMap(self.path_session, 
                                       trajectory_mask = self.trajectory_mask,
                                       rotation_theta  = self.orient_traj,
