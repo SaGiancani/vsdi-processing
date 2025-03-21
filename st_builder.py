@@ -411,15 +411,15 @@ class SpatioTemporalSession:
         subtraction   =  tmp_map - tmp_linear                    
 
         if safety_switch:
-            sanity_tmp_map, _          = get_spatio_temporal_profile(tmp_map[:(time_pred), :, :], 
+            sanity_tmp_map, _          = get_spatio_temporal_profile(tmp_map, 
                                                                         map_cond.trajectory_mask, 
                                                                         map_cond.rotation_angle, 
                                                                         correction_factor = map_cond.rotate_correction_factor, 
                                                                         discard_thresh = map_cond.discard_thresh)
             dv.plot_averaged_map(f'Subtraction_SanityCheck_{map_cond.condition_name}', None, None, None, 
                                 sanity_tmp_map, None, 
-                                np.nanpercentile(tmp_map[:(time_pred), :, :], 15), 
-                                np.nanpercentile(tmp_map[:(time_pred), :, :], 95), 
+                                np.nanpercentile(tmp_map, 15), 
+                                np.nanpercentile(tmp_map, 95), 
                                 None, 
                                 f'{self.id_name}', 
                                 None, 
