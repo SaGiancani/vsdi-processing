@@ -564,8 +564,9 @@ class SpatioTemporalSession:
                                                         time_step, 
                                                         nonlinear_zeroframe = start_time_cd-time_step)
             # Filtering linear_prediction
-            filtered_pred      = np.array([median_filter(i, size=(5,5)) for i in linear_prediction])
-            filtered_pred      = process.gaussian3d(filtered_pred, std = 1.5, size = 5)
+            # filtered_pred      = np.array([median_filter(i, size=(5,5)) for i in linear_prediction])
+            # filtered_pred      = process.gaussian3d(filtered_pred, std = 1.5, size = 5)
+            filtered_pred      = linear_prediction            
             slide_ss_am        = self.timing_single_stroke[0] - self.timing_am_sequence[0]
             filtered_pred      = filtered_pred[slide_ss_am:, :, :]
             time_slide         = (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
