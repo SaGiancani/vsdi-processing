@@ -564,3 +564,67 @@ def get_blobs_n_centroids(datacube, manual_thresh):
         blobs.append(blob)
     return np.array(blobs), np.array(centroids)
 
+
+def bin_image(data, x_bnnd_size, y_bnnd_size):
+    '''
+    DESCRIPTION:
+    Performs spatial binning on a 3D image dataset by resizing each frame using linear interpolation.
+
+    PARAMETERS:
+    data (numpy.ndarray)          : 3D array (Time, Height, Width), representing video frames.
+    x_bnnd_size (int)            : Target width after binning.
+    y_bnnd_size (int)            : Target height after binning.
+
+    RETURNS:
+    b (numpy.ndarray)             : Binned image data with resized frames.
+
+    PROCESS:
+    Iterates over all time frames in the dataset.
+    Resizes each frame to the specified dimensions using OpenCV's linear interpolation.
+    Stores the resized frames in a new array.
+
+    EXAMPLE USAGE:
+    binned_data = bin_image(video_data, x_bnnd_size=50, y_bnnd_size=50)    
+    '''
+    assert len(data.shape) == 3, 'Shape of data matrix wrong'
+    time = data.shape[0]
+    b = data
+    tmp = np.zeros((time, y_bnnd_size, x_bnnd_size))
+    for i in range(time):
+        tmp[i, :, :] = cv.resize(np.array(b[i, :, :], dtype='float64'), 
+                                 (x_bnnd_size, y_bnnd_size), 
+                                 interpolation=cv.INTER_LINEAR)
+    b = tmp
+    return b
+
+def get_binned_data(raw_data, bin = 1):
+    '''
+    DESCRIPTION:
+    Applies spatial binning to a dataset if binning is enabled.
+
+    PARAMETERS:
+    raw_data (numpy.ndarray)      : 4D array (Ntrial, Ntime, Ny, Nx), representing video-frame trials.
+    bin (int, optional)           : Binning factor. Default is 1 (no binning).
+
+    RETURNS:
+    data (numpy.ndarray)          : Binned or original dataset.
+
+    PROCESS:
+    Checks if binning is enabled (bin > 1).
+    Computes new dimensions based on the binning factor.
+    Applies bin_image() function to resize frames.
+    Returns the processed dataset.
+
+    EXAMPLE USAGE:
+    data = get_binned_data(video_data, bin=2)    
+    '''    
+    # Binning strategy
+    if bin > 1:
+        x_new_size = raw_data.shape[-1]//bin
+        y_new_size = raw_data.shape[-2]//bin    
+        data = np.array([bin_image(i, x_new_size, y_new_size) for i in raw_data])
+    else:
+        data = raw_data       
+    return data
+
+
