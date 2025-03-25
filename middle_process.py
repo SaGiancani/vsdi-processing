@@ -1172,7 +1172,7 @@ def get_classic_signal(path_session, zero_frames, bin_value = 2, log = None):
     # PARAMETERS INSTANCE
     # LOAD RAW DATA    
     dict_data               = load_all_mds(path_session, zero_frames, bin_val = bin_value, log = log)
-    p_dfs                   = np.concatenate([v for v in dict_data.values()], axis = 0)
+    p_dfs                   = np.vstack([v for v in dict_data.values()])
     all_zeros, norm_factor  = get_all_zero_frames(dict_data['blank'], p_dfs, zero_frames, log = log)
     del p_dfs
     mean_zero               = np.nanmean(all_zeros, axis = (0, 1))
