@@ -367,8 +367,8 @@ class SpatioTemporalSession:
         # Single stroke conditions
         utils.stampa(f'Start processing single stroke conditions\n', logger=self.log)
         for cond_id, cond_name in self.cond_pos.items():
-            cd                 = self.get_spatiotemporal_maps(cond_name) 
-            dict_ss[cond_name] = cd.averaged_df
+            averaged_signal    = self.get_spatiotemporal_maps(cond_name) 
+            dict_ss[cond_name] = averaged_signal
         # Apparent motion conditions
         utils.stampa(f'Start processing apparent motion conditions\n', logger=self.log)
         for cond_id, cond_name in self.cond_am.items():
