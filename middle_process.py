@@ -1175,9 +1175,9 @@ def get_classic_signal(path_session, zero_frames, bin_value = 2, log = None):
     p_dfs                   = np.vstack([v for v in dict_data.values()])
     all_zeros, norm_factor  = get_all_zero_frames(dict_data['blank'], p_dfs, zero_frames, log = log)
     del p_dfs
-    mean_zero               = np.nanmean(all_zeros, axis = (0, 1))
-    std_zero                = np.nanstd(all_zeros, axis = (0, 1))/norm_factor
-    utils.stampa(f'Sanity check: mean value in zero frames mean {np.nanmean(mean_zero, axis = (0, 1))} and std {np.nanmean(std_zero, axis = (0, 1))}', logger=log)
+    mean_zero               = np.nanmean(all_zeros, axis = 0)
+    std_zero                = np.nanstd(all_zeros, axis = 0)/norm_factor
+    utils.stampa(f'Sanity check: mean value in zero frames mean {np.nanmean(mean_zero)} and std {np.nanmean(std_zero)}', logger=log)
     dict_z                  = get_zscore(dict_data, mean_zero, std_zero, logger = log)
     return dict_z
 
