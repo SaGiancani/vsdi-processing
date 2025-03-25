@@ -1168,6 +1168,103 @@ def get_selected(matrix, autoselection):
     return df
 
 
+def get_classic_signal(path_session, zero_frames, bin_value = 2, log = None):
+    # PARAMETERS INSTANCE
+
+    # LOAD RAW DATA    
+    dict_data               = load_all_mds(path_session, zero_frames, bin_val = bin_value, log = log)
+    p_dfs                   = np.concatenate([v for v in dict_data.values()], axis = 0)
+    all_zeros, norm_factor  = get_all_zero_frames(dict_data['blank'], p_dfs, zero_frames, log = log)
+    del p_dfs
+    mean_zero               = np.nanmean(all_zeros, axis = (0, 1))
+    std_zero                = np.nanstd(all_zeros, axis = (0, 1))/norm_factor
+    utils.stampa(f'Sanity check: mean value in zero frames mean {np.nanmean(mean_zero, axis = (0, 1))} and std {np.nanmean(std_zero, axis = (0, 1))}', logger=log)
+    dict_z                  = get_zscore(dict_data, mean_zero, std_zero, logger = log)
+    return dict_z
+
+def load_all_mds(path_session, zero_frames, bin_val = 2, log = None):
+    # RAW DATA FOLDER DETECTION
+    md_data_path  = utils.find_thing('md_data', path_session, what = 'dir')
+    # md_data_path  = os.path.join(path_session, 'md_data')
+    utils.stampa(path_session, logger = log)
+    utils.stampa(md_data_path[0], logger = log)
+    conds_list    = os.listdir(md_data_path[0])
+    conds_list    = [os.path.join(md_data_path[0], i) for i in conds_list if 'md_data_' in i]     
+    dict_data     = {}
+    # IMPORT BLANK
+    cd_blnk    = Condition() 
+    blnk_fold  = [i for i in conds_list if 'data_blank' in i ][0]
+    cd_blnk.load_cond(blnk_fold.split('.pickle')[0])
+    
+    # If bin_val != None then it bins the data
+    if bin_val is not None:
+        blank_raw  = process.get_binned_data(cd_blnk.binned_data, bin = bin_val)
+        blank_data =  np.array([process.deltaf_up_fzero(i, zero_frames, deblank = True, blank_sign = None) for i in blank_raw])
+    else:
+        blank_data  = cd_blnk.df_fz 
+
+    blank_data = get_selected(blank_data, cd_blnk.autoselection)    
+    dict_data[cd_blnk.cond_name] = blank_data
+    utils.stampa(f'Condition {cd_blnk.cond_name} shape {blank_data.shape}', logger = log)    
+    average_blank = np.nanmean(blank_data, axis = 0)
+    del cd_blnk
+
+    # IMPORT CONDITIONS
+    for i in (conds_list):
+        if i != blnk_fold:
+            cd_x    = Condition() 
+            cd_x.load_cond(i.split('.pickle')[0])
+            cd_name = cd_x.cond_name
+
+            # If bin_val != None then it bins the data
+            if bin_val is not None:
+                data    = process.get_binned_data(cd_x.binned_data, bin = bin_val)
+
+                p_dffz      =  np.array([process.deltaf_up_fzero(i,
+                                                                 zero_frames, 
+                                                                 deblank = True, 
+                                                                 blank_sign = average_blank) for i in data])
+            else:
+                p_dffz  = cd_x.df_fz 
+            # p_dffz  = get_selected(p_dffz_, cd_x.autoselection)
+            utils.stampa(f'Condition {cd_name} shape {p_dffz.shape}', logger = logger)                
+            dict_data[cd_name] = p_dffz
+            del cd_x
+
+    return dict_data
+
+def get_all_zero_frames(blank_data, p_dfs, zero_frames, log = None):
+    # ABSOLUTE ZERO FRAME EXTRACTION                
+    # blnk      = blank_data.reshape(-1, blank_data.shape[-2], blank_data.shape[-1])
+    blnk      = blank_data[:, :zero_frames, :, :]
+    blnk_     = [i[:, :zero_frames, :, :] for i in p_dfs]
+    # blnk_     = [i.reshape(-1, i.shape[-2], i.shape[-1]) for i in blnk_]
+    blnk_     = np.concatenate(blnk_)
+    utils.stampa(blnk_.shape, logger=log)
+    utils.stampa(blnk.shape, logger=log)
+    all_zeros = np.concatenate([blnk, blnk_])
+    del blnk, blnk_
+    normalization_factor = all_zeros.shape[0]/len(p_dfs)  
+    utils.stampa(normalization_factor, logger=log)    
+    return all_zeros, normalization_factor 
+
+def get_zscore(dict_data, mean_zero, std_zero, logger = None):
+    # ZSCORE EXTRACTION
+    dict_z = {}
+    
+    for cd_name, i in dict_data.items():
+        utils.stampa(f'Zscore processing for condition {cd_name} starts', logger = logger)
+        z_cond = np.array([process.zeta_score(j, mean_zero, std_zero, full_seq=True) for j in i])
+
+        tmp_mean = np.nanmean(z_cond, axis = (-3, -2, -1))
+        z_cond   = z_cond - tmp_mean[:, np.newaxis, np.newaxis, np.newaxis]
+        dict_z[cd_name] = z_cond
+
+    return dict_z
+ 
+
+
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching autoselection pipeline')
     
