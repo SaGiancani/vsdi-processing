@@ -3,7 +3,7 @@ import data_visualization as dv
 import numpy as np
 import os
 import process_vsdi as process
-from middle_process import get_classic_signal
+from middle_process import get_classic_signal, Condition 
 import retinotopy 
 from scipy.ndimage.filters import median_filter
 from scipy.ndimage import rotate
@@ -309,9 +309,19 @@ class SpatioTemporalSession:
        
         if self.zmaps_flag:
             self.id_name           = f'{self.retino_session.id_name}_z'
+            # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
+            cd_x       = Condition() 
+            conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
+            conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
+            cd_x.load_cond(conds_list[0].split('.pickle')[0])  
+            _, _, y2check, _ = cd_x.df_fz.shape
+            bin_tmp = np.ceil(y2check, self.ny)
+
+            utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
             self.dict_zeta         = get_classic_signal(self.path_session, 
                                                         np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
-                                                        bin_value = 2, log = self.log) #To fix the bin_value that has to be a relative bin between original frame size and the md .pickle file
+                                                        bin_value = bin_tmp, 
+                                                        log = self.log)
         else:
             self.id_name           = self.retino_session.id_name
             self.dict_zeta         = None
@@ -942,6 +952,8 @@ def plot_st(profilemap,
         plt.show()
     plt.close('all')
     return (a,b)
+
+# Example for script launching sbatch Desktop/runpy_giancani.sh st_builder.py --path /envau/work/neopto/DATA_AnDO/exp-AM3_BEHAV+VSDI/sub-Hip/sess-20210108-001/derivatives/spcbin3_timebin1_zerofrms6_strategymae_n_chunk1_movFalse_dtrendFalse_deblankTrue/ --store --vis --denoised --zmaps
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching spatio-temporal profile analysis pipeline')
