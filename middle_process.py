@@ -1236,9 +1236,9 @@ def get_all_zero_frames(blank_data, p_dfs, zero_frames, log = None):
     # ABSOLUTE ZERO FRAME EXTRACTION                
     # blnk      = blank_data.reshape(-1, blank_data.shape[-2], blank_data.shape[-1])
     blnk      = blank_data[:, :zero_frames, :, :]
-    blnk_     = [i[:, :zero_frames, :, :] for i in p_dfs]
-    # blnk_     = [i.reshape(-1, i.shape[-2], i.shape[-1]) for i in blnk_]
-    blnk_     = np.concatenate(blnk_)
+    blnk_     = p_dfs[:, :zero_frames, :, :]
+    blnk_     = blnk_.reshape(-1, blnk_.shape[-2], blnk_.shape[-1])
+    blnk      = blnk.reshape(-1, blnk.shape[-2], blnk.shape[-1])
     utils.stampa(blnk_.shape, logger=log)
     utils.stampa(blnk.shape, logger=log)
     all_zeros = np.concatenate([blnk, blnk_])
