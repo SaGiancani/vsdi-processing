@@ -1170,7 +1170,6 @@ def get_selected(matrix, autoselection):
 
 def get_classic_signal(path_session, zero_frames, bin_value = 2, log = None):
     # PARAMETERS INSTANCE
-
     # LOAD RAW DATA    
     dict_data               = load_all_mds(path_session, zero_frames, bin_val = bin_value, log = log)
     p_dfs                   = np.concatenate([v for v in dict_data.values()], axis = 0)
@@ -1227,7 +1226,7 @@ def load_all_mds(path_session, zero_frames, bin_val = 2, log = None):
             else:
                 p_dffz  = cd_x.df_fz 
             # p_dffz  = get_selected(p_dffz_, cd_x.autoselection)
-            utils.stampa(f'Condition {cd_name} shape {p_dffz.shape}', logger = logger)                
+            utils.stampa(f'Condition {cd_name} shape {p_dffz.shape}', logger = log)                
             dict_data[cd_name] = p_dffz
             del cd_x
 
