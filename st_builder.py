@@ -3,7 +3,7 @@ import data_visualization as dv
 import numpy as np
 import os
 import process_vsdi as process
-from middle_process import Condition
+from middle_process import get_classic_signal
 import retinotopy 
 from scipy.ndimage.filters import median_filter
 from scipy.ndimage import rotate
@@ -253,6 +253,7 @@ class SpatioTemporalSession:
                  cortical_dim    = 14.5, #mm 
                  denoise_flag    = False,
                  retin_fold_path = None,
+                 zmaps_flag      = False,
                  **kwargs):
 
         self.acquisition_frequency = acquisition_fq #Hz
@@ -261,6 +262,7 @@ class SpatioTemporalSession:
         self.denoise_switch        = denoise_flag
         self.vis_switch            = vis_switch
         self.store_switch          = store_switch
+        self.zmaps_flag            = zmaps_flag
         if retin_fold_path is None:
             self.retin_folder      = os.path.join(dv.STORAGE_PATH, utils.NAME_RETINO_ANALYSIS)
         else:
@@ -293,7 +295,6 @@ class SpatioTemporalSession:
                                                        **kwargs)
         
         self.ny, self.nx       = self.retino_session.std_blank.shape 
-        self.id_name           = self.retino_session.id_name
         self.cond_dict         = self.retino_session.cond_dict
         self.cond_pos          = self.retino_session.cond_pos
         self.cond_am           = self.retino_session.cond_am
@@ -305,6 +306,16 @@ class SpatioTemporalSession:
         self.stimulus_speed          = self.stimulus_metadata['speed']
         self.timing_single_stroke    = (self.stimulus_metadata['single stroke']['bottom limit'], self.stimulus_metadata['single stroke']['upper limit'])
         self.timing_am_sequence      = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
+       
+        if self.zmaps_flag:
+            self.id_name           = f'{self.retino_session.id_name}_z'
+            self.dict_zeta         = get_classic_signal(self.path_session, 
+                                                        np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
+                                                        bin_value = 2, log = self.log) #To fix the bin_value that has to be a relative bin between original frame size and the md .pickle file
+        else:
+            self.id_name           = self.retino_session.id_name
+            self.dict_zeta         = None
+
         self.time_sequence           = self.retino_session.header['n_frames']
         self.time_ss                 = np.linspace(-(self.timing_single_stroke[0]-1)*self.time_bin, 
                                                    (self.time_sequence-(self.timing_single_stroke[0]))*self.time_bin, 
@@ -360,8 +371,16 @@ class SpatioTemporalSession:
         utils.stampa(f'Get spatiotemporal profiles for condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)
 
-        cd = self.retino_session.get_data_to_process(name_cond)
-        st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(cd, name_cond, synaptic_latency = synaptic_latency)
+        if self.zmaps_flag:
+            signal      = self.dict_zeta[name_cond]
+            avrg_signal = np.nanmean(self.dict_zeta[name_cond], axis = 0)
+
+        else:
+            cd          = self.retino_session.get_data_to_process(name_cond)
+            signal      = cd.df_fz
+            avrg_signal = cd.averaged_df
+
+        st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(signal, name_cond, synaptic_latency = synaptic_latency)
         min_level = np.nanpercentile(st_map_cd.maps, 15)
         max_level = np.nanpercentile(st_map_cd.maps, 95)
         thresh    = np.nanpercentile(st_map_cd.maps, 60)
@@ -372,9 +391,9 @@ class SpatioTemporalSession:
                                                                                        start_time_cd, 
                                                                                        colors, times, positions, 
                                                                                        (max_level, min_level, thresh),
-                                                                                        ISinterval = ISinterval, 
-                                                                                        single_pos_cds = single_pos_cds, 
-                                                                                        cd_type_flag = cd_type_flag)
+                                                                                       ISinterval = ISinterval, 
+                                                                                       single_pos_cds = single_pos_cds, 
+                                                                                       cd_type_flag = cd_type_flag)
             
             # Subtraction between maps goes here
             self.get_subtraction_condition(st_map_linear_pred, 
@@ -386,7 +405,7 @@ class SpatioTemporalSession:
         self.data_dictionary[name_cond] = st_map_cd               
         utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}', logger=self.log)
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                     
-        return cd
+        return avrg_signal
     
     def get_subtraction_condition(self, map_linear_pred, map_cond, ISinterval, colors, positions, times, sanity_switch = True):
         # adjust_frame  = self.timing_single_stroke[0] - self.timing_am_sequence[0]  
@@ -474,7 +493,7 @@ class SpatioTemporalSession:
             st_map_cd.store_stmap(os.path.join(self.storing_folder, self.id_name, name_cond_sub))                
         return
 
-    def get_condition_map(self, cd, name_cond, synaptic_latency = 6):
+    def get_condition_map(self, signal, name_cond, synaptic_latency = 6):
         # Single stroke condition
         if name_cond in list(self.cond_pos.values()):
             cd_type_flag  = 'ss'
@@ -509,7 +528,7 @@ class SpatioTemporalSession:
                                           rotation_theta  = self.orient_traj,
                                           onset_time      = start_time_cd,
                                           condition_name  = name_cond,
-                                          data            = cd.df_fz,
+                                          data            = signal,
                                           condition_type  = cd_type_flag,
                                           is_delay        = ISinterval,
                                           pixel_spacing   = self.pixel_spacing,#mm 
@@ -671,13 +690,13 @@ def get_spatio_temporal_profile(frames, trajectory_mask, theta, correction_facto
         b = np.nanmean(rotated, axis=0)
     return b, rotated
 
-def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe=5 , log = None):
+def get_linear_expectation(array_of_sequences, stepping, nonlinear_zeroframe = 5 , log = None):
     """
     Calculate the linear expectation of a sequence of arrays.
 
     Parameters:
     - array_of_sequences (list of 2D numpy arrays): List containing multiple time sequences.
-    - global_shift (int): Number of time steps to shift the sequences globally.
+    - stepping (int): Number of time steps for shifting the from one stroke's sequence to the next.
     - nonlinear_zeroframe (int, optional): Number of frames to use for nonlinear zeroing. Default is 5.
 
     Returns:
@@ -691,10 +710,10 @@ def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe
     
     # Calculate the step size for global shifting
     # step = int(np.ceil(global_shift/2))
-    step = int(global_shift)
+    step = int(stepping)
     
     utils.stampa(f'N° strokes {n_strokes}\n', logger=log)
-    utils.stampa(f'Global shift {global_shift}\n', logger=log)
+    utils.stampa(f'Global shift {stepping}\n', logger=log)
 
     # Copy the input sequences to avoid modifying the original data
     ppp = [np.copy(i) for i in array_of_sequences]
@@ -707,7 +726,7 @@ def get_linear_expectation(array_of_sequences, global_shift, nonlinear_zeroframe
             utils.stampa(f'Index second stroke: {i+1}\n', logger=log)
             utils.stampa(f'Shape temporary matrix {tmp.shape}\n', logger=log)
         else:
-            utils.stampa(f'Index {i+1}-th stroke: {i}\n', logger=log)            
+            utils.stampa(f'Index {i+1}-th stroke: {i+1}\n', logger=log)            
             tmp = tmp[step:, :] + ppp[i+1][:-(i+1)*step, :]
             utils.stampa(f'Shape temporary matrix {tmp.shape}\n', logger=log)
 
@@ -1003,6 +1022,14 @@ if __name__=="__main__":
                         action='store_false')
     parser.set_defaults(denoised_switch=False)   
 
+    parser.add_argument('--zmaps', 
+                        dest='zmaps_flag', 
+                        action='store_true')
+    parser.add_argument('--no-zmaps', 
+                        dest='zmaps_flag', 
+                        action='store_false')
+    parser.set_defaults(zmaps_flag=False)  
+
     
     start_process_time = datetime.datetime.now().replace(microsecond=0)
     args = parser.parse_args()
@@ -1020,7 +1047,8 @@ if __name__=="__main__":
                                          optical_ratio   = args.optical_magnification, #Optical magnification
                                          cortical_dim    = args.recorded_diameter, #mm 
                                          denoise_flag    = args.denoised_switch,                                         
-                                         green_name      = args.green_name,                                         
+                                         green_name      = args.green_name,
+                                         zmaps_flag      = args.zmaps_flag,                                         
                                          single_stroke_label   = args.single_stroke_label, 
                                          multiple_stroke_label = args.apparent_motion_label) 
     st_session.get_session()
