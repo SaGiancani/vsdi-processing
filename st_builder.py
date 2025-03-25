@@ -315,9 +315,8 @@ class SpatioTemporalSession:
             conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
             cd_x.load_cond(conds_list[0].split('.pickle')[0])  
             _, _, y2check, _ = cd_x.df_fz.shape
-            utils.stampa(f'{y2check/self.ny}', logger = self.log)
 
-            bin_tmp = np.ceil(y2check/self.ny)
+            bin_tmp = int(np.ceil(y2check/self.ny))
 
             utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
             self.dict_zeta         = get_classic_signal(self.path_session, 
