@@ -616,9 +616,9 @@ def whole_time_sequence(data,
         #ax.legend()
         if title_plot is not None:
             ax_time.set_title(f'{title_plot}', fontsize = 15)
-        ax_time.set_xlabel('Time - ms')
-        ax_time.set_ylabel('Signal')     
-
+        ax_time.tick_params(axis='both', which='major', labelsize=12)
+        ax_time.set_xlabel('Time - ms', fontsize=13)
+        ax_time.set_ylabel('Signal', fontsize=13)
 
 
     if pixel_spacing is not None:
