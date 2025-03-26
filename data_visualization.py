@@ -389,6 +389,9 @@ def whole_time_sequence(data,
                         name = None, 
                         blur = True, 
                         adaptive_vm = False, 
+                        time_series_data = None,
+                        time_series_info = (None, None, None),
+                        title_plot = None,
                         n_columns = 10, 
                         store_path = STORAGE_PATH,
                         handle_lims_blobs = ((97.72, 100)), 
@@ -414,17 +417,25 @@ def whole_time_sequence(data,
                         color_contour = 'k',
                         white_background = True):
 
-    fig = plt.figure(figsize=(15,15), dpi=500)
-    fig.subplots_adjust(bottom=0.2)
-
-    if white_background:
-        fig.patch.set_facecolor('white')
-
     if titles is None:
         titles = ['']*len(data)
 
-    nrows = int(np.ceil(np.shape(data)[0]/n_columns))  
+    total_subplots = np.shape(data)[0]# + 1  # Extra slot for time course
+    nrows = int(np.ceil(total_subplots / n_columns))
+    if time_series_data is not None:
+        add_height = 2
+    else:
+        add_height = 0
+        
+    fig_height = 5 + nrows * 2 + add_height  # Base height + extra height per row
+    fig = plt.figure(figsize=(15, fig_height), dpi=500)
+    # Adjust bottom spacing dynamically
+    bottom_padding = 0.1 + (add_height / fig_height)  # More rows → more bottom space
+    fig.subplots_adjust(bottom=bottom_padding)
     
+    if white_background:
+        fig.patch.set_facecolor('white')    
+
     grid = AxesGrid(fig, 111,
                     nrows_ncols=(nrows, n_columns),
                     axes_pad=padding_axes,
@@ -580,11 +591,38 @@ def whole_time_sequence(data,
     cbar = ax.cax.colorbar(p)
     cbar = grid.cbar_axes[0].colorbar(p)
 
+    # ---- ADDITIONAL ROW FOR TIME COURSES ----
+    if time_series_data is not None:
+        zero, time_interval, time_bins = time_series_info
+
+        ax_time = fig.add_axes([0.1, 0.15, 0.8, 0.35-(fig_height/150)])    #Left, bottom, width, height
+        
+        ax_time.spines[['top', 'right']].set_visible(False)
+
+        #x_tc = np.arange(25,45,1)
+        if (zero is not None) and  (time_interval is not None) and  (time_bins is not None):
+            x_tc = np.arange(-zero*time_interval, (time_bins*time_interval)-zero*time_interval, time_interval)
+        else:
+            x_tc = np.arange(len(time_series_data[0]))  # Assume all time series have the same length
+
+        ax_time.fill_between(x_tc, max_bord, min_bord, color = 'k', alpha = 0.1)
+        ax_time.plot(x_tc, np.mean(time_series_data, axis=0), label = 'Average', color = 'k', lw = 3 )
+        ax_time.vlines(0, min_bord, max_bord, ls = '--', lw = 2, color = 'gold')
+        ax_time.set_ylim(min_bord, max_bord)
+    #         ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
+
+        #ax.legend()
+        if title_plot is not None:
+            ax_time.set_title(f'{title_plot}', fontsize = 15)
+        ax_time.set_xlabel('Time - ms')
+        ax_time.set_ylabel('Signal')     
+
+
 
     if pixel_spacing is not None:
         #fig, ax = plt.subplots()
         fontprops = fm.FontProperties(size=14)
-        scalebar = AnchoredSizeBar(ax.transData,
+        scalebar  = AnchoredSizeBar(ax.transData,
                                     round(2/pixel_spacing), '2mm', 'lower right', #'upper right' 
                                     pad=0.1,
                                     color='crimson',
