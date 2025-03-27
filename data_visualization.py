@@ -608,7 +608,7 @@ def whole_time_sequence(data,
         ax_time.fill_between(x_tc, 
                              np.nanpercentile(time_series_data, 95, axis = 0), 
                              np.nanpercentile(time_series_data, 10, axis = 0), color = 'k', alpha = 0.1)
-        ax_time.plot(x_tc, np.mean(time_series_data, axis=0), label = 'Average', color = 'k', lw = 3 )
+        ax_time.plot(x_tc, np.nanmean(time_series_data, axis=0), label = 'Average', color = 'k', lw = 3 )
         ax_time.vlines(0, np.nanpercentile(data, 15), np.nanpercentile(data, 95), ls = '--', lw = 2, color = 'gold')
         ax_time.set_ylim(np.nanpercentile(data, 15), np.nanpercentile(data, 95))
     #         ax.ticklabel_format(axis='both', style='sci', scilimits=(-3,3))
