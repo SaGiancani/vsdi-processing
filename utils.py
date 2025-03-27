@@ -263,6 +263,44 @@ def get_conditions_correspondance(path):
     return {i: j['conditions'] for i, j in list(a['pos metadata'].items())}
 
 
+def find_subsets(data):
+    '''
+    Description:
+    The find_subsets function identifies subsets within a dictionary where each value is a list. 
+    Specifically, it looks for cases where one list is exactly one element shorter than another and 
+    checks whether the shorter list is a prefix of the longer list.
+    
+    Parameters:
+    data (dict): A dictionary where keys are identifiers and values are lists of elements.
+
+    Returns:
+    dict: A dictionary mapping longer lists to their corresponding shorter lists if the shorter list 
+    is a prefix of the longer list.
+
+    How It Works:
+    Extract all keys from the input dictionary.
+    Iterate over each key (key) and its corresponding list (main_list).
+    Compare it against every other list (sub_list) in the dictionary.
+    If the length of sub_list is exactly one element shorter than main_list and sub_list matches the 
+    beginning of main_list, the function stores the mapping in result.
+    The function stops checking once it finds a valid subset for a key.
+    '''
+    result = {}
+    keys = list(data.keys())
+
+    for key in keys:
+        main_list = data[key]
+        main_length = len(main_list)
+
+        for other_key in keys:
+            sub_list = data[other_key]
+            if len(sub_list) == main_length - 1:  # Ensure it's exactly one element less
+                if main_list[:len(sub_list)] == sub_list:
+                    result[key] = other_key
+                    break  # Stop once a valid match is found
+    return result
+
+
 def get_session_id_name(path_session):                
     # Session names extraction
     sub_name, experiment_name, session_name = get_session_metainfo(path_session)
