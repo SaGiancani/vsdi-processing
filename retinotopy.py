@@ -480,6 +480,59 @@ class RetinoSession(md.Session):
                                     name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
         return
 
+    def get_retino_subtraction(self, retino_dict, full_frame = True, default_time_window = 20):
+
+        single_pos       = list(set([i for v in self.retino_pos_am.values() for i in v]))
+        dict_components_ = self.retino_pos_am
+        for i in single_pos:
+            dict_components_[i] = [i]
+
+        dict_subs   = utils.find_subsets(dict_components_)     
+        utils.stampa(f'{dict_subs}', logger = self.logger)                                                               
+        params      = defaultdict(list)
+        dict_subtrs = dict()
+
+        for first_cond, second_cond in dict_subs.items():
+            
+            time_limits_first = ((self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
+            
+            if second_cd in self.cond_pos.values():
+                time_limits_second = ((self.stimulus_metadata['single stroke']['bottom limit'], self.stimulus_metadata['single stroke']['bottom limit'] + default_time_window))
+            else:
+                time_limits_second = ((self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
+
+            first_cd     = self.get_data_to_process(first_cond)
+            second_cd    = self.get_data_to_process(second_cond)
+            
+            name_subtrcts = f'{first_cond}-{second_cond}'
+            a             = self.stimulus_metadata['pos metadata']
+            space_step    = a[first_cond]['inter stimulus space']
+            frames_start  = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency))
+            if (frames_start//2) > 1:
+                frames_end = frames_start//2
+            else:
+                frames_end = 3
+            utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.logger)                                                               
+                
+            params, sub_x = subtraction_among_conditions(self.path_session, 
+                                                         np.nanmean(first_cd.df_fz, axis = 0),
+                                                         np.nanmean(second_cd.df_fz, axis = 0),
+                                                         time_limits_first, 
+                                                         time_limits_second, 
+                                                         self.id_name,
+                                                         f'_inferred_{first_cond}_{second_cond}',
+                                                         self.id_name,
+                                                         retino_dict[first_cond].mask,
+                                                         first_cd.df_fz, 
+                                                         params, 
+                                                         name_subtrcts, 
+                                                         ((frames_start, frames_end)),
+                                                         fullframe = full_frame,
+                                                         single_trial_analysis = True)
+            dict_subtrs[name_subtrcts] = sub_x
+
+        return params, dict_subtrs
+
 class Retinotopy:
     def __init__(self, 
                  session_path,
@@ -790,59 +843,6 @@ class Retinotopy:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
     
-
-    def get_retino_subtraction(self, retino_dict, full_frame = True, default_time_window = 20):
-
-        single_pos       = list(set([i for v in self.retino_pos_am.values() for i in v]))
-        dict_components_ = self.retino_pos_am
-        for i in single_pos:
-            dict_components_[i] = [i]
-
-        dict_subs   = utils.find_subsets(dict_components_)     
-        utils.stampa(f'{dict_subs}', logger = self.logger)                                                               
-        params      = defaultdict(list)
-        dict_subtrs = dict()
-
-        for first_cond, second_cond in dict_subs.items():
-            
-            time_limits_first = ((self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
-            
-            if second_cd in self.cond_pos.values():
-                time_limits_second = ((self.stimulus_metadata['single stroke']['bottom limit'], self.stimulus_metadata['single stroke']['bottom limit'] + default_time_window))
-            else:
-                time_limits_second = ((self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
-
-            first_cd     = self.get_data_to_process(first_cond)
-            second_cd    = self.get_data_to_process(second_cond)
-            
-            name_subtrcts = f'{first_cond}-{second_cond}'
-            a             = self.stimulus_metadata['pos metadata']
-            space_step    = a[first_cond]['inter stimulus space']
-            frames_start  = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency))
-            if (frames_start//2) > 1:
-                frames_end = frames_start//2
-            else:
-                frames_end = 3
-            utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.logger)                                                               
-                
-            params, sub_x = subtraction_among_conditions(self.path_session, 
-                                                         np.nanmean(first_cd.df_fz, axis = 0),
-                                                         np.nanmean(second_cd.df_fz, axis = 0),
-                                                         time_limits_first, 
-                                                         time_limits_second, 
-                                                         self.id_name,
-                                                         f'_inferred_{first_cond}_{second_cond}',
-                                                         self.id_name,
-                                                         retino_dict[first_cond].mask,
-                                                         first_cd.df_fz, 
-                                                         params, 
-                                                         name_subtrcts, 
-                                                         ((frames_start, frames_end)),
-                                                         fullframe = full_frame,
-                                                         single_trial_analysis = True)
-            dict_subtrs[name_subtrcts] = sub_x
-
-        return params, dict_subtrs
 
 
 def get_assess_centroid(centroids, mask):
