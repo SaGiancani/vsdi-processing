@@ -1,4 +1,5 @@
 import argparse, blk_file, datetime, json, os, utils
+from collections import defaultdict
 import cv2 as cv
 import data_visualization as dv
 import middle_process as md
@@ -315,6 +316,16 @@ class RetinoSession(md.Session):
             dict_retino = dict()
             for cond_id, cond_name in self.cond_dict.items():
                 dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
+
+            params, dict_subtrs = get_retino_subtraction(self.retino_pos_am, dict_retino, self.stimulus_metadata, acquisition_frequency = self.acquisition_frequency)
+
+            if self.visualization_switch:
+                for sub_name, sub_ret in dict_subtrs.items():
+                    self.plot_stuff(retinotopic_path_folder, sub_name, ['k'], dict_subtrs)
+                    # If true store variables
+                    if self.storage_switch:
+                        sub_ret.store_retino(os.path.join(retinotopic_path_folder, self.id_name, sub_name))            
+
             utils.stampa(f'Retino session elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                                         
             return
 
@@ -407,8 +418,7 @@ class RetinoSession(md.Session):
             return r
 
         def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino):
-            if name_cond in list(self.cond_pos.values()):
-                col_distr = colrs
+            if name_cond not in list(self.cond_am.values()):
                 dv.whole_time_sequence(dict_retino[name_cond].signal, 
                                     mask = dict_retino[name_cond].mask,
                                     name='z_sequence_'+ name_cond + self.id_name, 
@@ -419,6 +429,7 @@ class RetinoSession(md.Session):
                                     colors_centr = colrs,
                                     ext='png',
                                     name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                
                 # Parameters for heatmap plotting
                 min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
                 max_bord = np.nanpercentile(dict_retino[name_cond].map, 98)
@@ -434,7 +445,7 @@ class RetinoSession(md.Session):
                                      name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
                                      store_path = retinotopic_path_folder)
             
-            elif name_cond in list(self.cond_am.values()):
+            else:
                 if len(list(self.retino_pos_am[name_cond])) <3:
                     col_distr = COLORS_STROKE_WITHIN_AM[0]
                 else:
@@ -467,7 +478,7 @@ class RetinoSession(md.Session):
                                        colors_centr = colrs,
                                        ext='png',
                                        name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
-                return
+            return
 
 class Retinotopy:
     def __init__(self, 
@@ -804,10 +815,56 @@ def centroid_max(X, Y, data):
     return index, max_point
 
 
-def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, id_name, sub = 'No Wallace or Bretzel'):
+def get_retino_subtraction(dict_components, retino_dict, metadata_dict, full_frame = True, acquisition_frequency = 100, default_time_window = 20):
+
+    single_pos      = list(set([i for v in dict_components.values() for i in v]))
+    for i in single_pos:
+        dict_components[i] = [i]
+
+    dict_subs   = utils.find_subsets(dict_components)                                                                    
+    params      = defaultdict(list)
+    dict_subtrs = dict()
     
-    #if (sub == 'Bretzel') or (sub == 'Wallace'):
-    if (sub == 'Bretzel') or (sub == 'Wallace') or (sub=='Ziggy'):
+    for first_cond, second_cond in dict_subs.items():
+        name_subtrcts = f'{first_cond}-{second_cond}'
+        a             = metadata_dict['pos metadata']
+        space_step    = a[first_cond]['inter stimulus space']
+        frames_start  = int(np.ceil((1/metadata_dict['speed'])*(space_step*(len(dict_components[first_cond])-1))*acquisition_frequency))
+        if (frames_start//2) > 1:
+            frames_end = frames_start//2
+        else:
+            frames_end = 3
+            
+        params, sub_x = subtraction_among_conditions(retino_dict[first_cond].path_session, 
+                                                     retino_dict[first_cond].signal,
+                                                     retino_dict[second_cond].signal, 
+                                                     ((retino_dict[first_cond].time_limits[0], 
+                                                       retino_dict[first_cond].time_limits[0]+default_time_window)), 
+                                                     ((retino_dict[second_cond].time_limits[0], 
+                                                       retino_dict[second_cond].time_limits[0]+default_time_window)), 
+                                                     retino_dict[first_cond].session_name,
+                                                     f'_inferred_{first_cond}_{second_cond}',
+                                                     retino_dict[first_cond].session_name,
+                                                     retino_dict[first_cond].mask,
+                                                     retino_dict[first_cond].tc_mask,
+                                                     None, 
+                                                     retino_dict[first_cond].green,
+                                                     retino_dict[first_cond].df_fz, 
+                                                     params, 
+                                                     name_subtrcts, 
+                                                     ((frames_start, frames_end)),
+                                                     retino_dict[first_cond],
+                                                     stroke_type = 'multiple stroke', 
+                                                     fullframe = full_frame,
+                                                     single_trial_analysis = True)
+        dict_subtrs[name_subtrcts] = sub_x
+
+    return params, dict_subtrs
+
+
+def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, fullframe = True):
+    
+    if fullframe:
         dim_window = None
         centroids_ = None
     else:
@@ -858,7 +915,14 @@ def subtraction_among_conditions(path_session,
                                  name_params, 
                                  time_window_inference, 
                                  multiple_stroke_123,
-                                 stroke_type = 'multiple stroke', sub = 'No Wallace or Bretzel', single_trial_analysis = True, dim_window = 50):
+                                 stroke_type = 'multiple stroke', 
+                                 fullframe = True, 
+                                 averaged_time_courses = None,
+                                 single_trial_analysis = True, 
+                                 dim_window = 50):
+    
+    if fullframe:
+        dim_window = 100
     
     #First
     _, _, _, _, _, z_123_shrinked, _ = multiple_stroke_123.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1])
@@ -882,29 +946,29 @@ def subtraction_among_conditions(path_session,
                                         maps = None,
                                         mask_tc = traject_mask,
                                         tc = time_courses,
-                                        averaged_tc = np.nanmean(time_courses, axis=0),
+                                        averaged_tc = averaged_time_courses,
                                         df = df,
                                         green = green, 
                                         stroke_type = stroke_type)
 
     pos_inferred_averaged.time_limits = ((time_limits_first[0], time_limits_first[1]))
-    if (sub != 'Wallace' ) and (sub !='Bretzel') and (sub!='Ziggy'):
-        FOI = np.mean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
-    else:
-        FOI = np.mean(pos_inferred_averaged.signal, axis=0)
+    # if (sub != 'Wallace' ) and (sub !='Bretzel') and (sub!='Ziggy'):
+    FOI = np.nanmean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
+    # else:
+        # FOI = np.nanmean(pos_inferred_averaged.signal, axis=0)
 
     # Find retinotopic position in averaged signal over 15 frames
     centroids, blobs, _, blurred = pos_inferred_averaged.get_retinotopic_features(FOI, mask_switch = False)
-    min_bord = np.percentile(blurred, 15)
-    max_bord = np.percentile(blurred, 98)
+    min_bord = np.nanpercentile(blurred, 15)
+    max_bord = np.nanpercentile(blurred, 98)
     #coords_singl = np.array(list(zip(*centroids)))
     #(a,b), _ = retino.centroid_max(coords_singl[0], coords_singl[1], blurred)
     pos_inferred_averaged.retino_pos = centroids[0]
     pos_inferred_averaged.blob = blobs
     
     #if (sub != 'Wallace' ) and (sub !='Bretzel'):
-    if (sub != 'Wallace' ) and (sub !='Bretzel') and (sub!='Ziggy'):
-        blurred[~pos_inferred_averaged.mask] = np.NAN
+    # if (sub != 'Wallace' ) and (sub !='Bretzel') and (sub!='Ziggy'):
+    blurred[~pos_inferred_averaged.mask] = np.NAN
     pos_inferred_averaged.map = blurred
     
     if single_trial_analysis:
@@ -913,7 +977,7 @@ def subtraction_among_conditions(path_session,
             #print(dim_window, time_window_inference, second, pos_inferred_averaged.time_limits, time_limits_second,id_name, sub)
     #            time_limits_first = None
     #        else:
-        pos_inferred_averaged = single_trial_detection(pos_inferred_averaged, dim_window, time_window_inference, second, pos_inferred_averaged.time_limits, time_limits_second, id_name, sub = sub)
+        pos_inferred_averaged = single_trial_detection(pos_inferred_averaged, dim_window, time_window_inference, second, pos_inferred_averaged.time_limits, time_limits_second, fullframe = fullframe)
     else:
         pos_inferred_averaged.distribution_positions = list()
     
