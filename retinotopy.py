@@ -488,7 +488,7 @@ class RetinoSession(md.Session):
             dict_components_[i] = [i]
 
         dict_subs   = utils.find_subsets(dict_components_)     
-        utils.stampa(f'{dict_subs}', logger = self.logger)                                                               
+        utils.stampa(f'{dict_subs}', logger = self.log)                                                               
         params      = defaultdict(list)
         dict_subtrs = dict()
 
@@ -512,7 +512,7 @@ class RetinoSession(md.Session):
                 frames_end = frames_start//2
             else:
                 frames_end = 3
-            utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.logger)                                                               
+            utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
                 
             params, sub_x = subtraction_among_conditions(self.path_session, 
                                                          np.nanmean(first_cd.df_fz, axis = 0),
@@ -522,7 +522,7 @@ class RetinoSession(md.Session):
                                                          self.id_name,
                                                          f'_inferred_{first_cond}_{second_cond}',
                                                          self.id_name,
-                                                         retino_dict[first_cond].mask,
+                                                         self.mask,
                                                          first_cd.df_fz, 
                                                          params, 
                                                          name_subtrcts, 
