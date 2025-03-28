@@ -508,10 +508,15 @@ class RetinoSession(md.Session):
             a             = self.stimulus_metadata['pos metadata']
             space_step    = a[first_cond]['inter stimulus space']
             frames_start  = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency))
+            utils.stampa(f'Name sub {name_subtrcts}, space stepping {space_step}', logger = self.log)   
+            s    = self.stimulus_metadata['speed']            
+            strk = len(dict_components_[first_cond])-1                                            
+            utils.stampa(f'Frame start: {frames_start}, speed {s}, n° strokes - 1 {strk}, fq {self.acquisition_frequency}', logger = self.log)                                                               
+
             if (frames_start//2) > 1:
-                frames_end = frames_start//2
+                frames_end = frames_start + frames_start//2 # Something off here: it goes to 6 even for AM sequences with 2 pos
             else:
-                frames_end = 3
+                frames_end = frames_start + 2
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
                 
             params, sub_x = subtraction_among_conditions(self.path_session, 
