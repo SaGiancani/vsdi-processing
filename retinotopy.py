@@ -297,10 +297,8 @@ class RetinoSession(md.Session):
                 if self.storage_switch:
                     retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j + '_'+str(i+1)))
             # If true, store pictures
-            print('Os system print: '+ str(os.system('/usr/bin/sync')))
             if self.visualization_switch:
                 self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
-                print('Os system print: '+ str(os.system('/usr/bin/sync')))
         utils.stampa(f'End processing retinotopy analysis for condition {name_cond}')
         utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
         return dict_retino
@@ -316,7 +314,6 @@ class RetinoSession(md.Session):
         dict_retino = dict()
         for cond_id, cond_name in self.cond_dict.items():
             dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
-        # dict_retino has a double key inside dict_retino[AM][single pos]
         params, dict_subtrs = self.get_retino_subtraction(self, dict_retino)
 
         if self.visualization_switch:
@@ -373,8 +370,8 @@ class RetinoSession(md.Session):
         #z_s = process.zeta_score(cd_pos3.averaged_df, None, None, full_seq = True)
         # Blob and centroids extraction
         if str_type == 'multiple stroke':
-            begin_time = r.time_limits[0]+ starting_time+stroke_number*time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*time of occurrence of the stroke
-            end_time = r.time_limits[0]+ starting_time+stroke_number*time_step+time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
+            begin_time = r.time_limits[0]+ starting_time + stroke_number*time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*time of occurrence of the stroke
+            end_time   = r.time_limits[0]+ starting_time + stroke_number*time_step + time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
             foi = ((0, time_step))
         else:
             begin_time = r.time_limits[0]
@@ -420,30 +417,32 @@ class RetinoSession(md.Session):
     def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino):
         if name_cond not in list(self.cond_am.values()):
             dv.whole_time_sequence(dict_retino[name_cond].signal, 
-                                mask = dict_retino[name_cond].mask,
-                                name='z_sequence_'+ name_cond + self.id_name, 
-                                max=80, min=20,
-                                handle_lims_blobs = ((97.72, 100)),
-                                #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
-                                global_cntrds = [dict_retino[name_cond].retino_pos],
-                                colors_centr = colrs,
-                                ext='png',
-                                name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                                   mask = dict_retino[name_cond].mask,
+                                   name='z_sequence_'+ name_cond + self.id_name, 
+                                   max=80, min=20,
+                                   handle_lims_blobs = ((97.72, 100)),
+                                   #significant_thresh = np.percentile(dict_retino[name_cond].signal, 97.72), 
+                                   global_cntrds = [dict_retino[name_cond].retino_pos],
+                                   colors_centr = colrs,
+                                   ext='png',
+                                   name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
             
             # Parameters for heatmap plotting
             min_bord = np.nanpercentile(dict_retino[name_cond].map, 15)
             max_bord = np.nanpercentile(dict_retino[name_cond].map, 98)
             # Averaged hetmap plot
             dv.plot_averaged_map(name_cond, 
-                                    dict_retino[name_cond].blob, 
-                                    dict_retino[name_cond].retino_pos, 
-                                    dict_retino[name_cond].distribution_positions, 
-                                    dict_retino[name_cond].map, 
-                                    dict_retino[name_cond].retino_pos, 
-                                    min_bord, max_bord, colrs, 
-                                    self.id_name, colrs, 
-                                    name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
-                                    store_path = retinotopic_path_folder)
+                                 dict_retino[name_cond].blob, 
+                                 dict_retino[name_cond].retino_pos, 
+                                 dict_retino[name_cond].distribution_positions, 
+                                 dict_retino[name_cond].map, 
+                                 dict_retino[name_cond].retino_pos, 
+                                 min_bord, max_bord, 
+                                 colrs, 
+                                 self.id_name, 
+                                 colrs, 
+                                 name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
+                                 store_path = retinotopic_path_folder)
         
         else:
             if len(list(self.retino_pos_am[name_cond])) <3:
@@ -456,28 +455,28 @@ class RetinoSession(md.Session):
                 max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
                 # Averaged hetmap plot
                 dv.plot_averaged_map(name_cond+name_pos+'_'+str(c+1), 
-                                        dict_retino[name_cond][name_pos].blob, 
-                                        dict_retino[name_cond][name_pos].retino_pos, 
-                                        dict_retino[name_cond][name_pos].distribution_positions, 
-                                        dict_retino[name_cond][name_pos].map, 
-                                        dict_retino[name_pos].retino_pos, 
-                                        min_bord, max_bord, 
-                                        [colrs[c]], 
-                                        self.id_name, 
-                                        col_distr, 
-                                        name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
-                                        store_path = retinotopic_path_folder)
+                                     dict_retino[name_cond][name_pos].blob, 
+                                     dict_retino[name_cond][name_pos].retino_pos, 
+                                     dict_retino[name_cond][name_pos].distribution_positions, 
+                                     dict_retino[name_cond][name_pos].map, 
+                                     dict_retino[name_pos].retino_pos, 
+                                     min_bord, max_bord, 
+                                     [colrs[c]], 
+                                     self.id_name, 
+                                     col_distr, 
+                                     name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
+                                     store_path = retinotopic_path_folder)
             # Zscore
             dv.whole_time_sequence(dict_retino[name_cond][name_pos].signal, 
-                                    mask = dict_retino[name_cond][name_pos].mask,
-                                    name='z_sequence_'+ name_cond + self.id_name, 
-                                    max=80, min=20,
-                                    handle_lims_blobs = ((97.72, 100)),
-                                    #significant_thresh = np.percentile(dict_retino[name_cond][name_pos].signal, 97.72), 
-                                    global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
-                                    colors_centr = colrs,
-                                    ext='png',
-                                    name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                                   mask = dict_retino[name_cond][name_pos].mask,
+                                   name='z_sequence_'+ name_cond + self.id_name, 
+                                   max=80, min=20,
+                                   handle_lims_blobs = ((97.72, 100)),
+                                   #significant_thresh = np.percentile(dict_retino[name_cond][name_pos].signal, 97.72), 
+                                   global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
+                                   colors_centr = colrs,
+                                   ext='png',
+                                   name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
         return
 
     def get_retino_subtraction(self, retino_dict, full_frame = True, default_time_window = 20):
@@ -931,52 +930,35 @@ def subtraction_among_conditions(path_session,
         dim_window = 100
     
     r = Retinotopy(path_session, stroke_type = 'multiple stroke')
-
     #First
     _, _, _, _, _, z_123_shrinked, _ = r.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1])
-    sign                             = z_123_shrinked
-
-    if (second is not None) and (time_limits_second is not None):
-        #AM12
-        _, _, _, _, _, z_12_shrinked, _ = r.single_seq_retinotopy(second, None, None, time_limits_second[0], time_limits_second[1])
-        sign                            = z_123_shrinked-z_12_shrinked
+    _, _, _, _, _, z_12_shrinked, _  = r.single_seq_retinotopy(second, None, None, time_limits_second[0], time_limits_second[1])
+    sign                             = z_123_shrinked-z_12_shrinked
 
     # AM123 - AM12
     pos_inferred_averaged = Retinotopy(path_session, 
-                                       cond_name = id_name + name, 
-                                       name = id_name + name,
-                                       signal = sign,
+                                       cond_name    = id_name + name, 
+                                       name         = id_name + name,
+                                       signal       = sign,
                                        session_name = session_name, 
-                                       mask = mask,
-                                       df = df_123,
-                                       stroke_type = 'multiple stroke')
+                                       mask         = mask,
+                                       df           = df_123,
+                                       stroke_type  = 'multiple stroke')
 
     pos_inferred_averaged.time_limits = ((time_limits_first[0], time_limits_first[1]))
-    # if (sub != 'Wallace' ) and (sub !='Bretzel') and (sub!='Ziggy'):
     FOI                               = np.nanmean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
-    # else:
-        # FOI = np.nanmean(pos_inferred_averaged.signal, axis=0)
 
     # Find retinotopic position in averaged signal over 15 frames
     centroids, blobs, _, blurred = pos_inferred_averaged.get_retinotopic_features(FOI, mask_switch = False)
     min_bord                     = np.nanpercentile(blurred, 15)
     max_bord                     = np.nanpercentile(blurred, 98)
-    #coords_singl = np.array(list(zip(*centroids)))
-    #(a,b), _ = retino.centroid_max(coords_singl[0], coords_singl[1], blurred)
-    pos_inferred_averaged.retino_pos = centroids[0]
-    pos_inferred_averaged.blob       = blobs
-    
-    #if (sub != 'Wallace' ) and (sub !='Bretzel'):
-    # if (sub != 'Wallace' ) and (sub !='Bretzel') and (sub!='Ziggy'):
+
+    pos_inferred_averaged.retino_pos     = centroids[0]
+    pos_inferred_averaged.blob           = blobs
     blurred[~pos_inferred_averaged.mask] = np.NAN
     pos_inferred_averaged.map            = blurred
     
     if single_trial_analysis:
-    #        if (second is None) or (time_limits_second is None):
-            #retino_object, pos_centroids, blurrs_pos_single_trials, blobs_pos_single_trials, pos_centroids_single_trials, not_normlzd_pos_centroids, z_scores_pos_single_trials, centroids_pos_single_frame 
-            #print(dim_window, time_window_inference, second, pos_inferred_averaged.time_limits, time_limits_second,id_name, sub)
-    #            time_limits_first = None
-    #        else:
         pos_inferred_averaged = single_trial_detection(pos_inferred_averaged, dim_window, time_window_inference, second, pos_inferred_averaged.time_limits, time_limits_second, fullframe = fullframe)
     else:
         pos_inferred_averaged.distribution_positions = list()
@@ -992,14 +974,6 @@ def subtraction_among_conditions(path_session,
     params[name_params].append(pos_inferred_averaged.time_courses) #average timecourse
     params[name_params].append(pos_inferred_averaged.average_time_course) #average timecourse 8
 
-    # Build the 'retino_inferred' folder for the session 
-    # storage_path = os.path.join(NAME_ANALYSIS, id_name, 'retino_inferred')
-    # tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
-    # # Storing retinotopic objects
-    # # Deleting df_fz and time courses for sparing storage volume
-    # pos_inferred_averaged.df_fz = None
-    # pos_inferred_averaged.time_courses = None
-    # pos_inferred_averaged.store_retino(os.path.join(dv.STORAGE_PATH, NAME_ANALYSIS, tmp))
 
     return params, pos_inferred_averaged 
                 
