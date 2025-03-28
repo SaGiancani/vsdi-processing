@@ -302,7 +302,6 @@ class RetinoSession(md.Session):
         utils.stampa(f'End processing retinotopy analysis for condition {name_cond}')
         utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
         return dict_retino
-    
 
     def get_retino_session(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
@@ -314,7 +313,7 @@ class RetinoSession(md.Session):
         dict_retino = dict()
         for cond_id, cond_name in self.cond_dict.items():
             dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
-        params, dict_subtrs = self.get_retino_subtraction(self, dict_retino)
+        params, dict_subtrs = self.get_retino_subtraction(self)
 
         if self.visualization_switch:
             for sub_name, sub_ret in dict_subtrs.items():
@@ -325,7 +324,6 @@ class RetinoSession(md.Session):
 
         utils.stampa(f'Retino session elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                                         
         return
-
 
     def get_stroke_retinotopy(self,
                                 name_cond,
@@ -479,7 +477,7 @@ class RetinoSession(md.Session):
                                    name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
         return
 
-    def get_retino_subtraction(self, retino_dict, full_frame = True, default_time_window = 20):
+    def get_retino_subtraction(self, full_frame = False, default_time_window = 20):
 
         single_pos       = list(set([i for v in self.retino_pos_am.values() for i in v]))
         dict_components_ = self.retino_pos_am
@@ -993,7 +991,8 @@ def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, pat
         single_pos_retinotopy.append(single_pos_tmp.retino_pos)
     return single_pos_retinotopy
 
-
+# Example of script running sbatch Desktop/runpy_giancani.sh retinotopy.py --path_md /envau/work/neopto/DATA_AnDO/exp-AM3_VSDI/sub-Bretzel/sess-20131127_001/derivatives/spcbin1_timebin1_zerofrms6_strategymae_n_chunk1_movFalse_deblankTrue/ --ss_label p --vis --store --denoised
+# Specifically for Bretzel, rotate the spatial axis and crop otherwise analysis does not work entirely
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')
 
