@@ -513,10 +513,11 @@ class RetinoSession(md.Session):
             strk = len(dict_components_[first_cond])-1                                            
             utils.stampa(f'Frame start: {frames_start}, speed {s}, n° strokes - 1 {strk}, fq {self.acquisition_frequency}', logger = self.log)                                                               
 
+            # Not sure this check makes sense
             if (frames_start//2) > 1:
-                frames_end = frames_start + frames_start//2 # Something off here: it goes to 6 even for AM sequences with 2 pos
+                frames_end = frames_start + frames_start//2 
             else:
-                frames_end = frames_start + 2
+                frames_end = frames_start + 3
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
                 
             params, sub_x = subtraction_among_conditions(self.path_session, 
