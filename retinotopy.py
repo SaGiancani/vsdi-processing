@@ -494,15 +494,15 @@ class RetinoSession(md.Session):
 
         for first_cond, second_cond in dict_subs.items():
             
+            first_cd     = self.get_data_to_process(first_cond)
+            second_cd    = self.get_data_to_process(second_cond)
+            
             time_limits_first = ((self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
             
             if second_cd in self.cond_pos.values():
                 time_limits_second = ((self.stimulus_metadata['single stroke']['bottom limit'], self.stimulus_metadata['single stroke']['bottom limit'] + default_time_window))
             else:
                 time_limits_second = ((self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
-
-            first_cd     = self.get_data_to_process(first_cond)
-            second_cd    = self.get_data_to_process(second_cond)
             
             name_subtrcts = f'{first_cond}-{second_cond}'
             a             = self.stimulus_metadata['pos metadata']
