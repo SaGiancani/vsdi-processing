@@ -265,17 +265,15 @@ class RetinoSession(md.Session):
                 retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
             # If does not, it build it
             except:
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, str_type = 'single stroke') #get_stroke_retinotopy has to be modified for the rem_ files
+                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, retinotopic_path_folder, stroke_number = None, str_type = 'single stroke') 
                 # Store single stroke condition
                 dict_retino[name_cond] = retino_cond
                 # Extract visualization utility variables
                 indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
                 colrs.append(dv.COLORS_7[indeces_colors])
                 # If true, store pictures
-                print('Os system print: '+ str(os.system('/usr/bin/sync')))
                 if self.visualization_switch:
                     self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
-                    print('Os system print: '+ str(os.system('/usr/bin/sync')))
                 # If true store variables
                 if self.storage_switch:
                     retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
@@ -286,7 +284,7 @@ class RetinoSession(md.Session):
             dict_retino[name_cond] = dict()
             for i, j in enumerate(self.retino_pos_am[name_cond]):
                 utils.stampa(f'The stroke {j} is the number {i}\n', logger=self.log)
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, str_type = 'multiple stroke')
+                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, retinotopic_path_folder, stroke_number = i, str_type = 'multiple stroke')
                 # Store single stroke within AM
                 dict_retino[name_cond][j] = retino_cond
                 # Extract visualization utility variables
@@ -329,6 +327,7 @@ class RetinoSession(md.Session):
                                 name_cond,
                                 time_limits, 
                                 cd,
+                                retinotopic_path_folder,
                                 stroke_number = None,
                                 str_type = 'single stroke'):
 
@@ -398,18 +397,32 @@ class RetinoSession(md.Session):
         utils.stampa(f'Centroids and dimension of windows: {(r.retino_pos, self.window_dimension)}\n', logger=self.log)   
         print(r.retino_pos, self.window_dimension, begin_time, end_time)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
         pos_single_trials_data = [r.single_seq_retinotopy(i, 
-                                                            r.retino_pos,
-                                                            self.window_dimension, 
-                                                            begin_time,
-                                                            end_time,
-                                                            df_f0_foi = foi,
-                                                            sig_blank = mean_blank,
-                                                            std_blank = self.std_blank,
-                                                            lim_blob_detect = 70) for i in df] 
+                                                          r.retino_pos,
+                                                          self.window_dimension, 
+                                                          begin_time,
+                                                          end_time,
+                                                          df_f0_foi = foi,
+                                                          sig_blank = mean_blank,
+                                                          std_blank = self.std_blank,
+                                                          lim_blob_detect = 70) for i in df] 
 
         # Storing distribution of points
         pos_centroids = list(list(zip(*pos_single_trials_data))[0])
         r.distribution_positions = list(zip(*pos_centroids))
+
+        # Single trial plot sanity check
+        if self.visualization_switch:
+            t = [[i] for i in list(list(zip(*pos_single_trials_data))[4])]
+            dv.whole_time_sequence(list(list(zip(*pos_single_trials_data))[1]), 
+                                   blbs = list(list(zip(*pos_single_trials_data))[2]), 
+                                   cntrds = t, mask = None, 
+                                   max = 95, min = 15, 
+                                   blur = False, 
+                                   adaptive_vm = True, 
+                                   ext = 'png',
+                                   name_analysis_ = os.path.join(retinotopic_path_folder, self.id_name, name_cond),
+                                   name = 'sanity_check_single_trial_'+ name_cond + self.id_name)
+
         return r
 
     def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino):
