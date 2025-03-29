@@ -531,6 +531,7 @@ class RetinoSession(md.Session):
             else:
                 frames_end = frames_start + 3
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
+            utils.stampa(f'Full frame switch {full_frame}', logger = self.log)                                                               
                 
             params, sub_x = subtraction_among_conditions(self.path_session, 
                                                          np.nanmean(first_cd.df_fz, axis = 0),
