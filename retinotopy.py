@@ -392,6 +392,8 @@ class RetinoSession(md.Session):
         blurred[~r.mask] = np.NAN
         r.map = blurred
 
+        # def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, fullframe = True):
+
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n')
         utils.stampa(f'Shape of signal for single trial extracting centroids: {df.shape}\n', logger=self.log)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
         utils.stampa(f'Centroids and dimension of windows: {(r.retino_pos, self.window_dimension)}\n', logger=self.log)   
@@ -517,7 +519,7 @@ class RetinoSession(md.Session):
             name_subtrcts = f'{first_cond}-{second_cond}'
             a             = self.stimulus_metadata['pos metadata']
             space_step    = a[first_cond]['inter stimulus space']
-            frames_start  = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency))
+            frames_start  = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency)) + a[first_cond]['start']
             utils.stampa(f'Name sub {name_subtrcts}, space stepping {space_step}', logger = self.log)   
             s    = self.stimulus_metadata['speed']            
             strk = len(dict_components_[first_cond])-1                                            
@@ -970,7 +972,13 @@ def subtraction_among_conditions(path_session,
     pos_inferred_averaged.map            = blurred
     
     if single_trial_analysis:
-        pos_inferred_averaged = single_trial_detection(pos_inferred_averaged, dim_window, time_window_inference, second, pos_inferred_averaged.time_limits, time_limits_second, fullframe = fullframe)
+        pos_inferred_averaged = single_trial_detection(pos_inferred_averaged, 
+                                                       dim_window, 
+                                                       time_window_inference, 
+                                                       second, 
+                                                       pos_inferred_averaged.time_limits, 
+                                                       time_limits_second, 
+                                                       fullframe = fullframe)
     else:
         pos_inferred_averaged.distribution_positions = list()
     
