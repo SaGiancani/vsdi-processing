@@ -656,21 +656,6 @@ class Retinotopy:
             return ((int(a[list(a.keys())[0]][stroke_type]['bottom limit']), int(a[list(a.keys())[0]][stroke_type]['upper limit'])))
             #return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
-
-    def get_retinotopic_features(self, FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):# MODIFIED HERE 22/03/23
-        num_for_nan = np.nanpercentile(FOI, 20)
-        #num_for_nan = -33e-10
-        print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
-        #averaged_df1 = np.nan_to_num(averaged_df1, nan=np.nanmin(averaged_df1), neginf=np.nanmin(averaged_df1[np.where(averaged_df1 != -np.inf)]), posinf=np.nanmax(averaged_df1[np.where(averaged_df1 != np.inf)]))
-        blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
-        _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, min_2_lim = thresh_gaus, adaptive_thresh=adaptive_thresh)
-        if mask_switch:
-            circular_mask = utils.sector_mask(np.shape(blurred), (centroids[0][1], centroids[0][0]), circular_mask_dim, (0,360))
-        else:
-            circular_mask = None
-        return centroids, blobs, circular_mask, blurred
-
-
     def centroid_poly(self, X, Y):
         """
         https://en.wikipedia.org/wiki/Centroid#Of_a_polygon
@@ -807,51 +792,12 @@ class Retinotopy:
         #print(lim_inf, lim_sup)
 
         # If want to store information from single frame
-        # THIS IF COULD BE REFACTORED IN A NEW METHOD: OBSOLETE ANALYSIS
         if single_frame_analysis:
-            single_centroids = list()
-            # Strategy for time windowing
-            for i in range(len(ztmp)):
-                if time_window==1:
-                    #print(f'the {i}th frame')
-                    tmp_ = ztmp[i, :, :]
-                elif time_window >1:
-                    if i == 0:
-                        #print(f'from 0 to {time_window//2}')
-                        tmp_ = np.nanmean(ztmp[i:time_window//2, :, :], axis=0)                    
-                    elif i<=time_window//2-1:
-                        #print(f'from 0 to {time_window//2}')
-                        tmp_ = np.nanmean(ztmp[0:i:time_window//2, :, :], axis=0)
-
-                    elif i>time_window//2-1:
-                        try:
-                            tmp_ = np.nanmean(ztmp[i-time_window//2:i+time_window//2, :, :], axis=0)
-                            #print(f'from {i-time_window//2} to {i+time_window//2}')
-                        except:
-                            tmp_ = np.nanmean(ztmp[i-time_window//2:, :, :], axis=0)
-                            #print(f'from {i-time_window//2} to {len(ztmp)}')
-                centroids_singl, _, _, blurred_singl = self.get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False, thresh_gaus=single_frame_thresh)
-                coords_singl = np.array(list(zip(*centroids_singl)))
-                if (coords_singl is not None) and (len(coords_singl)>0) :
-                    # Centroid at maximum response
-                    (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
-                else:
-                    print(len(coords_singl))
-                    (a,b) = (np.nan, np.nan)
-                # Centroid at the centroid of the polygon given by all the points
-                #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
-                
-                # If global_centroid, then normalization of resulting centroid
-                if global_centroid is None:
-                    c,d = ((a,b))
-                else:
-                    c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
-                single_centroids.append((c, d))
-                
+            single_centroids = get_single_frame_peak(ztmp, time_window, global_centroid, dim_side, lim_blob_detect = lim_blob_detect, single_frame_thresh = single_frame_thresh)
         else:
-            single_centroids = []
+            single_centroids = []    
 
-        centroids, blobs, _, blurred = self.get_retinotopic_features(np.nanmean(ztmp, axis=0), min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
+        centroids, blobs, _, blurred = get_retinotopic_features(np.nanmean(ztmp, axis=0), min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
         coords = np.array(list(zip(*centroids)))
         if (coords is not None) and (len(coords)>0) :
             (a,b), _ = centroid_max(coords[0], coords[1], blurred)
@@ -864,6 +810,61 @@ class Retinotopy:
             c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
     
+
+def get_retinotopic_features(FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):# MODIFIED HERE 22/03/23
+    num_for_nan = np.nanpercentile(FOI, 20)
+    #num_for_nan = -33e-10
+    print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
+    #averaged_df1 = np.nan_to_num(averaged_df1, nan=np.nanmin(averaged_df1), neginf=np.nanmin(averaged_df1[np.where(averaged_df1 != -np.inf)]), posinf=np.nanmax(averaged_df1[np.where(averaged_df1 != np.inf)]))
+    blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
+    _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, min_2_lim = thresh_gaus, adaptive_thresh=adaptive_thresh)
+    if mask_switch:
+        circular_mask = utils.sector_mask(np.shape(blurred), (centroids[0][1], centroids[0][0]), circular_mask_dim, (0,360))
+    else:
+        circular_mask = None
+    return centroids, blobs, circular_mask, blurred
+
+
+def get_single_frame_peak(ztmp, time_window, global_centroid, dim_side, lim_blob_detect = 80, single_frame_thresh = 99):
+    single_centroids = list()
+    # Strategy for time windowing
+    for i in range(len(ztmp)):
+        if time_window==1:
+            #print(f'the {i}th frame')
+            tmp_ = ztmp[i, :, :]
+        elif time_window >1:
+            if i == 0:
+                #print(f'from 0 to {time_window//2}')
+                tmp_ = np.nanmean(ztmp[i:time_window//2, :, :], axis=0)                    
+            elif i<=time_window//2-1:
+                #print(f'from 0 to {time_window//2}')
+                tmp_ = np.nanmean(ztmp[0:i:time_window//2, :, :], axis=0)
+
+            elif i>time_window//2-1:
+                try:
+                    tmp_ = np.nanmean(ztmp[i-time_window//2:i+time_window//2, :, :], axis=0)
+                    #print(f'from {i-time_window//2} to {i+time_window//2}')
+                except:
+                    tmp_ = np.nanmean(ztmp[i-time_window//2:, :, :], axis=0)
+                    #print(f'from {i-time_window//2} to {len(ztmp)}')
+        centroids_singl, _, _, blurred_singl = get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False, thresh_gaus=single_frame_thresh)
+        coords_singl = np.array(list(zip(*centroids_singl)))
+        if (coords_singl is not None) and (len(coords_singl)>0) :
+            # Centroid at maximum response
+            (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
+        else:
+            print(len(coords_singl))
+            (a,b) = (np.nan, np.nan)
+        # Centroid at the centroid of the polygon given by all the points
+        #(a,b) = centroid_poly(coords_singl[0], coords_singl[1])
+        
+        # If global_centroid, then normalization of resulting centroid
+        if global_centroid is None:
+            c,d = ((a,b))
+        else:
+            c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
+        single_centroids.append((c, d))
+    return single_centroids
 
 
 def get_assess_centroid(centroids, mask):
@@ -908,23 +909,12 @@ def single_trial_detection(retino_object, dim_window, time_window_inference, df_
                                                                   df_confront = df_conf,
                                                                   df_confront_foi = time_limits_second,
                                                                   df_f0_foi = time_limits_first,
-                                                                  lim_blob_dect = 70
-                                                                #   single_frame_analysis=True,
-                                                                #   time_window=3
-                                                                  ) for i in retino_object.df_fz]    
+                                                                  lim_blob_detect = 70) for i in retino_object.df_fz]    
     
     # Storing distribution of points
     pos_centroids = list(list(zip(*pos_single_trials_data))[0])
     retino_object.distribution_positions = list(zip(*pos_centroids))
     print('Centroids found!\n')               
-    #print('The dots for single trial analysis are:\n')
-    #print(single_stroke.distribution_positions)
-    # blurrs_pos_single_trials = list(list(zip(*pos_single_trials_data))[1])
-    # blobs_pos_single_trials = list(list(zip(*pos_single_trials_data))[2])
-    # #pos_centroids_single_trials = list(list(zip(*pos_single_trials_data))[3])
-    # not_normlzd_pos_centroids = list(list(zip(*pos_single_trials_data))[4])
-    #z_scores_pos_single_trials = list(list(zip(*pos_single_trials_data))[5])
-    #centroids_pos_single_frame = list(list(zip(*pos_single_trials_data))[6])
                     
     return retino_object
 
@@ -967,7 +957,7 @@ def subtraction_among_conditions(path_session,
     FOI                               = np.nanmean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
 
     # Find retinotopic position in averaged signal over 15 frames
-    centroids, blobs, _, blurred = pos_inferred_averaged.get_retinotopic_features(FOI, min_lim=80, max_lim = 99, mask_switch = False)
+    centroids, blobs, _, blurred = get_retinotopic_features(FOI, min_lim=80, max_lim = 99, mask_switch = False)
     min_bord                     = np.nanpercentile(blurred, 15)
     max_bord                     = np.nanpercentile(blurred, 98)
 
