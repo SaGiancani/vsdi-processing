@@ -392,8 +392,6 @@ class RetinoSession(md.Session):
         blurred[~r.mask] = np.NAN
         r.map = blurred
 
-        # def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, fullframe = True):
-
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n')
         utils.stampa(f'Shape of signal for single trial extracting centroids: {df.shape}\n', logger=self.log)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
         utils.stampa(f'Centroids and dimension of windows: {(r.retino_pos, self.window_dimension)}\n', logger=self.log)   
@@ -811,7 +809,7 @@ class Retinotopy:
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
     
 
-def get_retinotopic_features(FOI, min_lim=90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):# MODIFIED HERE 22/03/23
+def get_retinotopic_features(FOI, min_lim = None, max_lim = None, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):# MODIFIED HERE 22/03/23
     num_for_nan = np.nanpercentile(FOI, 20)
     #num_for_nan = -33e-10
     print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
@@ -847,7 +845,9 @@ def get_single_frame_peak(ztmp, time_window, global_centroid, dim_side, lim_blob
                 except:
                     tmp_ = np.nanmean(ztmp[i-time_window//2:, :, :], axis=0)
                     #print(f'from {i-time_window//2} to {len(ztmp)}')
-        centroids_singl, _, _, blurred_singl = get_retinotopic_features(tmp_, min_lim=lim_blob_detect, max_lim = 100, mask_switch = False, thresh_gaus=single_frame_thresh)
+        min_lim = np.nanpercentile(tmp_, lim_blob_detect)
+        max_lim = np.nanpercentile(tmp_, 100)
+        centroids_singl, _, _, blurred_singl = get_retinotopic_features(tmp_, min_lim = min_lim, max_lim = max_lim, mask_switch = False, thresh_gaus=single_frame_thresh)
         coords_singl = np.array(list(zip(*centroids_singl)))
         if (coords_singl is not None) and (len(coords_singl)>0) :
             # Centroid at maximum response
@@ -957,7 +957,9 @@ def subtraction_among_conditions(path_session,
     FOI                               = np.nanmean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
 
     # Find retinotopic position in averaged signal over 15 frames
-    centroids, blobs, _, blurred = get_retinotopic_features(FOI, min_lim=80, max_lim = 99, mask_switch = False)
+    lim_inf = np.nanpercentile(FOI[np.where((FOI != -np.inf) | (FOI != np.inf))], 80)
+    lim_sup = np.nanpercentile(FOI[np.where((FOI != -np.inf) | (FOI != np.inf))], 99)
+    centroids, blobs, _, blurred = get_retinotopic_features(FOI, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False)
     min_bord                     = np.nanpercentile(blurred, 15)
     max_bord                     = np.nanpercentile(blurred, 98)
 
