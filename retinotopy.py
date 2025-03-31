@@ -530,7 +530,6 @@ class RetinoSession(md.Session):
             frames_end = frames_start + 4
             
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
-            utils.stampa(f'Full frame switch {full_frame}', logger = self.log)                                                               
                 
             params, sub_x = subtraction_among_conditions(self.path_session, 
                                                          np.nanmean(first_cd.df_fz, axis = 0),
@@ -932,11 +931,14 @@ def subtraction_among_conditions(path_session,
                                  time_window_inference, 
                                  fullframe = True, 
                                  single_trial_analysis = True, 
-                                 dim_window = 50):
+                                 dim_window = 50):                                                         
     
     if fullframe:
         dim_window = 100
     
+    utils.stampa(f'Full frame switch {fullframe}', logger = None)                                                               
+    utils.stampa(f'Dim window frame  {dim_window}', logger = None)    
+
     r = Retinotopy(path_session, stroke_type = 'multiple stroke')
     #First
     _, _, _, _, _, z_123_shrinked, _ = r.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1])
