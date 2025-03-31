@@ -526,10 +526,11 @@ class RetinoSession(md.Session):
             utils.stampa(f'Frame start: {frames_start}, speed {s}, n° strokes - 1 {strk}, fq {self.acquisition_frequency}', logger = self.log)                                                               
 
             # Not sure this check makes sense
-            if (frames_start//2) > 1:
-                frames_end = frames_start + frames_start//2 
-            else:
-                frames_end = frames_start + 3
+            # if (frames_start//2) > 1:                               # THIS COULD BE MODIFIED. SPECIFICALLY THE END: MORE THAN 3
+            #     frames_end = frames_start + frames_start//2 
+            # else:
+            frames_end = frames_start + 4
+            
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
             utils.stampa(f'Full frame switch {full_frame}', logger = self.log)                                                               
                 
@@ -806,6 +807,7 @@ class Retinotopy:
         #print(lim_inf, lim_sup)
 
         # If want to store information from single frame
+        # THIS IF COULD BE REFACTORED IN A NEW METHOD: OBSOLETE ANALYSIS
         if single_frame_analysis:
             single_centroids = list()
             # Strategy for time windowing
@@ -906,8 +908,10 @@ def single_trial_detection(retino_object, dim_window, time_window_inference, df_
                                                                   df_confront = df_conf,
                                                                   df_confront_foi = time_limits_second,
                                                                   df_f0_foi = time_limits_first,
-                                                                  single_frame_analysis=True,
-                                                                  time_window=3) for i in retino_object.df_fz]    
+                                                                  lim_blob_dect = 70
+                                                                #   single_frame_analysis=True,
+                                                                #   time_window=3
+                                                                  ) for i in retino_object.df_fz]    
     
     # Storing distribution of points
     pos_centroids = list(list(zip(*pos_single_trials_data))[0])
@@ -963,7 +967,7 @@ def subtraction_among_conditions(path_session,
     FOI                               = np.nanmean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
 
     # Find retinotopic position in averaged signal over 15 frames
-    centroids, blobs, _, blurred = pos_inferred_averaged.get_retinotopic_features(FOI, mask_switch = False)
+    centroids, blobs, _, blurred = pos_inferred_averaged.get_retinotopic_features(FOI, min_lim=80, max_lim = 99, mask_switch = False)
     min_bord                     = np.nanpercentile(blurred, 15)
     max_bord                     = np.nanpercentile(blurred, 98)
 
