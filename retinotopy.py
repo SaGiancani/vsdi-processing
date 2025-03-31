@@ -142,10 +142,13 @@ class RetinoSession(md.Session):
 
         self.id_name = utils.get_session_id_name(self.path_session)                   
         if not self.denoise_switch:
-            self.mask  = self.get_mask()
+            self.mask       = self.get_mask()
+            self.full_frame = False 
         else:
-            self.id_name = f'{self.id_name}_Denoise'
-            self.mask  = np.ones((self.std_blank.shape), dtype=bool)
+            self.id_name    = f'{self.id_name}_Denoise'
+            self.mask       = np.ones((self.std_blank.shape), dtype=bool)
+            self.full_frame = True 
+ 
         utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
 
         (ny, nx)                  = self.mean_blank [0, :,:].shape            
@@ -311,7 +314,7 @@ class RetinoSession(md.Session):
         dict_retino = dict()
         for cond_id, cond_name in self.cond_dict.items():
             dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
-        params, dict_subtrs = self.get_retino_subtraction(self)
+        params, dict_subtrs = self.get_retino_subtraction()
 
         if self.visualization_switch:
             for sub_name, sub_ret in dict_subtrs.items():
@@ -490,7 +493,7 @@ class RetinoSession(md.Session):
                                    name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
         return
 
-    def get_retino_subtraction(self, full_frame = False, default_time_window = 20):
+    def get_retino_subtraction(self, default_time_window = 20):
 
         single_pos       = list(set([i for v in self.retino_pos_am.values() for i in v]))
         dict_components_ = self.retino_pos_am
@@ -499,6 +502,7 @@ class RetinoSession(md.Session):
 
         dict_subs   = utils.find_subsets(dict_components_)     
         utils.stampa(f'{dict_subs}', logger = self.log)                                                               
+        utils.stampa(f'{self.full_frame}', logger = self.log)                                                               
         params      = defaultdict(list)
         dict_subtrs = dict()
 
@@ -544,7 +548,7 @@ class RetinoSession(md.Session):
                                                          params, 
                                                          name_subtrcts, 
                                                          ((frames_start, frames_end)),
-                                                         fullframe = full_frame,
+                                                         fullframe = self.full_frame,
                                                          single_trial_analysis = True)
             dict_subtrs[name_subtrcts] = sub_x
 
