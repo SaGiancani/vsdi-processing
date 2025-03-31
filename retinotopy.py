@@ -809,7 +809,7 @@ class Retinotopy:
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
     
 
-def get_retinotopic_features(FOI, min_lim = None, max_lim = None, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):# MODIFIED HERE 22/03/23
+def get_retinotopic_features(FOI, min_lim = 90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):
     num_for_nan = np.nanpercentile(FOI, 20)
     #num_for_nan = -33e-10
     print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
@@ -957,9 +957,8 @@ def subtraction_among_conditions(path_session,
     FOI                               = np.nanmean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
 
     # Find retinotopic position in averaged signal over 15 frames
-    lim_inf = np.nanpercentile(FOI[np.where((FOI != -np.inf) | (FOI != np.inf))], 80)
-    lim_sup = np.nanpercentile(FOI[np.where((FOI != -np.inf) | (FOI != np.inf))], 99)
-    centroids, blobs, _, blurred = get_retinotopic_features(FOI, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False)
+    centroids, blobs, _, blurred = get_retinotopic_features(FOI, mask_switch = False)
+    print(centroids)
     min_bord                     = np.nanpercentile(blurred, 15)
     max_bord                     = np.nanpercentile(blurred, 98)
 
