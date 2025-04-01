@@ -142,11 +142,18 @@ class RetinoSession(md.Session):
 
         self.id_name = utils.get_session_id_name(self.path_session)                   
         if not self.denoise_switch:
-            self.mask       = self.get_mask()
-            self.full_frame = False 
+            try:
+                self.mask       = self.get_mask()
+                utils.stampa('Mask properly loaded', logger = self.log)
+                self.full_frame = False 
+            except:
+                self.mask       = np.ones((self.std_blank.shape), dtype = bool)
+                utils.stampa('Impossible to properly load the mask. Substitute by fullframe', logger = self.log)
+                self.full_frame = True 
+
         else:
             self.id_name    = f'{self.id_name}_Denoise'
-            self.mask       = np.ones((self.std_blank.shape), dtype=bool)
+            self.mask       = np.ones((self.std_blank.shape), dtype = bool)
             self.full_frame = True 
  
         utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
@@ -527,10 +534,7 @@ class RetinoSession(md.Session):
             strk = len(dict_components_[first_cond])-1                                            
             utils.stampa(f'Frame start: {frames_start}, speed {s}, n° strokes - 1 {strk}, fq {self.acquisition_frequency}', logger = self.log)                                                               
 
-            # Not sure this check makes sense
-            # if (frames_start//2) > 1:                               # THIS COULD BE MODIFIED. SPECIFICALLY THE END: MORE THAN 3
-            #     frames_end = frames_start + frames_start//2 
-            # else:
+            # 4 frames after the start for averaging out and checking for peaks
             frames_end = frames_start + 4
             
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
@@ -541,7 +545,7 @@ class RetinoSession(md.Session):
                                                          time_limits_first, 
                                                          time_limits_second, 
                                                          self.id_name,
-                                                         f'_inferred_{first_cond}_{second_cond}',
+                                                         f'{first_cond}_{second_cond}',
                                                          self.id_name,
                                                          self.mask,
                                                          first_cd.df_fz, 
@@ -935,7 +939,7 @@ def subtraction_among_conditions(path_session,
                                  time_window_inference, 
                                  fullframe = True, 
                                  single_trial_analysis = True, 
-                                 dim_window = 50):                                                         
+                                 dim_window = 150):                                                         
     
     if fullframe:
         dim_window = 100
@@ -951,7 +955,7 @@ def subtraction_among_conditions(path_session,
 
     # AM123 - AM12
     pos_inferred_averaged = Retinotopy(path_session, 
-                                       cond_name    = id_name + name, 
+                                       cond_name    = name, 
                                        name         = id_name + name,
                                        signal       = sign,
                                        session_name = session_name, 
@@ -1015,7 +1019,6 @@ def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, pat
     return single_pos_retinotopy
 
 # Example of script running sbatch Desktop/runpy_giancani.sh retinotopy.py --path_md /envau/work/neopto/DATA_AnDO/exp-AM3_VSDI/sub-Bretzel/sess-20131127_001/derivatives/spcbin1_timebin1_zerofrms6_strategymae_n_chunk1_movFalse_deblankTrue/ --ss_label p --vis --store --denoised
-# Specifically for Bretzel, rotate the spatial axis and crop otherwise analysis does not work entirely
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')
 
