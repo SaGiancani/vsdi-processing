@@ -35,7 +35,7 @@ class RetinoSession(md.Session):
                     single_stroke_label = 'pos',
                     multiple_stroke_label = 'am',
                     time_course_window_dim = 10,
-                    window_dim = 150,
+                    window_dim = 420,
                     acquisition_fq = 100,#Hz
                     denoise_flag = False,
                     **kwargs):
@@ -73,8 +73,8 @@ class RetinoSession(md.Session):
         self.all_blks = md.get_all_blks(self.header['path_session'], sort = True) # all the blks, sorted by creation date -written on the filename-.
         # A blk loaded for useful hyperparameters
         blk = blk_file.BlkFile(os.path.join(self.header['path_session'],'rawdata', self.all_blks[np.random.randint(len(self.all_blks)-1)]), 
-                            self.header['spatial_bin'], 
-                            self.header['temporal_bin'])
+                               self.header['spatial_bin'], 
+                               self.header['temporal_bin'])
         self.header['n_frames'] = blk.header['nframesperstim']
         self.header['original_height'] = blk.header['frameheight']
         self.header['original_width'] = blk.header['framewidth']
@@ -152,7 +152,7 @@ class RetinoSession(md.Session):
         else:
             self.id_name    = f'{self.id_name}_Denoise'
             self.mask       = np.ones((self.std_blank.shape), dtype = bool)
-            self.full_frame = True 
+            self.full_frame = False 
  
         utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
 
@@ -160,7 +160,11 @@ class RetinoSession(md.Session):
         self.green                = utils.get_green(green_name, self.path_session, size = (ny, nx), log=None)
         # Single centroid mask dimension
         self.tc_window_dimension  = time_course_window_dim
-        self.window_dimension     = window_dim
+        try:
+            self.window_dimension     = window_dim//(self.green.shape[1]//nx)
+        except:
+            self.window_dimension     = window_dim//(1312//nx)
+        utils.stampa(f'Dimension of mask {self.window_dimension}', logger = self.log)
 
         self.visualization_switch = data_vis_switch
         self.storage_switch       = store_switch
@@ -379,19 +383,19 @@ class RetinoSession(md.Session):
             end_time   = r.time_limits[0]+ starting_time + stroke_number*time_step + time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
             foi = ((0, time_step))
         else:
-            begin_time = r.time_limits[0]
-            end_time = r.time_limits[1]
-            foi = None
+            begin_time = r.time_limits[0] + 6 # Inject a synaptic delay to make it compatible with st_builder 
+            end_time   = r.time_limits[1] + 6 
+            foi        = None
 
         utils.stampa(f'Begin and end frames are: {(begin_time, end_time)}', logger=self.log)   
 
         _, blurred, blobs, centroids, norm_centroids, z_s, _ = r.single_seq_retinotopy(avr_df, 
-                                                                                        None, None,
-                                                                                        begin_time,
-                                                                                        end_time,
-                                                                                        sig_blank = mean_blank,
-                                                                                        std_blank = self.std_blank,
-                                                                                        lim_blob_detect = 70)
+                                                                                       None, None,
+                                                                                       begin_time,
+                                                                                       end_time,
+                                                                                       sig_blank = mean_blank,
+                                                                                       std_blank = self.std_blank,
+                                                                                       lim_blob_detect = 70)
 
         r.blob = blobs
         r.retino_pos = centroids[0]
@@ -1061,7 +1065,7 @@ if __name__=="__main__":
     parser.add_argument('--wd_dim', 
                         dest='wd',
                         type=int,
-                        default = 150,
+                        default = 420,
                         required=False,
                         help='Window dimension for single stroke centroid detection -pixels side of a square-') 
 
