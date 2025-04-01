@@ -163,6 +163,7 @@ class RetinoSession(md.Session):
         utils.stampa(f'Green shape {self.green.shape}', logger = self.log)
         utils.stampa(f'Data shape {(ny, nx)}', logger = self.log)
         utils.stampa(f'Window dim {window_dim}', logger = self.log)
+        window_dim = int(np.nanmax([ny, nx])//3)
         try:
             self.window_dimension     = window_dim//(self.green.shape[1]//nx)
         except:
@@ -1065,12 +1066,12 @@ if __name__=="__main__":
                         required=False,
                         help='Time course window dimension -pixels radius-') 
 
-    parser.add_argument('--wd_dim', 
-                        dest='wd',
-                        type=int,
-                        default = 600,
-                        required=False,
-                        help='Window dimension for single stroke centroid detection -pixels side of a square-') 
+    # parser.add_argument('--wd_dim', 
+    #                     dest='wd',
+    #                     type=int,
+    #                     default = 600,
+    #                     required=False,
+    #                     help='Window dimension for single stroke centroid detection -pixels side of a square-') 
 
     parser.add_argument('--vis', 
                         dest='data_vis_switch', 
@@ -1114,7 +1115,7 @@ if __name__=="__main__":
                                    single_stroke_label=args.single_stroke_label, 
                                    multiple_stroke_label=args.apparent_motion_label,
                                    time_course_window_dim=args.tcwd,
-                                   window_dim=args.wd,
+                                #    window_dim=args.wd,
                                    logger=log,
                                    store_switch=args.store_switch,
                                    denoise_flag=args.denoised_switch,
