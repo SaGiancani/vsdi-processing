@@ -141,12 +141,10 @@ class RetinoSession(md.Session):
         self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
 
         self.id_name = utils.get_session_id_name(self.path_session)                   
-        if not self.denoise_switch:
-            try:
-                self.mask       = self.get_mask()
-                utils.stampa('Mask properly loaded', logger = self.log)
-                self.full_frame = False 
-            except:
+        if not self.denoise_switch:        
+            self.mask       = self.get_mask()
+            self.full_frame = False 
+            if self.mask is None:
                 self.mask       = np.ones((self.std_blank.shape), dtype = bool)
                 utils.stampa('Impossible to properly load the mask. Substitute by fullframe', logger = self.log)
                 self.full_frame = True 
