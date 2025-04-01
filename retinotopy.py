@@ -35,7 +35,7 @@ class RetinoSession(md.Session):
                     single_stroke_label = 'pos',
                     multiple_stroke_label = 'am',
                     time_course_window_dim = 10,
-                    window_dim = 420,
+                    window_dim = 600,
                     acquisition_fq = 100,#Hz
                     denoise_flag = False,
                     **kwargs):
@@ -1065,7 +1065,7 @@ if __name__=="__main__":
     parser.add_argument('--wd_dim', 
                         dest='wd',
                         type=int,
-                        default = 420,
+                        default = 600,
                         required=False,
                         help='Window dimension for single stroke centroid detection -pixels side of a square-') 
 
