@@ -785,7 +785,7 @@ class Retinotopy:
             if df_confront is not None:
                 # df_confront = df_confront[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
                 #                 (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
-                df_confront = df_confront[y_min:y_max, x_min:x_max]               
+                df_confront = df_confront[:, y_min:y_max, x_min:x_max]               
             flag_adjust_centroid = True
 
         # Full frame analysis, no crop
