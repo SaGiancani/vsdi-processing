@@ -164,7 +164,7 @@ class RetinoSession(md.Session):
             utils.stampa(f'Green shape {self.green.shape}', logger = self.log)
             self.window_dimension     = window_dim//(self.green.shape[1]//nx)
         except:
-            utils.stampa(f'Green shape {self.green.shape}', logger = self.log)
+            utils.stampa(f'Green shape {1312}', logger = self.log)
             self.window_dimension     = window_dim//(1312//nx)
         utils.stampa(f'Data shape {(ny, nx)}', logger = self.log)
         utils.stampa(f'Dimension of window {self.window_dimension}', logger = self.log)
