@@ -27,6 +27,7 @@ class RetinoSession(md.Session):
                     logs_switch =False,  
                     base_report_name= 'BaseReport.csv',
                     base_head_dim = 19, 
+                    full_frame = False,                    
                     logger = None, 
                     condid = None, 
                     store_switch = False, 
@@ -139,20 +140,18 @@ class RetinoSession(md.Session):
 
         self.mean_blank        = self.blank_condition.averaged_df
         self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
+        
+        self.full_frame        = full_frame 
+        self.id_name           = utils.get_session_id_name(self.path_session)                   
 
-        self.id_name = utils.get_session_id_name(self.path_session)                   
         if not self.denoise_switch:        
             self.mask       = self.get_mask()
-            self.full_frame = False 
             if self.mask is None:
                 self.mask       = np.ones((self.std_blank.shape), dtype = bool)
-                utils.stampa('Impossible to properly load the mask. Substitute by fullframe', logger = self.log)
-                self.full_frame = True 
-
+                utils.stampa('Impossible to properly load the mask. Substitute by fullframe visualization', logger = self.log)
         else:
             self.id_name    = f'{self.id_name}_Denoise'
             self.mask       = np.ones((self.std_blank.shape), dtype = bool)
-            self.full_frame = False 
  
         utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
 
@@ -541,7 +540,7 @@ class RetinoSession(md.Session):
             utils.stampa(f'Frame start: {frames_start}, speed {s}, n° strokes - 1 {strk}, fq {self.acquisition_frequency}', logger = self.log)                                                               
 
             # 4 frames after the start for averaging out and checking for peaks
-            frames_end = frames_start + 4
+            frames_end = frames_start + 3
             
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
                 
@@ -559,7 +558,8 @@ class RetinoSession(md.Session):
                                                          name_subtrcts, 
                                                          ((frames_start, frames_end)),
                                                          fullframe = self.full_frame,
-                                                         single_trial_analysis = True)
+                                                         single_trial_analysis = True,
+                                                         logger = self.log)
             dict_subtrs[name_subtrcts] = sub_x
 
         return params, dict_subtrs
@@ -963,13 +963,14 @@ def subtraction_among_conditions(path_session,
                                  time_window_inference, 
                                  fullframe = True, 
                                  single_trial_analysis = True, 
-                                 dim_window = 150):                                                         
+                                 dim_window = 150,
+                                 logger = None):                                                         
     
     if fullframe:
         dim_window = 100
     
-    utils.stampa(f'Full frame switch {fullframe}', logger = None)                                                               
-    utils.stampa(f'Dim window frame  {dim_window}', logger = None)    
+    utils.stampa(f'Full frame switch {fullframe}', logger = logger)                                                               
+    utils.stampa(f'Dim window frame  {dim_window}', logger = logger)    
 
     r = Retinotopy(path_session, stroke_type = 'multiple stroke')
     #First
@@ -993,9 +994,10 @@ def subtraction_among_conditions(path_session,
     # Find retinotopic position in averaged signal over 15 frames
     centroids, blobs, _, blurred = get_retinotopic_features(FOI, mask_switch = False)
     print(centroids)
+    utils.stampa(f'Centroids:  {centroids}', logger = logger)   
+
     min_bord                     = np.nanpercentile(blurred, 15)
     max_bord                     = np.nanpercentile(blurred, 98)
-
     pos_inferred_averaged.retino_pos     = centroids[0]
     pos_inferred_averaged.blob           = blobs
     blurred[~pos_inferred_averaged.mask] = np.NAN
@@ -1091,6 +1093,14 @@ if __name__=="__main__":
     #                     required=False,
     #                     help='Window dimension for single stroke centroid detection -pixels side of a square-') 
 
+    parser.add_argument('--full_frame', 
+                        dest='full_frame_switch', 
+                        action='store_true')
+    parser.add_argument('--no-full_frame', 
+                        dest='full_frame_switch', 
+                        action='store_false')
+    parser.set_defaults(full_frame_switch=False)  
+
     parser.add_argument('--vis', 
                         dest='data_vis_switch', 
                         action='store_true')
@@ -1134,6 +1144,7 @@ if __name__=="__main__":
                                    multiple_stroke_label=args.apparent_motion_label,
                                    time_course_window_dim=args.tcwd,
                                 #    window_dim=args.wd,
+                                   full_frame = args.full_frame_switch,
                                    logger=log,
                                    store_switch=args.store_switch,
                                    denoise_flag=args.denoised_switch,
