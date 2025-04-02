@@ -752,28 +752,45 @@ class Retinotopy:
         two signals. If the df_confront is not provided it performs the zscore only on df_f0.
         '''
         # Considering small portion of the frame, corresponding to a square of dim_side pixel of side, centered on blob centroid
-        if (global_centroid is not None) and \
-           (global_centroid[1] + dim_side//2<df_f0.shape[-2]) and\
-           (global_centroid[1] - dim_side//2>0) and\
-           (global_centroid[0] + dim_side//2<df_f0.shape[-1]) and\
-           (global_centroid[0] - dim_side//2>0):
-            check_seq =df_f0[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
-                            (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
+        # if (global_centroid is not None) and \
+        #    (global_centroid[1] + dim_side//2<df_f0.shape[-2]) and\
+        #    (global_centroid[1] - dim_side//2>0) and\
+        #    (global_centroid[0] + dim_side//2<df_f0.shape[-1]) and\
+        #    (global_centroid[0] - dim_side//2>0):
+        #     check_seq =df_f0[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
+        #                     (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
+
+        if global_centroid is not None:
+            y, x = global_centroid
+            h, w = df_f0.shape[-2], df_f0.shape[-1]  # Frame dimensions
+
+            # Compute valid bounds
+            y_min = max(0, y - dim_side // 2)
+            y_max = min(h, y + dim_side // 2)
+            x_min = max(0, x - dim_side // 2)
+            x_max = min(w, x + dim_side // 2)
+            
+            print(y_min, y_max, x_min, x_max)
+            # Extract the available spatial window
+            check_seq = df_f0[:, y_min:y_max, x_min:x_max]
 
             # Handling the case in which blank signal is provided or not
             if (sig_blank is None) and (std_blank is None):
                 sig_blank = np.nanmean(check_seq[:zero_frames, :, :], axis = 0)
                 std_blank = np.nanstd(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames
             else:
-                sig_blank = sig_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
-                                      (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
-                std_blank = std_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
-                                      (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]               
+                # sig_blank = sig_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
+                #                       (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
+                # std_blank = std_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
+                #                       (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]       
+                sig_blank = sig_blank[y_min:y_max, x_min:x_max]
+                std_blank = std_blank[y_min:y_max, x_min:x_max]                               
         
             # Check for presence of df to subtract to df_f0: used for single trial analysis in AMstrokes
             if df_confront is not None:
-                df_confront = df_confront[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
-                                (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
+                # df_confront = df_confront[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
+                #                 (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
+                df_confront = df_confront[y_min:y_max, x_min:x_max]               
             flag_adjust_centroid = True
 
         # Full frame analysis, no crop
@@ -818,7 +835,8 @@ class Retinotopy:
         if global_centroid is None or (not flag_adjust_centroid):
             c,d = ((a,b))
         else:
-            c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
+            # c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
+            c, d = ((x_min + a, y_min + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
     
 
