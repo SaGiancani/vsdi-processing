@@ -552,6 +552,7 @@ class RetinoSession(md.Session):
                                                          params, 
                                                          name_subtrcts, 
                                                          ((frames_start, frames_end)),
+                                                         dim_window = self.window_dimension,
                                                          fullframe = self.full_frame,
                                                          single_trial_analysis = True,
                                                          logger = self.log)
