@@ -963,7 +963,7 @@ def subtraction_among_conditions(path_session,
                                  logger = None):                                                         
     
     if fullframe:
-        dim_window = 100
+        dim_window = None
     
     utils.stampa(f'Full frame switch {fullframe}', logger = logger)                                                               
     utils.stampa(f'Dim window frame  {dim_window}', logger = logger)    
