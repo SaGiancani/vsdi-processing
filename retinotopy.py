@@ -160,13 +160,13 @@ class RetinoSession(md.Session):
         # Single centroid mask dimension
         self.tc_window_dimension  = time_course_window_dim
         window_dim = int(np.nanmax([ny, nx])//3)
-        utils.stampa(f'Green shape {self.green.shape}', logger = self.log)
-        utils.stampa(f'Data shape {(ny, nx)}', logger = self.log)
-        utils.stampa(f'Window dim {window_dim}', logger = self.log)
         try:
+            utils.stampa(f'Green shape {self.green.shape}', logger = self.log)
             self.window_dimension     = window_dim//(self.green.shape[1]//nx)
         except:
+            utils.stampa(f'Green shape {self.green.shape}', logger = self.log)
             self.window_dimension     = window_dim//(1312//nx)
+        utils.stampa(f'Data shape {(ny, nx)}', logger = self.log)
         utils.stampa(f'Dimension of window {self.window_dimension}', logger = self.log)
 
         self.visualization_switch = data_vis_switch
