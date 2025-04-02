@@ -761,7 +761,7 @@ class Retinotopy:
         #                     (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
 
         if global_centroid is not None:
-            y, x = global_centroid
+            x, y = global_centroid
             h, w = df_f0.shape[-2], df_f0.shape[-1]  # Frame dimensions
 
             # Compute valid bounds
