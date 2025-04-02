@@ -35,7 +35,7 @@ class RetinoSession(md.Session):
                     single_stroke_label = 'pos',
                     multiple_stroke_label = 'am',
                     time_course_window_dim = 10,
-                    window_dim = 600,
+                    # window_dim = 600,
                     acquisition_fq = 100,#Hz
                     denoise_flag = False,
                     **kwargs):
@@ -722,7 +722,7 @@ class Retinotopy:
                                 sig_blank = None,
                                 std_blank = None,
                                 single_frame_thresh = 97,
-                                all_frame_thres = 97):
+                                all_frame_thres = 90):
         '''
         The method gets as input:
         df_f0: 3 dimensional matrix
