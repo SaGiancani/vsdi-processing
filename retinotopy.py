@@ -362,9 +362,14 @@ class RetinoSession(md.Session):
         # dF/F0 of only autoselected trials 
         df = md.get_selected(cd.df_fz, cd.autoselection)
         avr_df = np.nanmean(df, axis = 0)
+        utils.stampa(f'NaNs in average signal: {(np.isnan(avr_df).sum()/(np.size(((avr_df))))*100)}%', logger=self.log)
+        utils.stampa(f'NaNs in global signal: {(np.isnan(df).sum()/(np.size(((df))))*100)}%', logger=self.log)
 
         # COUNTERCHECK THIS BLANK 
         mean_blank = np.nanmean(self.mean_blank, axis = 0)
+        utils.stampa(f'NaNs in average blank: {(np.isnan(mean_blank).sum()/(np.size(((mean_blank))))*100)}%', logger=self.log)
+        utils.stampa(f'NaNs in std blank: {(np.isnan(self.std_blank).sum()/(np.size(((self.std_blank))))*100)}%', logger=self.log)
+
         utils.stampa(f'The blank employed in the zscore has shape {mean_blank.shape}', logger=self.log)   
         z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
 
