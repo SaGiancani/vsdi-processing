@@ -371,7 +371,8 @@ class RetinoSession(md.Session):
         utils.stampa(f'NaNs in std blank: {(np.isnan(self.std_blank).sum()/(np.size(((self.std_blank))))*100)}%', logger=self.log)
 
         utils.stampa(f'The blank employed in the zscore has shape {mean_blank.shape}', logger=self.log)   
-        z_s = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
+        z_s                 = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
+        z_s[np.isnan(z_s)]  = self.value_to_sub*10
 
         # Instance retinotopy object: single stroke
         r = Retinotopy(self.path_session,
@@ -389,8 +390,8 @@ class RetinoSession(md.Session):
         #z_s = process.zeta_score(cd_pos3.averaged_df, None, None, full_seq = True)
         # Blob and centroids extraction
         if str_type == 'multiple stroke':
-            begin_time = r.time_limits[0]+ starting_time + stroke_number*time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*time of occurrence of the stroke
-            end_time   = r.time_limits[0]+ starting_time + stroke_number*time_step + time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
+            begin_time = r.time_limits[0] + starting_time + stroke_number*time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*time of occurrence of the stroke
+            end_time   = r.time_limits[0] + starting_time + stroke_number*time_step + time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
             foi = ((0, time_step))
         else:
             begin_time = r.time_limits[0] + 6 # Inject a synaptic delay to make it compatible with st_builder 
