@@ -436,6 +436,10 @@ class RetinoSession(md.Session):
         # Single trial plot sanity check
         if self.visualization_switch:
             t = [[i] for i in list(list(zip(*pos_single_trials_data))[4])]
+            if stroke_number is None:
+                stroke_number_fortitle = 0 
+            else:
+                stroke_number_fortitle = stroke_number
             dv.whole_time_sequence(list(list(zip(*pos_single_trials_data))[1]), 
                                    blbs = list(list(zip(*pos_single_trials_data))[2]), 
                                    cntrds = t, mask = None, 
@@ -444,7 +448,7 @@ class RetinoSession(md.Session):
                                    adaptive_vm = True, 
                                    ext = 'png',
                                    name_analysis_ = os.path.join(retinotopic_path_folder, self.id_name, name_cond),
-                                   name = 'sanity_check_single_trial_'+ name_cond + self.id_name)
+                                   name = f'sanity_check_single_trial_stroke_n_{stroke_number_fortitle}_{name_cond}_{self.id_name}' )
 
         return r
 
@@ -761,14 +765,6 @@ class Retinotopy:
         two signals. If the df_confront is not provided it performs the zscore only on df_f0.
         '''
         # Considering small portion of the frame, corresponding to a square of dim_side pixel of side, centered on blob centroid
-        # if (global_centroid is not None) and \
-        #    (global_centroid[1] + dim_side//2<df_f0.shape[-2]) and\
-        #    (global_centroid[1] - dim_side//2>0) and\
-        #    (global_centroid[0] + dim_side//2<df_f0.shape[-1]) and\
-        #    (global_centroid[0] - dim_side//2>0):
-        #     check_seq =df_f0[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
-        #                     (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
-
         if global_centroid is not None:
             x, y = global_centroid
             h, w = df_f0.shape[-2], df_f0.shape[-1]  # Frame dimensions
@@ -788,17 +784,11 @@ class Retinotopy:
                 sig_blank = np.nanmean(check_seq[:zero_frames, :, :], axis = 0)
                 std_blank = np.nanstd(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames
             else:
-                # sig_blank = sig_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
-                #                       (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
-                # std_blank = std_blank[(global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)),
-                #                       (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]       
                 sig_blank = sig_blank[y_min:y_max, x_min:x_max]
                 std_blank = std_blank[y_min:y_max, x_min:x_max]                               
         
             # Check for presence of df to subtract to df_f0: used for single trial analysis in AMstrokes
             if df_confront is not None:
-                # df_confront = df_confront[:, (global_centroid[1]-(dim_side//2)):(global_centroid[1]+(dim_side//2)), 
-                #                 (global_centroid[0]-(dim_side//2)):(global_centroid[0]+(dim_side//2))]
                 df_confront = df_confront[:, y_min:y_max, x_min:x_max]               
             flag_adjust_centroid = True
 
