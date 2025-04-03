@@ -257,6 +257,7 @@ class RetinoSession(md.Session):
             value_to_sub = np.nanpercentile(cd.df_fz, 10)
         else:   
             value_to_sub = self.value_to_sub
+        utils.stampa(f'Value to substitute to nans {value_to_sub}\n', logger=self.log)
         cd.df_fz[np.isnan(cd.df_fz)]             = value_to_sub
         cd.averaged_df[np.isnan(cd.averaged_df)] = value_to_sub
         utils.stampa(f'Condition {name_cond} loaded in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)    
