@@ -821,7 +821,7 @@ class Retinotopy:
             ztmp = process.zeta_score(tmp[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
         else:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
-            ztmp[np.isnan(ztmp)]  = np.nanmean(ztmp, 10)    
+            ztmp[np.isnan(ztmp)]  = np.nanpercentile(ztmp, 10)    
         
         # Thresholding values
         mean_ztmp = np.nanmean(ztmp, axis=0)
