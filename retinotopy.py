@@ -134,8 +134,9 @@ class RetinoSession(md.Session):
         # TO NOTICE: deblank_switch add roi_signals, df_fz, auto_selected, conditions, counter_blank and overwrites the session_blks
         self.time_course_blank = None
         self.f_f0_blank        = None
-        self.stde_f_f0_blank   = None           
-        cd_blank = self.get_data_to_process('blank')            
+        self.stde_f_f0_blank   = None 
+        self.value_to_sub      = None          
+        cd_blank, self.value_to_sub = self.get_data_to_process('blank')            
         self.blank_condition = cd_blank
 
         self.mean_blank        = self.blank_condition.averaged_df
@@ -245,7 +246,6 @@ class RetinoSession(md.Session):
                 # It doesnt work at this line: no storage in case of exceptional run
                 cd.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond)) 
                 utils.stampa(f'Condition {name_cond} loaded!\n', logger=self.log)
-        
         else:
             cd.df_fz         = utils.get_denoised_cond(self.path_md, name_cond, log = self.log) # formally incorrect but for sake of process
             cd.cond_name     = name_cond
@@ -253,8 +253,14 @@ class RetinoSession(md.Session):
             cd.autoselection = np.ones(len(cd.df_fz))
             utils.stampa(f'Condition {name_cond} loaded successfully!\n', logger=self.log)
 
+        if self.value_to_sub is None:
+            value_to_sub = np.nanpercentile(cd.df_fz, 10)
+        else:   
+            value_to_sub = self.value_to_sub
+        cd.df_fz[np.isnan(cd.df_fz)]             = value_to_sub
+        cd.averaged_df[np.isnan(cd.averaged_df)] = value_to_sub
         utils.stampa(f'Condition {name_cond} loaded in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)    
-        return cd
+        return cd, value_to_sub
 
 
     def get_retinotopy(self,
@@ -265,7 +271,7 @@ class RetinoSession(md.Session):
         utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)            
         colrs = []
-        cd    = self.get_data_to_process(name_cond)
+        cd, _ = self.get_data_to_process(name_cond)
         
         # Single stroke condition
         if name_cond in list(self.cond_pos.values()):
@@ -515,8 +521,8 @@ class RetinoSession(md.Session):
 
         for first_cond, second_cond in dict_subs.items():
             
-            first_cd     = self.get_data_to_process(first_cond)
-            second_cd    = self.get_data_to_process(second_cond)
+            first_cd, _   = self.get_data_to_process(first_cond)
+            second_cd, _  = self.get_data_to_process(second_cond)
             
             time_limits_first = ((self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
             
