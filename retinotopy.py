@@ -826,7 +826,7 @@ class Retinotopy:
         # Thresholding values
         mean_ztmp = np.nanmean(ztmp, axis=0)
         lim_inf = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], lim_blob_detect)
-        lim_sup = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], 99)
+        lim_sup = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], 98)
         #print(lim_inf, lim_sup)
 
         # If want to store information from single frame
