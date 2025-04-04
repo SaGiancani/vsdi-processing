@@ -17,7 +17,7 @@ def plot_hist(a, title = 'hist'):
     val_mean = np.nanmean(a)
     U_filled = np.nan_to_num(a, nan=val_mean)  # Replace NaN with the mean of non-NaN values
     U_filled[~np.isfinite(U_filled)] = val_mean  # Replace inf with the mean of non-NaN values
-    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=1500)
+    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=150)
 
     # Plot the histogram using computed values
     plt.figure()
