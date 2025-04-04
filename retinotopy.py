@@ -12,23 +12,19 @@ COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal', 'orange', 'lime']
 
 import matplotlib.pyplot as plt
 
-def plot_hist(a, title = 'hist', bins = 300):
+def plot_hist(a, title = 'hist'):
     # Compute histogram with np.histogram
     val_mean = np.nanmean(a)
     U_filled = np.nan_to_num(a, nan=val_mean)  # Replace NaN with the mean of non-NaN values
     U_filled[~np.isfinite(U_filled)] = val_mean  # Replace inf with the mean of non-NaN values
-    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=bins)
+    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=1500)
 
     # Plot the histogram using computed values
     plt.figure()
-    min_val = np.percentile(U_filled, 3)  # 1st percentile
-    max_val = np.percentile(U_filled, 97)  # 99th percentile
-    bin_edges = np.linspace(min_val, max_val, num=bins)    
-    plt.bar(hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
+    plt.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
 
     # Add the cutoff line, ensuring it aligns with the histogram's x-axis scale
     # plt.axvline(cutoff, color='r', linewidth=2, label=f'Cutoff: {cutoff:.2f}')
-    print(np.min(U_filled), np.max(U_filled))
     plt.xlabel("Value")
     plt.ylabel("Frequency")
     plt.title("Histogram with Cutoff")
@@ -172,8 +168,6 @@ class RetinoSession(md.Session):
         self.mean_blank        = self.blank_condition.averaged_df
         self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
         
-        plot_hist(self.mean_blank, title = 'mean_blank')
-
         self.full_frame        = full_frame 
         self.id_name           = utils.get_session_id_name(self.path_session)                   
 
@@ -294,6 +288,16 @@ class RetinoSession(md.Session):
                         time_limits, 
                         retinotopic_path_folder):
         utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
+
+        dv.whole_time_sequence(self.mean_blank, 
+                               mask = self.mask, 
+                               max = 95, min = 15, 
+                               blur = False, 
+                               adaptive_vm = True, 
+                               ext = 'png',
+                               name_analysis_ = os.path.join(retinotopic_path_folder, self.id_name),
+                               name = f'sanity_check_blank' )    
+
         start_time = datetime.datetime.now().replace(microsecond=0)            
         colrs = []
         cd    = self.get_data_to_process(name_cond)
