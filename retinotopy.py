@@ -1077,6 +1077,7 @@ def subtraction_among_conditions(path_session,
                                                                               second, 
                                                                               pos_inferred_averaged.time_limits, 
                                                                               time_limits_second, 
+                                                                              mask = mask,
                                                                               fullframe = fullframe)
     else:
         pos_inferred_averaged.distribution_positions = list()
