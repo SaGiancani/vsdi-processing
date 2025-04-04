@@ -479,6 +479,7 @@ class RetinoSession(md.Session):
                                                           begin_time,
                                                           end_time,
                                                           df_f0_foi = foi,
+                                                          mask = self.mask,
                                                           sig_blank = mean_blank,
                                                           std_blank = self.std_blank,
                                                           lim_blob_detect = self.limit_blob_detection,
@@ -783,6 +784,7 @@ class Retinotopy:
                               df_confront = None,
                               df_confront_foi = None,
                               df_f0_foi = None,
+                              mask = None,
                               zero_frames = 20,
                               lim_blob_detect = 80,
                               single_frame_analysis = False,
@@ -878,9 +880,12 @@ class Retinotopy:
         if single_frame_analysis:
             single_centroids = get_single_frame_peak(ztmp, time_window, global_centroid, dim_side, lim_blob_detect = lim_blob_detect, single_frame_thresh = single_frame_thresh)
         else:
-            single_centroids = []    
+            single_centroids = [] 
 
-        centroids, blobs, _, blurred = get_retinotopic_features(np.nanmean(ztmp, axis=0), min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
+        frame_to_analyze = np.nanmean(ztmp, axis=0)               
+        if mask is not None:
+            frame_to_analyze = frame_to_analyze*mask            
+        centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
         coords = np.array(list(zip(*centroids)))
         if (coords is not None) and (len(coords)>0) :
             (a,b), _ = centroid_max(coords[0], coords[1], blurred)
@@ -975,7 +980,7 @@ def centroid_max(X, Y, data):
             print('Something wrong with the centroid_max method')
     return index, max_point
 
-def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, fullframe = True):
+def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, mask = None, fullframe = True):
     
     if fullframe:
         dim_window = None
@@ -992,6 +997,7 @@ def single_trial_detection(retino_object, dim_window, time_window_inference, df_
                                                                   time_window_inference[0],
                                                                   time_window_inference[1],
                                                                   df_confront = df_conf,
+                                                                  mask = mask,
                                                                   df_confront_foi = time_limits_second,
                                                                   df_f0_foi = time_limits_first,
                                                                   lim_blob_detect = 70) for i in retino_object.df_fz]    
@@ -1014,7 +1020,7 @@ def subtraction_among_conditions(path_session,
                                  df_123, 
                                  params, 
                                  name_params, 
-                                 time_window_inference, 
+                                 time_window_inference,
                                  fullframe = True, 
                                  single_trial_analysis = True, 
                                  dim_window = 150,
@@ -1030,7 +1036,11 @@ def subtraction_among_conditions(path_session,
     #First
     _, _, _, _, _, z_123_shrinked, _ = r.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1])
     _, _, _, _, _, z_12_shrinked, _  = r.single_seq_retinotopy(second, None, None, time_limits_second[0], time_limits_second[1])
-    sign                             = z_123_shrinked-z_12_shrinked
+
+    z_123_shrinked = z_123_shrinked*mask
+    z_12_shrinked  = z_12_shrinked*mask
+
+    sign           = (z_123_shrinked-z_12_shrinked)*mask
 
     # AM123 - AM12
     pos_inferred_averaged = Retinotopy(path_session, 
