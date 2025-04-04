@@ -833,11 +833,13 @@ class Retinotopy:
             x_min = max(0, x - dim_side // 2)
             x_max = min(w, x + dim_side // 2)
             
+            check_seq = df_f0[:, y_min:y_max, x_min:x_max]
+
             if mask is not None:
                 mask = mask[y_min:y_max, x_min:x_max]
+                check_seq = check_seq*mask
             print(y_min, y_max, x_min, x_max)
             # Extract the available spatial window
-            check_seq = df_f0[:, y_min:y_max, x_min:x_max]
 
             # Handling the case in which blank signal is provided or not
             if (sig_blank is None) and (std_blank is None):
