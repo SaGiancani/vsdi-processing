@@ -126,8 +126,9 @@ class RetinoSession(md.Session):
         self.multiple_stroke_label = multiple_stroke_label
         utils.stampa(f'{self.single_stroke_label} {self.multiple_stroke_label}', logger = self.log)            
 
-        self.path_session = path_session
-        self.path_md      = path_md
+        self.path_session            = path_session
+        self.path_md                 = path_md
+        self.retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(utils.NAME_RETINO_ANALYSIS))
 
         # Corresponding single stroke for each AM condition
         self.retino_pos_am = utils.get_conditions_correspondance(self.path_session)
@@ -167,6 +168,10 @@ class RetinoSession(md.Session):
 
         self.mean_blank        = self.blank_condition.averaged_df
         self.mean_blank[np.isnan(self.mean_blank)] = np.nanpercentile(self.mean_blank, 15) 
+        utils.stampa(f'NaNs in average blank: {(np.isnan(self.mean_blank).sum()/(np.size(((self.mean_blank))))*100)}%', logger=self.log)
+        self.mean_blank = np.nan_to_num(self.mean_blank, copy=False, nan=np.nanpercentile(self.mean_blank, 20), posinf=None, neginf=None)
+        utils.stampa(f'NaNs in average blank: {(np.isnan(self.mean_blank).sum()/(np.size(((self.mean_blank))))*100)}%', logger=self.log)
+
         self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
         
         self.full_frame        = full_frame 
@@ -286,8 +291,7 @@ class RetinoSession(md.Session):
 
     def get_retinotopy(self,
                         name_cond, 
-                        time_limits, 
-                        retinotopic_path_folder):
+                        time_limits):
         utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
 
         dv.whole_time_sequence(self.mean_blank, 
@@ -296,7 +300,7 @@ class RetinoSession(md.Session):
                                blur = False, 
                                adaptive_vm = True, 
                                ext = 'png',
-                               name_analysis_ = os.path.join(retinotopic_path_folder, self.id_name),
+                               name_analysis_ = os.path.join(self.retinotopic_path_folder, self.id_name),
                                name = f'sanity_check_blank' )    
 
         start_time = datetime.datetime.now().replace(microsecond=0)            
@@ -308,10 +312,10 @@ class RetinoSession(md.Session):
             # Try to check if retino_cond already exists
             try:
                 retino_cond = Retinotopy(self.path_session)
-                retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
+                retino_cond.load_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
             # If does not, it build it
             except:
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, retinotopic_path_folder, stroke_number = None, stroke_name = None, str_type = 'single stroke') 
+                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, stroke_name = None, str_type = 'single stroke') 
                 # Store single stroke condition
                 self.dictionary_retinotopies[name_cond] = retino_cond
                 # Extract visualization utility variables
@@ -319,10 +323,10 @@ class RetinoSession(md.Session):
                 colrs.append(dv.COLORS_7[indeces_colors])
                 # If true, store pictures
                 if self.visualization_switch:
-                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
+                    self.plot_stuff(self.retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
                 # If true store variables
                 if self.storage_switch:
-                    retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
+                    retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond))
         
         # Multiple stroke condition
         elif name_cond in list(self.cond_am.values()):
@@ -330,7 +334,7 @@ class RetinoSession(md.Session):
             self.dictionary_retinotopies[name_cond] = dict()
             for i, j in enumerate(self.retino_pos_am[name_cond]):
                 utils.stampa(f'The stroke {j} is the number {i}\n', logger=self.log)
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, retinotopic_path_folder, stroke_number = i, stroke_name = j, str_type = 'multiple stroke')
+                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, stroke_name = j, str_type = 'multiple stroke')
                 # Store single stroke within AM
                 self.dictionary_retinotopies[name_cond][j] = retino_cond
                 # Extract visualization utility variables
@@ -339,10 +343,10 @@ class RetinoSession(md.Session):
                 colrs.append(dv.COLORS_7[indeces_colors])
                 # If true store variables
                 if self.storage_switch:
-                    retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j + '_'+str(i+1)))
+                    retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j + '_'+str(i+1)))
             # If true, store pictures
             if self.visualization_switch:
-                self.plot_stuff(retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
+                self.plot_stuff(self.retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
         utils.stampa(f'End processing retinotopy analysis for condition {name_cond}')
         utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
         return 
@@ -350,17 +354,16 @@ class RetinoSession(md.Session):
     def get_retino_session(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
         # Create Retinotopic Analysis folder path
-        retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(utils.NAME_RETINO_ANALYSIS))
         utils.stampa(f'Retino session for data session {self.id_name} start to process...\n', logger=self.log)
-        utils.stampa(f'Data are gonna be stored at {retinotopic_path_folder}\n', logger=self.log)                                         
+        utils.stampa(f'Data are gonna be stored at {self.retinotopic_path_folder}\n', logger=self.log)                                         
         # Storing variable
         for cond_id, cond_name in self.cond_dict.items():
-            self.get_retinotopy(cond_name, None, retinotopic_path_folder)
+            self.get_retinotopy(cond_name, None)
         params, dict_subtrs = self.get_retino_subtraction()
 
         if self.visualization_switch:
             for sub_name, sub_ret in dict_subtrs.items():
-                self.plot_stuff(retinotopic_path_folder, sub_name, ['k'], dict_subtrs)
+                self.plot_stuff(self.retinotopic_path_folder, sub_name, ['k'], dict_subtrs)
                 # If true store variables
                 dv.whole_time_sequence(params[sub_name][-1][0], 
                                        blbs = params[sub_name][-1][1], 
@@ -370,10 +373,10 @@ class RetinoSession(md.Session):
                                        blur = False, 
                                        adaptive_vm = True, 
                                        ext = 'png',
-                                       name_analysis_ = os.path.join(retinotopic_path_folder, self.id_name, sub_name),
+                                       name_analysis_ = os.path.join(self.retinotopic_path_folder, self.id_name, sub_name),
                                        name = f'sanity_check_single_trial_sub_{sub_name}_{self.id_name}' )                
                 if self.storage_switch:
-                    sub_ret.store_retino(os.path.join(retinotopic_path_folder, self.id_name, sub_name))            
+                    sub_ret.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, sub_name))            
 
         utils.stampa(f'Retino session elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                                         
         return
@@ -382,7 +385,6 @@ class RetinoSession(md.Session):
                               name_cond,
                               time_limits, 
                               cd,
-                              retinotopic_path_folder,
                               stroke_number = None,
                               stroke_name = None,                              
                               str_type = 'single stroke'):
@@ -498,7 +500,7 @@ class RetinoSession(md.Session):
                                    blur = False, 
                                    adaptive_vm = True, 
                                    ext = 'png',
-                                   name_analysis_ = os.path.join(retinotopic_path_folder, self.id_name, name_cond),
+                                   name_analysis_ = os.path.join(self.retinotopic_path_folder, self.id_name, name_cond),
                                    name = f'sanity_check_single_trial_stroke_n_{stroke_number_fortitle}_{name_cond}_{self.id_name}' )
 
         return r
@@ -1221,4 +1223,5 @@ if __name__=="__main__":
                                    data_vis_switch=args.data_vis_switch) 
     
     retino_session.get_retino_session()
+    utils.write_parse(vars(args), os.path.join(retino_session.retinotopic_path_folder, retino_session.id_name))
     utils.stampa(f'Retinotopic analysis for session {retino_session.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                

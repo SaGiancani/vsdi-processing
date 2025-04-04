@@ -483,3 +483,14 @@ def get_green(green_name, path_session, size = None, log=None):
     except:
         stampa(f'No green {green_name} present in rawdata folder for session {get_session_id_name(path_session)}', logger=log)
         return None
+
+
+def read_parse(pathname):
+    with open(os.path.join(pathname,'args_values.json'), "r") as json_file:
+        stored_args = json.load(json_file)
+    return stored_args
+
+def write_parse(args_dict, pathname):
+    with open(os.path.join(pathname,'args_values.json'), "w") as json_file:
+        json.dump(args_dict, json_file)
+    return
