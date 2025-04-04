@@ -1115,6 +1115,14 @@ if __name__=="__main__":
                         default = 10,
                         required=False,
                         help='Time course window dimension -pixels radius-') 
+    
+    parser.add_argument('--sampl_fq', 
+                        dest='acquisition_fq',
+                        type=int,
+                        default = 100,
+                        required=False,
+                        help='Frequency of acquisition') 
+
 
     parser.add_argument('--full_frame', 
                         dest='full_frame_switch', 
@@ -1172,6 +1180,7 @@ if __name__=="__main__":
                                    all_frame_threshold=args.frames_threshold,
                                    store_switch=args.store_switch,
                                    denoise_flag=args.denoised_switch,
+                                   acquisition_fq= args.acquisition_fq,
                                    data_vis_switch=args.data_vis_switch) 
     
     retino_session.get_retino_session()
