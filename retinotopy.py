@@ -411,9 +411,9 @@ class RetinoSession(md.Session):
                                                                                        lim_blob_detect  = self.limit_blob_detection,
                                                                                        all_frame_thres = self.all_frame_threshold)
 
-        r.blob = blobs
+        r.blob       = blobs
         r.retino_pos = centroids[0]
-
+        r.signal     = z_s          # Only for visualization sake
         if str_type == 'multiple stroke':
             centroid_to_use = self.dictionary_retinotopies[stroke_name].retino_pos                    
         else:
