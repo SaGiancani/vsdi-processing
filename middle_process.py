@@ -62,13 +62,13 @@ class Condition:
         self.trials = None
         self.z_score = None
     
-    def store_cond(self, t):
+    def store_cond(self, t, folder_particle = 'md_data'):
         '''
         Storing method. All the parameters are wrapped within a list.
         Built-in storage folder md_data within derivatives. The pickle file takes the name md_data_cond_name
         '''
         tp = [self.session_header, self.session_name, self.cond_name, self.cond_id, self.binned_data, self.df_fz, self.time_course, self.averaged_df, self.averaged_timecourse, self.autoselection, self.blk_names, self.trials, self.z_score]
-        utils.inputs_save(tp, os.path.join(t,'md_data','md_data_'+self.cond_name))
+        utils.inputs_save(tp, os.path.join(t, folder_particle,'md_data_'+self.cond_name))
         return
     
     def load_cond(self, path):
@@ -1225,7 +1225,7 @@ def load_all_mds(path_session, zero_frames, bin_val = 2, log = None):
                                                                  blank_sign = average_blank) for i in data])
             else:
                 p_dffz  = cd_x.df_fz 
-            # p_dffz  = get_selected(p_dffz_, cd_x.autoselection)
+            p_dffz  = get_selected(p_dffz, cd_x.autoselection)
             utils.stampa(f'Condition {cd_name} shape {p_dffz.shape}', logger = log)                
             dict_data[cd_name] = p_dffz
             del cd_x
