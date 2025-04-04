@@ -335,6 +335,16 @@ class RetinoSession(md.Session):
             for sub_name, sub_ret in dict_subtrs.items():
                 self.plot_stuff(retinotopic_path_folder, sub_name, ['k'], dict_subtrs)
                 # If true store variables
+                dv.whole_time_sequence(params[sub_name][-1][0], 
+                                       blbs = params[sub_name][-1][2], 
+                                       cntrds = params[sub_name][-1][3], 
+                                       mask = None, 
+                                       max = 95, min = 15, 
+                                       blur = False, 
+                                       adaptive_vm = True, 
+                                       ext = 'png',
+                                       name_analysis_ = os.path.join(retinotopic_path_folder, self.id_name, sub_name),
+                                       name = f'sanity_check_single_trial_sub_{sub_name}_{self.id_name}' )                
                 if self.storage_switch:
                     sub_ret.store_retino(os.path.join(retinotopic_path_folder, self.id_name, sub_name))            
 
@@ -396,8 +406,8 @@ class RetinoSession(md.Session):
             end_time   = r.time_limits[0] + starting_time + stroke_number*time_step + time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
             foi = ((0, time_step))
         else:
-            begin_time = r.time_limits[0] + 6 # Inject a synaptic delay to make it compatible with st_builder 
-            end_time   = r.time_limits[1] + 6 
+            begin_time = r.time_limits[0] + int(np.ceil(0.06/(1/self.acquisition_frequency))) # Inject a synaptic delay to make it compatible with st_builder - 60ms
+            end_time   = r.time_limits[1] + int(np.ceil(0.06/(1/self.acquisition_frequency)))
             foi        = None
 
         utils.stampa(f'Begin and end frames are: {(begin_time, end_time)}', logger=self.log)   
@@ -589,8 +599,7 @@ class RetinoSession(md.Session):
                                                          fullframe = self.full_frame,
                                                          single_trial_analysis = True,
                                                          logger = self.log)
-            dict_subtrs[name_subtrcts] = sub_x
-
+            dict_subtrs[name_subtrcts] = sub_x                
         return params, dict_subtrs
 
 class Retinotopy:
@@ -962,7 +971,7 @@ def single_trial_detection(retino_object, dim_window, time_window_inference, df_
     retino_object.distribution_positions = list(zip(*pos_centroids))
     print('Centroids found!\n')               
                     
-    return retino_object
+    return retino_object, pos_single_trials_data
 
 def subtraction_among_conditions(path_session, 
                                  first, second, 
@@ -1019,13 +1028,13 @@ def subtraction_among_conditions(path_session,
     pos_inferred_averaged.map            = blurred
     
     if single_trial_analysis:
-        pos_inferred_averaged = single_trial_detection(pos_inferred_averaged, 
-                                                       dim_window, 
-                                                       time_window_inference, 
-                                                       second, 
-                                                       pos_inferred_averaged.time_limits, 
-                                                       time_limits_second, 
-                                                       fullframe = fullframe)
+        pos_inferred_averaged, pos_single_trial_data = single_trial_detection(pos_inferred_averaged, 
+                                                                              dim_window, 
+                                                                              time_window_inference, 
+                                                                              second, 
+                                                                              pos_inferred_averaged.time_limits, 
+                                                                              time_limits_second, 
+                                                                              fullframe = fullframe)
     else:
         pos_inferred_averaged.distribution_positions = list()
     
@@ -1039,8 +1048,10 @@ def subtraction_among_conditions(path_session,
     params[name_params].append(pos_inferred_averaged.tc_mask) #mask
     params[name_params].append(pos_inferred_averaged.time_courses) #average timecourse
     params[name_params].append(pos_inferred_averaged.average_time_course) #average timecourse 8
-
-
+    centroids_single_trial =  [[i] for i in list(list(zip(*pos_single_trial_data))[4])]
+    blobs_single_trial     =  list(list(zip(*pos_single_trial_data))[2])
+    frames_single_trial    =  list(list(zip(*pos_single_trial_data))[1])
+    params[name_params].append((frames_single_trial, blobs_single_trial, centroids_single_trial)) #For sanity check plots 9
     return params, pos_inferred_averaged 
                 
 def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, path_session, denoise_flag = False):
