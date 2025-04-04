@@ -33,6 +33,8 @@ class RetinoSession(md.Session):
                     store_switch = False, 
                     data_vis_switch = True, 
                     end_frame = None,
+                    limit_blob_detection = 80,
+                    all_frame_threshold = 90,
                     single_stroke_label = 'pos',
                     multiple_stroke_label = 'am',
                     time_course_window_dim = 10,
@@ -126,7 +128,8 @@ class RetinoSession(md.Session):
         utils.stampa(f'All session conditions: {self.cond_dict_all}\n', logger = self.log)            
 
         self.acquisition_frequency = acquisition_fq
-
+        self.limit_blob_detection  = limit_blob_detection
+        self.all_frame_threshold   = all_frame_threshold
         # Metadata stimulus
         self.stimulus_metadata = utils.get_stimulus_metadata(self.path_session) 
 
@@ -155,7 +158,6 @@ class RetinoSession(md.Session):
             self.mask       = np.ones((self.std_blank.shape), dtype = bool)
  
         utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
-
         (ny, nx)                  = self.mean_blank [0, :,:].shape            
         self.green                = utils.get_green(green_name, self.path_session, size = (ny, nx), log=None)
         # Single centroid mask dimension
@@ -371,18 +373,18 @@ class RetinoSession(md.Session):
         utils.stampa(f'NaNs in std blank: {(np.isnan(self.std_blank).sum()/(np.size(((self.std_blank))))*100)}%', logger=self.log)
 
         utils.stampa(f'The blank employed in the zscore has shape {mean_blank.shape}', logger=self.log)   
-        z_s                 = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
-        z_s[np.isnan(z_s)]  = self.value_to_sub*10
+        # z_s                 = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
+        avr_df[np.isnan(avr_df)]  = self.value_to_sub
 
         # Instance retinotopy object: single stroke
         r = Retinotopy(self.path_session,
-                        cond_name = name_cond,
-                        name = self.id_name + '_cond_' +name_cond, 
-                        session_name = self.id_name,
-                        signal = z_s,
-                        mask = self.mask,
-                        green = self.green,
-                        stroke_type = str_type)
+                       cond_name = name_cond,
+                       name = self.id_name + '_cond_' +name_cond, 
+                       session_name = self.id_name,
+                       signal = avr_df,
+                       mask = self.mask,
+                       green = self.green,
+                       stroke_type = str_type)
 
         if (time_limits is not None):
             r.time_limits = time_limits                                 
@@ -406,7 +408,8 @@ class RetinoSession(md.Session):
                                                                                        end_time,
                                                                                        sig_blank = mean_blank,
                                                                                        std_blank = self.std_blank,
-                                                                                       lim_blob_detect = 70)
+                                                                                       lim_blob_detect  = self.limit_blob_detection,
+                                                                                       all_frame_thres = self.all_frame_threshold)
 
         r.blob = blobs
         r.retino_pos = centroids[0]
@@ -427,7 +430,8 @@ class RetinoSession(md.Session):
                                                           df_f0_foi = foi,
                                                           sig_blank = mean_blank,
                                                           std_blank = self.std_blank,
-                                                          lim_blob_detect = 70) for i in df] 
+                                                          lim_blob_detect = self.limit_blob_detection,
+                                                          all_frame_thres = self.all_frame_threshold) for i in df] 
 
         # Storing distribution of points
         pos_centroids = list(list(zip(*pos_single_trials_data))[0])
@@ -1086,13 +1090,6 @@ if __name__=="__main__":
                         required=False,
                         help='Time course window dimension -pixels radius-') 
 
-    # parser.add_argument('--wd_dim', 
-    #                     dest='wd',
-    #                     type=int,
-    #                     default = 600,
-    #                     required=False,
-    #                     help='Window dimension for single stroke centroid detection -pixels side of a square-') 
-
     parser.add_argument('--full_frame', 
                         dest='full_frame_switch', 
                         action='store_true')
@@ -1143,7 +1140,6 @@ if __name__=="__main__":
                                    single_stroke_label=args.single_stroke_label, 
                                    multiple_stroke_label=args.apparent_motion_label,
                                    time_course_window_dim=args.tcwd,
-                                #    window_dim=args.wd,
                                    full_frame = args.full_frame_switch,
                                    logger=log,
                                    store_switch=args.store_switch,
