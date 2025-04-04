@@ -336,8 +336,8 @@ class RetinoSession(md.Session):
                 self.plot_stuff(retinotopic_path_folder, sub_name, ['k'], dict_subtrs)
                 # If true store variables
                 dv.whole_time_sequence(params[sub_name][-1][0], 
-                                       blbs = params[sub_name][-1][2], 
-                                       cntrds = params[sub_name][-1][3], 
+                                       blbs = params[sub_name][-1][1], 
+                                       cntrds = params[sub_name][-1][2], 
                                        mask = None, 
                                        max = 95, min = 15, 
                                        blur = False, 
