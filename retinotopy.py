@@ -837,6 +837,7 @@ class Retinotopy:
 
             if mask is not None:
                 mask = mask[y_min:y_max, x_min:x_max]
+                check_seq = check_seq*mask
             print(y_min, y_max, x_min, x_max)
             # Extract the available spatial window
 
@@ -874,21 +875,19 @@ class Retinotopy:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
             ztmp[np.isnan(ztmp)]  = np.nanpercentile(ztmp, 10)    
         
-        # Thresholding values
-        mean_ztmp = np.nanmean(ztmp, axis=0)
-        lim_inf = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], lim_blob_detect)
-        lim_sup = np.nanpercentile(mean_ztmp[np.where((mean_ztmp != -np.inf) | (mean_ztmp != np.inf))], 98)
-        #print(lim_inf, lim_sup)
-
         # If want to store information from single frame
         if single_frame_analysis:
             single_centroids = get_single_frame_peak(ztmp, time_window, global_centroid, dim_side, lim_blob_detect = lim_blob_detect, single_frame_thresh = single_frame_thresh)
         else:
             single_centroids = [] 
 
+        # Thresholding values
         frame_to_analyze = np.nanmean(ztmp, axis=0)               
+        #print(lim_inf, lim_sup)
         if mask is not None:
             frame_to_analyze = frame_to_analyze*mask            
+        lim_inf = np.nanpercentile(frame_to_analyze[np.where((frame_to_analyze != -np.inf) | (frame_to_analyze != np.inf))], lim_blob_detect)
+        lim_sup = np.nanpercentile(frame_to_analyze[np.where((frame_to_analyze != -np.inf) | (frame_to_analyze != np.inf))], 98)
         centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
         coords = np.array(list(zip(*centroids)))
         if (coords is not None) and (len(coords)>0) :
