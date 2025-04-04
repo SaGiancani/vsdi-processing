@@ -1092,7 +1092,6 @@ if __name__=="__main__":
                         help='Conditions to analyze: None by default -all the conditions-')   
      
     parser.add_argument('--lim_blob', 
-                        action='append', 
                         dest='lim_blob',
                         default=80,
                         required=False,
