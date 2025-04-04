@@ -167,8 +167,9 @@ class RetinoSession(md.Session):
         utils.stampa(f'Data shape {(ny, nx)}', logger = self.log)
         utils.stampa(f'Dimension of window {self.window_dimension}', logger = self.log)
 
-        self.visualization_switch = data_vis_switch
-        self.storage_switch       = store_switch
+        self.visualization_switch           = data_vis_switch
+        self.storage_switch                 = store_switch
+        self.dictionary_retinotopies        = dict()
 
 
     def get_conditions_pos(self):
@@ -269,8 +270,7 @@ class RetinoSession(md.Session):
     def get_retinotopy(self,
                         name_cond, 
                         time_limits, 
-                        retinotopic_path_folder, 
-                        dict_retino):
+                        retinotopic_path_folder):
         utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)            
         colrs = []
@@ -284,15 +284,15 @@ class RetinoSession(md.Session):
                 retino_cond.load_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
             # If does not, it build it
             except:
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, retinotopic_path_folder, stroke_number = None, str_type = 'single stroke') 
+                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, retinotopic_path_folder, stroke_number = None, stroke_name = None, str_type = 'single stroke') 
                 # Store single stroke condition
-                dict_retino[name_cond] = retino_cond
+                self.dictionary_retinotopies[name_cond] = retino_cond
                 # Extract visualization utility variables
                 indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
                 colrs.append(dv.COLORS_7[indeces_colors])
                 # If true, store pictures
                 if self.visualization_switch:
-                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
+                    self.plot_stuff(retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
                 # If true store variables
                 if self.storage_switch:
                     retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond))
@@ -300,12 +300,12 @@ class RetinoSession(md.Session):
         # Multiple stroke condition
         elif name_cond in list(self.cond_am.values()):
             # Storing variable
-            dict_retino[name_cond] = dict()
+            self.dictionary_retinotopies[name_cond] = dict()
             for i, j in enumerate(self.retino_pos_am[name_cond]):
                 utils.stampa(f'The stroke {j} is the number {i}\n', logger=self.log)
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, retinotopic_path_folder, stroke_number = i, str_type = 'multiple stroke')
+                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, retinotopic_path_folder, stroke_number = i, stroke_name = j, str_type = 'multiple stroke')
                 # Store single stroke within AM
-                dict_retino[name_cond][j] = retino_cond
+                self.dictionary_retinotopies[name_cond][j] = retino_cond
                 # Extract visualization utility variables
                 utils.stampa(self.cond_pos, logger=self.log)
                 indeces_colors =[list(self.cond_pos.values()).index(j)][0]
@@ -315,10 +315,10 @@ class RetinoSession(md.Session):
                     retino_cond.store_retino(os.path.join(retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j + '_'+str(i+1)))
             # If true, store pictures
             if self.visualization_switch:
-                self.plot_stuff(retinotopic_path_folder, name_cond, colrs, dict_retino)
+                self.plot_stuff(retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
         utils.stampa(f'End processing retinotopy analysis for condition {name_cond}')
         utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
-        return dict_retino
+        return 
 
     def get_retino_session(self):
         start_time = datetime.datetime.now().replace(microsecond=0)
@@ -327,9 +327,8 @@ class RetinoSession(md.Session):
         utils.stampa(f'Retino session for data session {self.id_name} start to process...\n', logger=self.log)
         utils.stampa(f'Data are gonna be stored at {retinotopic_path_folder}\n', logger=self.log)                                         
         # Storing variable
-        dict_retino = dict()
         for cond_id, cond_name in self.cond_dict.items():
-            dict_retino = self.get_retinotopy(cond_name, None, retinotopic_path_folder, dict_retino)
+            self.get_retinotopy(cond_name, None, retinotopic_path_folder)
         params, dict_subtrs = self.get_retino_subtraction()
 
         if self.visualization_switch:
@@ -343,12 +342,13 @@ class RetinoSession(md.Session):
         return
 
     def get_stroke_retinotopy(self,
-                                name_cond,
-                                time_limits, 
-                                cd,
-                                retinotopic_path_folder,
-                                stroke_number = None,
-                                str_type = 'single stroke'):
+                              name_cond,
+                              time_limits, 
+                              cd,
+                              retinotopic_path_folder,
+                              stroke_number = None,
+                              stroke_name = None,                              
+                              str_type = 'single stroke'):
 
         start_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -413,6 +413,12 @@ class RetinoSession(md.Session):
 
         r.blob = blobs
         r.retino_pos = centroids[0]
+
+        if str_type == 'multiple stroke':
+            centroid_to_use = self.dictionary_retinotopies[stroke_name]                    
+        else:
+            centroid_to_use = r.retino_pos                    
+
         utils.stampa(f'Retinotopic averaged position at: {r.retino_pos}\n', logger=self.log)   
 
         blurred[~r.mask] = np.NAN
@@ -423,13 +429,10 @@ class RetinoSession(md.Session):
         print(r.retino_pos, self.window_dimension, begin_time, end_time)   
 
         if not self.full_frame:
-            centroid_to_use = r.retino_pos
             window_dim      = self.window_dimension
         else:
-            centroid_to_use = None                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
             window_dim      = None
         utils.stampa(f'Centroids and dimension of windows employeed: {(centroid_to_use, window_dim)}\n', logger=self.log)   
-
         pos_single_trials_data = [r.single_seq_retinotopy(i, 
                                                           centroid_to_use,
                                                           window_dim, 
@@ -733,21 +736,21 @@ class Retinotopy:
 
 
     def single_seq_retinotopy(self,df_f0, 
-                                global_centroid,
-                                dim_side,
-                                start_frame,
-                                end_frame,
-                                df_confront = None,
-                                df_confront_foi = None,
-                                df_f0_foi = None,
-                                zero_frames = 20,
-                                lim_blob_detect = 80,
-                                single_frame_analysis = False,
-                                time_window = 1,
-                                sig_blank = None,
-                                std_blank = None,
-                                single_frame_thresh = 97,
-                                all_frame_thres = 90):
+                              global_centroid,
+                              dim_side,
+                              start_frame,
+                              end_frame,
+                              df_confront = None,
+                              df_confront_foi = None,
+                              df_f0_foi = None,
+                              zero_frames = 20,
+                              lim_blob_detect = 80,
+                              single_frame_analysis = False,
+                              time_window = 1,
+                              sig_blank = None,
+                              std_blank = None,
+                              single_frame_thresh = 97,
+                              all_frame_thres = 90):
         '''
         The method gets as input:
         df_f0: 3 dimensional matrix
@@ -777,7 +780,7 @@ class Retinotopy:
         two signals. If the df_confront is not provided it performs the zscore only on df_f0.
         '''
         # Considering small portion of the frame, corresponding to a square of dim_side pixel of side, centered on blob centroid
-        if global_centroid is not None:
+        if (global_centroid is not None) and (dim_side is not None):
             x, y = global_centroid
             h, w = df_f0.shape[-2], df_f0.shape[-1]  # Frame dimensions
 
@@ -847,7 +850,6 @@ class Retinotopy:
         if global_centroid is None or (not flag_adjust_centroid):
             c,d = ((a,b))
         else:
-            # c, d = ((global_centroid[0]-dim_side//2 + a, global_centroid[1]-dim_side//2 + b))
             c, d = ((x_min + a, y_min + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
     
