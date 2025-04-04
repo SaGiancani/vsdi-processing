@@ -138,9 +138,8 @@ class RetinoSession(md.Session):
         self.time_course_blank = None
         self.f_f0_blank        = None
         self.stde_f_f0_blank   = None 
-        self.value_to_sub      = None          
-        cd_blank, self.value_to_sub = self.get_data_to_process('blank')            
-        self.blank_condition = cd_blank
+        cd_blank               = self.get_data_to_process('blank')            
+        self.blank_condition   = cd_blank
 
         self.mean_blank        = self.blank_condition.averaged_df
         self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
@@ -256,15 +255,8 @@ class RetinoSession(md.Session):
             cd.autoselection = np.ones(len(cd.df_fz))
             utils.stampa(f'Condition {name_cond} loaded successfully!\n', logger=self.log)
 
-        if self.value_to_sub is None:
-            value_to_sub = np.nanpercentile(cd.df_fz, 10)
-        else:   
-            value_to_sub = self.value_to_sub
-        utils.stampa(f'Value to substitute to nans {value_to_sub}\n', logger=self.log)
-        cd.df_fz[np.isnan(cd.df_fz)]             = value_to_sub
-        cd.averaged_df[np.isnan(cd.averaged_df)] = value_to_sub
         utils.stampa(f'Condition {name_cond} loaded in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)    
-        return cd, value_to_sub
+        return cd
 
 
     def get_retinotopy(self,
@@ -274,7 +266,7 @@ class RetinoSession(md.Session):
         utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)            
         colrs = []
-        cd, _ = self.get_data_to_process(name_cond)
+        cd    = self.get_data_to_process(name_cond)
         
         # Single stroke condition
         if name_cond in list(self.cond_pos.values()):
@@ -384,7 +376,6 @@ class RetinoSession(md.Session):
 
         utils.stampa(f'The blank employed in the zscore has shape {mean_blank.shape}', logger=self.log)   
         z_s_visual                = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
-        avr_df[np.isnan(avr_df)]  = self.value_to_sub
 
         # Instance retinotopy object: single stroke
         r = Retinotopy(self.path_session,
@@ -558,8 +549,8 @@ class RetinoSession(md.Session):
 
         for first_cond, second_cond in dict_subs.items():
             
-            first_cd, _   = self.get_data_to_process(first_cond)
-            second_cd, _  = self.get_data_to_process(second_cond)
+            first_cd  = self.get_data_to_process(first_cond)
+            second_cd = self.get_data_to_process(second_cond)
             
             time_limits_first = ((self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
             

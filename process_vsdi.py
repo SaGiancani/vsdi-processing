@@ -152,7 +152,7 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
 def find_highest_sum_area(matrix, window_size, start_row=None, end_row=None, start_col=None, end_col=None):
     '''
     Description:
-    The find_highest_sum_submatrix method is designed to identify the area within a 2D matrix
+    The find_highest_sum_area method is designed to identify the area within a 2D matrix
     specified by the start and end row and column indices with the highest sum of elements. It 
     employs a sliding window approach to calculate the sum of elements within the specified 
     submatrix and identifies the central position of the area with the maximum sum.
