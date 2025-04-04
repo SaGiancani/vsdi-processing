@@ -415,7 +415,7 @@ class RetinoSession(md.Session):
         r.retino_pos = centroids[0]
 
         if str_type == 'multiple stroke':
-            centroid_to_use = self.dictionary_retinotopies[stroke_name]                    
+            centroid_to_use = self.dictionary_retinotopies[stroke_name].retino_pos                    
         else:
             centroid_to_use = r.retino_pos                    
 
@@ -534,6 +534,7 @@ class RetinoSession(md.Session):
 
     def get_retino_subtraction(self, default_time_window = 20):
 
+        # All possible subtraction dictionary building
         single_pos       = list(set([i for v in self.retino_pos_am.values() for i in v]))
         dict_components_ = self.retino_pos_am
         for i in single_pos:
