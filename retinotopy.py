@@ -246,6 +246,7 @@ class RetinoSession(md.Session):
             x_bnnd_size = x_size
             y_bnnd_size = y_size
             mask = mask[0:y_bnnd_size , 0:x_bnnd_size ].astype(bool)
+            utils.stampa(f'Mask dimension {mask.shape}', logger=self.log)
             utils.stampa(f'Mask loaded succesfully!', logger=self.log)
 
         except:
