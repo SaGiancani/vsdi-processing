@@ -408,6 +408,8 @@ class RetinoSession(md.Session):
 
         # COUNTERCHECK THIS BLANK 
         mean_blank = np.nanmean(self.mean_blank, axis = 0)
+        mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15) 
+        mean_blank = np.nan_to_num(mean_blank, copy=False, nan=np.nanpercentile(mean_blank, 20), posinf=None, neginf=None)
         utils.stampa(f'NaNs in average blank: {(np.isnan(mean_blank).sum()/(np.size(((mean_blank))))*100)}%', logger=self.log)
         utils.stampa(f'NaNs in std blank: {(np.isnan(self.std_blank).sum()/(np.size(((self.std_blank))))*100)}%', logger=self.log)
 
