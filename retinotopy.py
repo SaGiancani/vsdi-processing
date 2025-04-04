@@ -837,7 +837,6 @@ class Retinotopy:
 
             if mask is not None:
                 mask = mask[y_min:y_max, x_min:x_max]
-                check_seq = check_seq*mask
             print(y_min, y_max, x_min, x_max)
             # Extract the available spatial window
 
