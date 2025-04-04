@@ -1082,6 +1082,22 @@ if __name__=="__main__":
                         default=None,
                         type=int,
                         help='Conditions to analyze: None by default -all the conditions-')   
+     
+    parser.add_argument('--lim_blob', 
+                        action='append', 
+                        dest='lim_blob',
+                        default=80,
+                        required=False,
+                        type=int,
+                        help='Blob detection percentile limit for single_seq_retinotopy method')   
+    
+          
+    parser.add_argument('--frms_thresh', 
+                        dest='frames_threshold',
+                        default=90,
+                        type=int,
+                        required=False,
+                        help='Frame percentile threshold for single_seq_retinotopy')   
                         
     parser.add_argument('--tcwd_dim', 
                         dest='tcwd',
@@ -1142,6 +1158,8 @@ if __name__=="__main__":
                                    time_course_window_dim=args.tcwd,
                                    full_frame = args.full_frame_switch,
                                    logger=log,
+                                   limit_blob_detection=args.lim_blob,
+                                   all_frame_threshold=args.frames_threshold,
                                    store_switch=args.store_switch,
                                    denoise_flag=args.denoised_switch,
                                    data_vis_switch=args.data_vis_switch) 
