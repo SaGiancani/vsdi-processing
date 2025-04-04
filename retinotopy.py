@@ -383,7 +383,7 @@ class RetinoSession(md.Session):
         utils.stampa(f'NaNs in std blank: {(np.isnan(self.std_blank).sum()/(np.size(((self.std_blank))))*100)}%', logger=self.log)
 
         utils.stampa(f'The blank employed in the zscore has shape {mean_blank.shape}', logger=self.log)   
-        # z_s                 = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
+        z_s_visual                = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
         avr_df[np.isnan(avr_df)]  = self.value_to_sub
 
         # Instance retinotopy object: single stroke
@@ -412,18 +412,18 @@ class RetinoSession(md.Session):
 
         utils.stampa(f'Begin and end frames are: {(begin_time, end_time)}', logger=self.log)   
 
-        _, blurred, blobs, centroids, norm_centroids, z_s, _ = r.single_seq_retinotopy(avr_df, 
-                                                                                       None, None,
-                                                                                       begin_time,
-                                                                                       end_time,
-                                                                                       sig_blank = mean_blank,
-                                                                                       std_blank = self.std_blank,
-                                                                                       lim_blob_detect  = self.limit_blob_detection,
-                                                                                       all_frame_thres = self.all_frame_threshold)
+        _, blurred, blobs, centroids, norm_centroids, _, _ = r.single_seq_retinotopy(avr_df, 
+                                                                                     None, None,
+                                                                                     begin_time,
+                                                                                     end_time,
+                                                                                     sig_blank = mean_blank,
+                                                                                     std_blank = self.std_blank,
+                                                                                     lim_blob_detect  = self.limit_blob_detection,
+                                                                                     all_frame_thres = self.all_frame_threshold)
 
         r.blob       = blobs
         r.retino_pos = centroids[0]
-        r.signal     = z_s          # Only for visualization sake
+        r.signal     = z_s_visual          # Only for visualization sake
         if str_type == 'multiple stroke':
             centroid_to_use = self.dictionary_retinotopies[stroke_name].retino_pos                    
         else:
