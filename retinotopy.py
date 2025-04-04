@@ -166,6 +166,7 @@ class RetinoSession(md.Session):
         self.blank_condition   = cd_blank
 
         self.mean_blank        = self.blank_condition.averaged_df
+        self.mean_blank[np.isnan(self.mean_blank)] = np.nanpercentile(self.mean_blank, 15) 
         self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
         
         self.full_frame        = full_frame 
