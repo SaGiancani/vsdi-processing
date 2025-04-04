@@ -24,7 +24,7 @@ def plot_hist(a, title = 'hist', bins = 300):
     min_val = np.percentile(U_filled, 3)  # 1st percentile
     max_val = np.percentile(U_filled, 97)  # 99th percentile
     bin_edges = np.linspace(min_val, max_val, num=bins)    
-    plt.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
+    plt.bar(hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
 
     # Add the cutoff line, ensuring it aligns with the histogram's x-axis scale
     # plt.axvline(cutoff, color='r', linewidth=2, label=f'Cutoff: {cutoff:.2f}')
