@@ -12,18 +12,18 @@ COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal', 'orange', 'lime']
 
 import matplotlib.pyplot as plt
 
-def plot_hist(a, title = 'hist'):
+def plot_hist(a, title = 'hist', bins = 300):
     # Compute histogram with np.histogram
     val_mean = np.nanmean(a)
     U_filled = np.nan_to_num(a, nan=val_mean)  # Replace NaN with the mean of non-NaN values
     U_filled[~np.isfinite(U_filled)] = val_mean  # Replace inf with the mean of non-NaN values
-    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=150)
+    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=bins)
 
     # Plot the histogram using computed values
     plt.figure()
     min_val = np.percentile(U_filled, 3)  # 1st percentile
     max_val = np.percentile(U_filled, 97)  # 99th percentile
-    bin_edges = np.linspace(min_val, max_val, num=300)    
+    bin_edges = np.linspace(min_val, max_val, num=bins)    
     plt.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
 
     # Add the cutoff line, ensuring it aligns with the histogram's x-axis scale
