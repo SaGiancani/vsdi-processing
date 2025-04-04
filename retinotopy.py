@@ -10,6 +10,30 @@ from scipy.ndimage.filters import gaussian_filter
 
 COLORS_STROKE_WITHIN_AM = ['turquoise', 'teal', 'orange', 'lime']
 
+import matplotlib.pyplot as plt
+
+def plot_hist(a, title = 'hist'):
+    # Compute histogram with np.histogram
+    val_mean = np.nanmean(a)
+    U_filled = np.nan_to_num(a, nan=val_mean)  # Replace NaN with the mean of non-NaN values
+    U_filled[~np.isfinite(U_filled)] = val_mean  # Replace inf with the mean of non-NaN values
+    hist_values, bin_edges = np.histogram(U_filled.ravel(), bins=1500)
+
+    # Plot the histogram using computed values
+    plt.figure()
+    plt.bar(bin_edges[:-1], hist_values, width=np.diff(bin_edges), align='edge', edgecolor='black')
+
+    # Add the cutoff line, ensuring it aligns with the histogram's x-axis scale
+    # plt.axvline(cutoff, color='r', linewidth=2, label=f'Cutoff: {cutoff:.2f}')
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+    plt.title("Histogram with Cutoff")
+    plt.legend()
+
+    plt.savefig(os.path.join(f'{title}.png'))
+    plt.close()
+    return
+
 class RetinoSession(md.Session):
     def __init__(self, 
                     path_session, 
@@ -144,6 +168,8 @@ class RetinoSession(md.Session):
         self.mean_blank        = self.blank_condition.averaged_df
         self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
         
+        plot_hist(self.mean_blank, title = 'mean_blank')
+
         self.full_frame        = full_frame 
         self.id_name           = utils.get_session_id_name(self.path_session)                   
 
