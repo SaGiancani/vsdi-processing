@@ -833,6 +833,8 @@ class Retinotopy:
             x_min = max(0, x - dim_side // 2)
             x_max = min(w, x + dim_side // 2)
             
+            if mask is not None:
+                mask = mask[y_min:y_max, x_min:x_max]
             print(y_min, y_max, x_min, x_max)
             # Extract the available spatial window
             check_seq = df_f0[:, y_min:y_max, x_min:x_max]
