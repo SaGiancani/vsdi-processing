@@ -1245,7 +1245,7 @@ if __name__=="__main__":
                                    limit_blob_detection=args.lim_blob,
                                    all_frame_threshold=args.frames_threshold,
                                    store_switch=args.store_switch,
-                                   mask_switch=args.mask_switch
+                                   mask_switch=args.mask_switch,
                                    denoise_flag=args.denoised_switch,
                                    acquisition_fq= args.acquisition_fq,
                                    data_vis_switch=args.data_vis_switch) 
