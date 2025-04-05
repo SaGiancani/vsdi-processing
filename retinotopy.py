@@ -1077,13 +1077,16 @@ def subtraction_among_conditions(path_session,
     min_bord                     = np.nanpercentile(blurred, 15)
     max_bord                     = np.nanpercentile(blurred, 98)
     # In case the picked centroid is too far away from the corresponding control retinotopic position, it picks the control position as centroid
+    centroid_for_sub = centroids[0]
     if (stroke_centroid is not None) and (not fullframe):
         d_centroids = process.distance(centroids[0], stroke_centroid)
+        utils.stampa(f'Distance between detected centroid {centroids[0]} and control centroid {stroke_centroid} is: {d_centroids}')
         d_frameside = process.distance((0, 0), (FOI.shape[-1], 0)) 
+        utils.stampa(f'Distance/length frame side is: {d_frameside}')
+        utils.stampa(f'Proportion between distances Distance Between Centroids/Frame Side length: {d_centroids/d_frameside}')
         if (d_centroids >= d_frameside*.3):
             centroid_for_sub = stroke_centroid
-    else:
-        centroid_for_sub = centroids[0]
+
     pos_inferred_averaged.retino_pos     = centroid_for_sub
     pos_inferred_averaged.blob           = blobs
     blurred[~pos_inferred_averaged.mask] = np.NAN
