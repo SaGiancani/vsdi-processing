@@ -54,6 +54,7 @@ class RetinoSession(md.Session):
                     full_frame = False,                    
                     logger = None, 
                     condid = None, 
+                    mask_switch = False,
                     store_switch = False, 
                     data_vis_switch = True, 
                     end_frame = None,
@@ -177,14 +178,16 @@ class RetinoSession(md.Session):
         self.full_frame        = full_frame 
         self.id_name           = utils.get_session_id_name(self.path_session)                   
 
-        if not self.denoise_switch:        
-            self.mask       = self.get_mask()
-            if self.mask is None:
-                self.mask       = np.ones((self.std_blank.shape), dtype = bool)
-                utils.stampa('Impossible to properly load the mask. Substitute by fullframe visualization', logger = self.log)
-        else:
-            self.id_name    = f'{self.id_name}_Denoise'
+        self.mask_switch       = mask_switch
+        self.mask              = self.get_mask()
+        if (not self.mask_switch) or (self.mask is None):
             self.mask       = np.ones((self.std_blank.shape), dtype = bool)
+            utils.stampa('Impossible to properly load the mask. No masking applied', logger = self.log)
+        else:
+            utils.stampa(f'Mask of shape {self.mask.shape} properly loaded!', logger = self.log)
+
+        if self.denoise_switch:        
+            self.id_name    = f'{self.id_name}_Denoise'
  
         utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
         (ny, nx)                  = self.mean_blank [0, :,:].shape            
@@ -1187,6 +1190,14 @@ if __name__=="__main__":
                         action='store_false')
     parser.set_defaults(full_frame_switch=False)  
 
+    parser.add_argument('--mask', 
+                        dest='mask_switch', 
+                        action='store_true')
+    parser.add_argument('--no-mask', 
+                        dest='mask_switch', 
+                        action='store_false')
+    parser.set_defaults(mask_switch=False)  
+
     parser.add_argument('--vis', 
                         dest='data_vis_switch', 
                         action='store_true')
@@ -1234,6 +1245,7 @@ if __name__=="__main__":
                                    limit_blob_detection=args.lim_blob,
                                    all_frame_threshold=args.frames_threshold,
                                    store_switch=args.store_switch,
+                                   mask_switch=args.mask_switch
                                    denoise_flag=args.denoised_switch,
                                    acquisition_fq= args.acquisition_fq,
                                    data_vis_switch=args.data_vis_switch) 
