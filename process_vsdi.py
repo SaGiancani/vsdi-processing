@@ -148,6 +148,10 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
             
         return countours_, centroids_, blobs_
     
+def distance(p1, p2):
+    p1 = np.array(p1)
+    p2 = np.array(p2)
+    return np.linalg.norm(p1 - p2)
 
 def find_highest_sum_area(matrix, window_size, start_row=None, end_row=None, start_col=None, end_col=None):
     '''
@@ -206,6 +210,28 @@ def find_highest_sum_area(matrix, window_size, start_row=None, end_row=None, sta
 
     return max_position
 
+def get_best_coordinate(image, coords, radius=3):
+    max_avg = -np.inf
+
+    for x, y in coords:
+        # Define neighborhood bounds
+        x_min = max(0, x - radius)
+        x_max = min(image.shape[0], x + radius + 1)
+        y_min = max(0, y - radius)
+        y_max = min(image.shape[1], y + radius + 1)
+
+        # Extract neighborhood
+        neighborhood = image[x_min:x_max, y_min:y_max]
+
+        # Compute average ignoring NaNs
+        avg = np.nanmean(neighborhood)
+
+        # Update max if needed
+        if avg > max_avg:
+            max_avg = avg
+            best_coord = (x, y)
+
+    return best_coord
 
 
 def get_centroids(contours):

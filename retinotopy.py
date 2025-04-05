@@ -125,7 +125,7 @@ class RetinoSession(md.Session):
         
         self.single_stroke_label   = single_stroke_label
         self.multiple_stroke_label = multiple_stroke_label
-        utils.stampa(f'{self.single_stroke_label} {self.multiple_stroke_label}', logger = self.log)            
+        utils.stampa(f'Single stroke label: {self.single_stroke_label} Multiple strokes label: {self.multiple_stroke_label}', logger = self.log)            
 
         self.path_session            = path_session
         self.path_md                 = path_md
@@ -133,7 +133,7 @@ class RetinoSession(md.Session):
 
         # Corresponding single stroke for each AM condition
         self.retino_pos_am = utils.get_conditions_correspondance(self.path_session)
-        utils.stampa(f'{self.retino_pos_am}', logger = self.log)            
+        utils.stampa(f'Dictionary of conditions: {self.retino_pos_am}', logger = self.log)            
 
         # All the conditions    
         self.cond_dict  = super().get_condition_name()
@@ -295,15 +295,6 @@ class RetinoSession(md.Session):
                         time_limits):
         utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
 
-        dv.whole_time_sequence(self.mean_blank, 
-                               mask = self.mask, 
-                               max = 95, min = 15, 
-                               blur = False, 
-                               adaptive_vm = True, 
-                               ext = 'png',
-                               name_analysis_ = os.path.join(self.retinotopic_path_folder, self.id_name),
-                               name = f'sanity_check_blank' )    
-
         start_time = datetime.datetime.now().replace(microsecond=0)            
         colrs = []
         cd    = self.get_data_to_process(name_cond)
@@ -357,6 +348,17 @@ class RetinoSession(md.Session):
         # Create Retinotopic Analysis folder path
         utils.stampa(f'Retino session for data session {self.id_name} start to process...\n', logger=self.log)
         utils.stampa(f'Data are gonna be stored at {self.retinotopic_path_folder}\n', logger=self.log)                                         
+
+        # Sanity check for blank condition
+        dv.whole_time_sequence(self.mean_blank, 
+                               mask = self.mask, 
+                               max = 95, min = 15, 
+                               blur = False, 
+                               adaptive_vm = True, 
+                               ext = 'png',
+                               name_analysis_ = os.path.join(self.retinotopic_path_folder, self.id_name),
+                               name = f'sanity_check_blank' )    
+        
         # Storing variable
         for cond_id, cond_name in self.cond_dict.items():
             self.get_retinotopy(cond_name, None)
@@ -584,15 +586,18 @@ class RetinoSession(md.Session):
         dict_components_ = self.retino_pos_am
         for i in single_pos:
             dict_components_[i] = [i]
-
+        
         dict_subs   = utils.find_subsets(dict_components_)     
-        utils.stampa(f'{dict_subs}', logger = self.log)                                                               
-        utils.stampa(f'{self.full_frame}', logger = self.log)                                                               
+        utils.stampa(f'Dictionary of subtractions: {dict_subs}', logger = self.log)                                                               
+        utils.stampa(f'Full frame switch: {self.full_frame}', logger = self.log)                                                               
         params      = defaultdict(list)
         dict_subtrs = dict()
 
         for first_cond, second_cond in dict_subs.items():
-            
+            # Provide the control retinotopic position in case of glitch in peak detection
+            stroke_name     = self.retino_pos_am[first_cd][-1] 
+            stroke_centroid = self.dictionary_retinotopies[stroke_name].retino_pos
+
             first_cd  = self.get_data_to_process(first_cond)
             second_cd = self.get_data_to_process(second_cond)
             
@@ -632,6 +637,7 @@ class RetinoSession(md.Session):
                                                          ((frames_start, frames_end)),
                                                          dim_window = self.window_dimension,
                                                          fullframe = self.full_frame,
+                                                         stroke_centroid = stroke_centroid,
                                                          single_trial_analysis = True,
                                                          logger = self.log)
             dict_subtrs[name_subtrcts] = sub_x                
@@ -891,17 +897,15 @@ class Retinotopy:
         if mask is not None:
             frame_to_analyze = frame_to_analyze*mask   
         cleaned = frame_to_analyze[np.isfinite(frame_to_analyze)]        
-        print(f'NaNs in frame to analyze after cleaning: {(np.isnan(cleaned).sum()/(np.size(((cleaned))))*100)}%')
         lim_inf = np.nanpercentile(cleaned, lim_blob_detect)
         lim_sup = np.nanpercentile(cleaned, 100)
         centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
-        coords = np.array(list(zip(*centroids)))
-        if (coords is not None) and (len(coords)>0) :
-            (a,b), _ = centroid_max(coords[0], coords[1], blurred)
+        if (len(centroids)>0) :
+            (a,b) = process.get_best_coordinate(blurred, centroids)
         else:
             (a,b) = (np.nan, np.nan)
         # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
-        if global_centroid is None or (not flag_adjust_centroid):
+        if (global_centroid is None) or (not flag_adjust_centroid):
             c,d = ((a,b))
         else:
             c, d = ((x_min + a, y_min + b))
@@ -975,6 +979,7 @@ def get_assess_centroid(centroids, mask):
 
 def centroid_max(X, Y, data):
     '''
+    OBSOLETE
     Pick the point in the matrix data with higher value.
     X and Y are list of x and y coordinates.
     The method returns the coordinates and the value of higher point.
@@ -1033,14 +1038,14 @@ def subtraction_among_conditions(path_session,
                                  time_window_inference,
                                  fullframe = True, 
                                  single_trial_analysis = True, 
+                                 stroke_centroid = None,
                                  dim_window = 150,
                                  logger = None):                                                         
     
     if fullframe:
         dim_window = None
     
-    utils.stampa(f'Full frame switch {fullframe}', logger = logger)                                                               
-    utils.stampa(f'Dim window frame  {dim_window}', logger = logger)    
+    utils.stampa(f'Full frame switch {fullframe}', logger = logger)      
 
     r = Retinotopy(path_session, stroke_type = 'multiple stroke')
     #First
@@ -1067,12 +1072,19 @@ def subtraction_among_conditions(path_session,
 
     # Find retinotopic position in averaged signal over 15 frames
     centroids, blobs, _, blurred = get_retinotopic_features(FOI, mask_switch = False)
-    print(centroids)
-    utils.stampa(f'Centroids:  {centroids}', logger = logger)   
+    utils.stampa(f'Centroids in subtraction {name_params}:  {centroids}', logger = logger)   
 
     min_bord                     = np.nanpercentile(blurred, 15)
     max_bord                     = np.nanpercentile(blurred, 98)
-    pos_inferred_averaged.retino_pos     = centroids[0]
+    # In case the picked centroid is too far away from the corresponding control retinotopic position, it picks the control position as centroid
+    if (stroke_centroid is not None) and (not fullframe):
+        d_centroids = process.distance(centroids[0], stroke_centroid)
+        d_frameside = process.distance((0, 0), (FOI.shape[-1], 0)) 
+        if (d_centroids >= d_frameside*.3):
+            centroid_for_sub = stroke_centroid
+    else:
+        centroid_for_sub = centroids[0]
+    pos_inferred_averaged.retino_pos     = centroid_for_sub
     pos_inferred_averaged.blob           = blobs
     blurred[~pos_inferred_averaged.mask] = np.NAN
     pos_inferred_averaged.map            = blurred
