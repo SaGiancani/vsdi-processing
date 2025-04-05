@@ -900,7 +900,8 @@ class Retinotopy:
         lim_inf = np.nanpercentile(cleaned, lim_blob_detect)
         lim_sup = np.nanpercentile(cleaned, 100)
         centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
-        if (len(centroids)>0) :
+        if (len(centroids)>0):
+            print(centroids)
             (a,b) = process.get_best_coordinate(blurred, centroids)
         else:
             (a,b) = (np.nan, np.nan)
