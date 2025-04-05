@@ -1083,9 +1083,10 @@ def subtraction_among_conditions(path_session,
         utils.stampa(f'Distance between detected centroid {centroids[0]} and control centroid {stroke_centroid} is: {d_centroids}')
         d_frameside = process.distance((0, 0), (FOI.shape[-1], 0)) 
         utils.stampa(f'Distance/length frame side is: {d_frameside}')
-        utils.stampa(f'Proportion between distances Distance Between Centroids/Frame Side length: {d_centroids/d_frameside}')
+        utils.stampa(f'Proportion between distances Distance Between Centroids/Frame Side length: {d_frameside/d_centroids}')
         if (d_centroids >= d_frameside*.3):
             centroid_for_sub = stroke_centroid
+            utils.stampa(f'The control centroid is picked instead.')
 
     pos_inferred_averaged.retino_pos     = centroid_for_sub
     pos_inferred_averaged.blob           = blobs
