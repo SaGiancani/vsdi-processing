@@ -211,8 +211,9 @@ def find_highest_sum_area(matrix, window_size, start_row=None, end_row=None, sta
     return max_position
 
 def get_best_coordinate(image, coords, radius=3):
-    max_avg = -np.inf
-
+    max_avg    = -np.inf
+    best_coord = None
+    
     for x, y in coords:
         # Define neighborhood bounds
         x_min = max(0, x - radius)
