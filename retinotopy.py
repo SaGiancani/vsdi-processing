@@ -595,7 +595,7 @@ class RetinoSession(md.Session):
 
         for first_cond, second_cond in dict_subs.items():
             # Provide the control retinotopic position in case of glitch in peak detection
-            stroke_name     = self.retino_pos_am[first_cd][-1] 
+            stroke_name     = self.retino_pos_am[first_cond][-1] 
             stroke_centroid = self.dictionary_retinotopies[stroke_name].retino_pos
 
             first_cd  = self.get_data_to_process(first_cond)
