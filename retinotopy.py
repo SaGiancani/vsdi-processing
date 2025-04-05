@@ -452,6 +452,7 @@ class RetinoSession(md.Session):
                                                                                      end_time,
                                                                                      sig_blank = mean_blank,
                                                                                      std_blank = self.std_blank,
+                                                                                     zero_frames = r.time_limits[0],
                                                                                      lim_blob_detect  = self.limit_blob_detection,
                                                                                      all_frame_thres = self.all_frame_threshold)
 
@@ -484,6 +485,7 @@ class RetinoSession(md.Session):
                                                           end_time,
                                                           df_f0_foi = foi,
                                                           mask = self.mask,
+                                                          zero_frames = r.time_limits[0],
                                                           sig_blank = mean_blank,
                                                           std_blank = self.std_blank,
                                                           lim_blob_detect = self.limit_blob_detection,
@@ -889,7 +891,6 @@ class Retinotopy:
         #print(lim_inf, lim_sup)
         if mask is not None:
             frame_to_analyze = frame_to_analyze*mask   
-        print(f'NaNs in frame to analyze before cleaning: {(np.isnan(frame_to_analyze).sum()/(np.size(((frame_to_analyze))))*100)}%')
         cleaned = frame_to_analyze[np.isfinite(frame_to_analyze)]        
         print(f'NaNs in frame to analyze after cleaning: {(np.isnan(cleaned).sum()/(np.size(((cleaned))))*100)}%')
         lim_inf = np.nanpercentile(cleaned, lim_blob_detect)
@@ -1007,6 +1008,7 @@ def single_trial_detection(retino_object, dim_window, time_window_inference, df_
                                                                   time_window_inference[1],
                                                                   df_confront = df_conf,
                                                                   mask = mask,
+                                                                  zero_frames = retino_object.time_limits[0],
                                                                   df_confront_foi = time_limits_second,
                                                                   df_f0_foi = time_limits_first,
                                                                   lim_blob_detect = 70) for i in retino_object.df_fz]    
@@ -1043,8 +1045,8 @@ def subtraction_among_conditions(path_session,
 
     r = Retinotopy(path_session, stroke_type = 'multiple stroke')
     #First
-    _, _, _, _, _, z_123_shrinked, _ = r.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1])
-    _, _, _, _, _, z_12_shrinked, _  = r.single_seq_retinotopy(second, None, None, time_limits_second[0], time_limits_second[1])
+    _, _, _, _, _, z_123_shrinked, _ = r.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1], zero_frames = time_limits_first[0])
+    _, _, _, _, _, z_12_shrinked, _  = r.single_seq_retinotopy(second, None, None, time_limits_second[0], time_limits_second[1], zero_frames = time_limits_second[0])
 
     z_123_shrinked = z_123_shrinked*mask
     z_12_shrinked  = z_12_shrinked*mask
