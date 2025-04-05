@@ -876,7 +876,8 @@ class Retinotopy:
             ztmp = process.zeta_score(tmp[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
         else:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
-            ztmp = ztmp[np.isfinite(ztmp)]    
+            ztmp[~np.isfinite(ztmp)] = np.nanpercentile(ztmp, 15)
+
         
         # If want to store information from single frame
         if single_frame_analysis:
