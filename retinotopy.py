@@ -450,8 +450,8 @@ class RetinoSession(md.Session):
                                                                                      None, None,
                                                                                      begin_time,
                                                                                      end_time,
-                                                                                    #  sig_blank = mean_blank,
-                                                                                    #  std_blank = self.std_blank,
+                                                                                     sig_blank = mean_blank,
+                                                                                     std_blank = self.std_blank,
                                                                                      zero_frames = r.time_limits[0],
                                                                                      lim_blob_detect  = self.limit_blob_detection,
                                                                                      all_frame_thres = self.all_frame_threshold)
@@ -486,8 +486,8 @@ class RetinoSession(md.Session):
                                                           df_f0_foi = foi,
                                                           mask = self.mask,
                                                           zero_frames = r.time_limits[0],
-                                                        #   sig_blank = mean_blank,
-                                                        #   std_blank = self.std_blank,
+                                                          sig_blank = mean_blank,
+                                                          std_blank = self.std_blank,
                                                           lim_blob_detect = self.limit_blob_detection,
                                                           all_frame_thres = self.all_frame_threshold) for i in df] 
 
@@ -863,7 +863,7 @@ class Retinotopy:
         else:
             check_seq = df_f0
             # Handling the case in which blank signal is provided or not
-            if (sig_blank is None) and (std_blank is None):
+            if (sig_blank is None) or (std_blank is None):
                 sig_blank = np.nanmean(check_seq[:zero_frames, :, :], axis = 0)
                 std_blank = np.nanstd(check_seq[:zero_frames, :, :], axis = 0)/np.sqrt(np.shape(check_seq[:, :, :])[0])# Normalization of standard over all the frames, not only the zero_frames        
             flag_adjust_centroid = False
