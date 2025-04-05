@@ -888,9 +888,12 @@ class Retinotopy:
         frame_to_analyze = np.nanmean(ztmp, axis=0)               
         #print(lim_inf, lim_sup)
         if mask is not None:
-            frame_to_analyze = frame_to_analyze*mask            
-        lim_inf = np.nanpercentile(frame_to_analyze[np.where((frame_to_analyze != -np.inf) | (frame_to_analyze != np.inf))], lim_blob_detect)
-        lim_sup = np.nanpercentile(frame_to_analyze[np.where((frame_to_analyze != -np.inf) | (frame_to_analyze != np.inf))], 98)
+            frame_to_analyze = frame_to_analyze*mask   
+        print(f'NaNs in frame to analyze before cleaning: {(np.isnan(frame_to_analyze).sum()/(np.size(((frame_to_analyze))))*100)}%')
+        cleaned = frame_to_analyze[np.isfinite(frame_to_analyze)]        
+        print(f'NaNs in frame to analyze after cleaning: {(np.isnan(cleaned).sum()/(np.size(((cleaned))))*100)}%')
+        lim_inf = np.nanpercentile(cleaned, lim_blob_detect)
+        lim_sup = np.nanpercentile(cleaned, 100)
         centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
         coords = np.array(list(zip(*centroids)))
         if (coords is not None) and (len(coords)>0) :
