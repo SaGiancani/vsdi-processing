@@ -450,8 +450,8 @@ class RetinoSession(md.Session):
                                                                                      None, None,
                                                                                      begin_time,
                                                                                      end_time,
-                                                                                     sig_blank = mean_blank,
-                                                                                     std_blank = self.std_blank,
+                                                                                    #  sig_blank = mean_blank,
+                                                                                    #  std_blank = self.std_blank,
                                                                                      zero_frames = r.time_limits[0],
                                                                                      lim_blob_detect  = self.limit_blob_detection,
                                                                                      all_frame_thres = self.all_frame_threshold)
@@ -486,8 +486,8 @@ class RetinoSession(md.Session):
                                                           df_f0_foi = foi,
                                                           mask = self.mask,
                                                           zero_frames = r.time_limits[0],
-                                                          sig_blank = mean_blank,
-                                                          std_blank = self.std_blank,
+                                                        #   sig_blank = mean_blank,
+                                                        #   std_blank = self.std_blank,
                                                           lim_blob_detect = self.limit_blob_detection,
                                                           all_frame_thres = self.all_frame_threshold) for i in df] 
 
@@ -878,7 +878,7 @@ class Retinotopy:
             ztmp = process.zeta_score(tmp[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
         else:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
-            ztmp[np.isnan(ztmp)]  = np.nanpercentile(ztmp, 10)    
+            ztmp[np.isfinite(ztmp)]  = np.nanpercentile(ztmp, 10)    
         
         # If want to store information from single frame
         if single_frame_analysis:
