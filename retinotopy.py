@@ -168,12 +168,9 @@ class RetinoSession(md.Session):
         self.blank_condition   = cd_blank
 
         self.mean_blank        = self.blank_condition.averaged_df
-        self.mean_blank[np.isnan(self.mean_blank)] = np.nanpercentile(self.mean_blank, 15) 
-        utils.stampa(f'NaNs in average blank: {(np.isnan(self.mean_blank).sum()/(np.size(((self.mean_blank))))*100)}%', logger=self.log)
-        self.mean_blank = np.nan_to_num(self.mean_blank, copy=False, nan=np.nanpercentile(self.mean_blank, 20), posinf=None, neginf=None)
-        utils.stampa(f'NaNs in average blank: {(np.isnan(self.mean_blank).sum()/(np.size(((self.mean_blank))))*100)}%', logger=self.log)
-
+        self.mean_blank[~np.isfinite(self.mean_blank)] = np.nanpercentile(self.mean_blank, 15)
         self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
+        utils.stampa(f'NaNs in average blank: {(np.isnan(self.mean_blank).sum()/(np.size(((self.mean_blank))))*100)}%', logger=self.log)
         
         self.full_frame        = full_frame 
         self.id_name           = utils.get_session_id_name(self.path_session)                   
