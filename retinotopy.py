@@ -453,6 +453,7 @@ class RetinoSession(md.Session):
                                                                                      sig_blank = mean_blank,
                                                                                      std_blank = self.std_blank,
                                                                                      zero_frames = r.time_limits[0],
+                                                                                     mask = self.mask,
                                                                                      lim_blob_detect  = self.limit_blob_detection,
                                                                                      all_frame_thres = self.all_frame_threshold)
 
@@ -1045,8 +1046,8 @@ def subtraction_among_conditions(path_session,
 
     r = Retinotopy(path_session, stroke_type = 'multiple stroke')
     #First
-    _, _, _, _, _, z_123_shrinked, _ = r.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1], zero_frames = time_limits_first[0])
-    _, _, _, _, _, z_12_shrinked, _  = r.single_seq_retinotopy(second, None, None, time_limits_second[0], time_limits_second[1], zero_frames = time_limits_second[0])
+    _, _, _, _, _, z_123_shrinked, _ = r.single_seq_retinotopy(first, None, None, time_limits_first[0], time_limits_first[1], zero_frames = time_limits_first[0], mask = mask)
+    _, _, _, _, _, z_12_shrinked, _  = r.single_seq_retinotopy(second, None, None, time_limits_second[0], time_limits_second[1], zero_frames = time_limits_second[0], mask = mask)
 
     z_123_shrinked = z_123_shrinked*mask
     z_12_shrinked  = z_12_shrinked*mask
