@@ -875,7 +875,7 @@ class Retinotopy:
         # Check for presence of df to subtract to df_f0: used for single trial analysis in AMstrokes
         if df_confront is not None:
             # FOI for each of the signal elements: either AM or single stroke dF/F0  
-            if (df_confront_foi and df_f0_foi) is not None:
+            if (df_confront_foi is not None) and (df_f0_foi is not None):
                 tmp = check_seq[df_f0_foi[0]:df_f0_foi[1], :, :] - df_confront[df_confront_foi[0]:df_confront_foi[1], :, :]
             else:
                 tmp = check_seq - df_confront
