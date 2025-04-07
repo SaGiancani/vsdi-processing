@@ -217,9 +217,9 @@ def get_best_coordinate(image, coords, radius=3):
     for x, y in coords:
         # Define neighborhood bounds
         x_min = np.nanmax([0, x - radius])
-        x_max = np.nanmin([image.shape[0], x + radius + 1])
+        x_max = int(x_min + 2*radius)
         y_min = np.nanmax([0, y - radius])
-        y_max = np.nanmin([image.shape[1], y + radius + 1])
+        y_max = int(y_min + 2*radius)
 
         # Extract neighborhood
         print(f'Indeces {x_min, x_max, y_min, y_max}')
