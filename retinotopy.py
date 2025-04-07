@@ -900,16 +900,16 @@ class Retinotopy:
         lim_inf = np.nanpercentile(cleaned, lim_blob_detect)
         lim_sup = np.nanpercentile(cleaned, 98)
         centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
-        # if (len(centroids)>0):
-        #     (a,b) = process.get_best_coordinate(blurred, centroids)
-        #     if (a is None) or (b is None):
-        #         coords_singl = np.array(list(zip(*centroids)))
-        #         (a,b), _ = process.centroid_max(coords_singl[0], coords_singl[1], blurred)         
-        coords = np.array(list(zip(*centroids)))
-        if (coords is not None) and (len(coords)>0) :
-            (a,b), _ = process.centroid_max(coords[0], coords[1], blurred)                           
-        else:
-            (a,b) = (np.nan, np.nan)
+        if (len(centroids)>0):
+            (a,b) = process.get_best_coordinate(blurred, centroids)
+            if (a is None) or (b is None):
+                coords_singl = np.array(list(zip(*centroids)))
+                (a,b), _ = process.centroid_max(coords_singl[0], coords_singl[1], blurred)         
+        # coords = np.array(list(zip(*centroids)))
+        # if (coords is not None) and (len(coords)>0) :
+        #     (a,b), _ = process.centroid_max(coords[0], coords[1], blurred)                           
+        # else:
+        #     (a,b) = (np.nan, np.nan)
         # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
         if (global_centroid is None) or (not flag_adjust_centroid):
             c,d = ((a,b))
@@ -1174,7 +1174,7 @@ if __name__=="__main__":
                         type=int,
                         help='Conditions to analyze: None by default -all the conditions-')   
      
-    parser.add_argument('--lim_blob', 
+    parser.add_argument('--lim_blob',  # This parameter handles the width of the detected blob. Higher for even narrower blobs, lower if you want to discard spiky position in the frame
                         dest='lim_blob',
                         default=80,
                         required=False,
