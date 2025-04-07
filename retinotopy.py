@@ -956,7 +956,7 @@ def get_single_frame_peak(ztmp, time_window, global_centroid, dim_side, lim_blob
         coords_singl = np.array(list(zip(*centroids_singl)))
         if (coords_singl is not None) and (len(coords_singl)>0) :
             # Centroid at maximum response
-            (a,b), _ = centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
+            (a,b), _ = process.centroid_max(coords_singl[0], coords_singl[1], blurred_singl)
         else:
             print(len(coords_singl))
             (a,b) = (np.nan, np.nan)
@@ -977,24 +977,6 @@ def get_assess_centroid(centroids, mask):
     Assess position of the centroids: if inside the mask, then it is considered
     '''
     return [i for i in centroids if mask[i[1],i[0]]]
-
-
-def centroid_max(X, Y, data):
-    '''
-    OBSOLETE
-    Pick the point in the matrix data with higher value.
-    X and Y are list of x and y coordinates.
-    The method returns the coordinates and the value of higher point.
-    '''
-    max_point = -np.inf
-    for i, (x, y) in enumerate(zip(X, Y)):
-        #print(data[y, x])
-        if data[y, x] >= max_point:
-            index = (x, y)
-            max_point = data[y, x]
-        elif i == 0:
-            print('Something wrong with the centroid_max method')
-    return index, max_point
 
 def single_trial_detection(retino_object, dim_window, time_window_inference, df_conf, time_limits_first, time_limits_second, mask = None, fullframe = True):
     
