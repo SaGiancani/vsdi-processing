@@ -1073,7 +1073,7 @@ def subtraction_among_conditions(path_session,
         utils.stampa(f'Proportion between distances Distance Between Centroids/Frame Side length: {d_frameside/d_centroids}')
 
         if (d_centroids >= d_frameside*.3):
-            centroid_for_sub = stroke_centroid                  # This should be used only for reframing the spatial window. Then it should be recomputed on the new cluster of peaks
+            centroid_for_sub = stroke_centroid # This should be used only for reframing the spatial window. Then it should be recomputed on the new cluster of peaks
             utils.stampa(f'The control centroid is picked instead.')
             control_centroid = True
 
@@ -1091,19 +1091,29 @@ def subtraction_among_conditions(path_session,
                                                                               time_limits_second, 
                                                                               mask = mask,
                                                                               fullframe = fullframe)
+        
         # Refining the centroid position: after using the control position finding the actual centroid position out of the single trial centroids distribution
         if control_centroid:
-            _, blurred, blobs, centroids, norm_centroids, _, _ = pos_inferred_averaged.single_seq_retinotopy(first - second, 
-                                                                                                             (np.nanmean(pos_inferred_averaged.distribution_positions[0]), np.nanmean(pos_inferred_averaged.distribution_positions[1])),
-                                                                                                             int(dim_window*.8),                                                                                     
-                                                                                                             time_window_inference[0],
-                                                                                                             time_window_inference[1],
-                                                                                                             zero_frames = pos_inferred_averaged.time_limits[0],
-                                                                                                             mask = mask) 
+            FOI_reiterated = np.nanmean(pos_inferred_averaged.signal[time_window_inference[0]:time_window_inference[1], :, :], axis=0)*pos_inferred_averaged.mask
+            # Compute valid bounds
+            x_reiterated, y_reiterated = np.nanmean(pos_inferred_averaged.distribution_positions[0]), np.nanmean(pos_inferred_averaged.distribution_positions[1])
+            reduced_window = int(dim_window*.8)
+
+            x_min = np.nanmax([0, x_reiterated - reduced_window//2])
+            x_max = int(x_min + 2*(reduced_window//2))
+            y_min = np.nanmax([0, y_reiterated - reduced_window//2])
+            y_max = int(y_min + 2*(reduced_window//2))
+            
+            FOI_reiterated = FOI_reiterated[y_min:y_max, x_min:x_max]
+
+            # Find retinotopic position in averaged signal over 15 frames
+            centroids, blobs, _, _ = get_retinotopic_features(FOI_reiterated, mask_switch = False)   
+            blb                 = np.zeros((FOI_reiterated.shape))         
+            blb[y_min:, x_min:] = blobs
+
             pos_inferred_averaged.retino_pos     = centroids[0]
-            pos_inferred_averaged.blob           = blobs
-            blurred[~pos_inferred_averaged.mask] = np.NAN
-            pos_inferred_averaged.map            = blurred                   
+            pos_inferred_averaged.blob           = blb
+           
     else:
         pos_inferred_averaged.distribution_positions = list() 
     
