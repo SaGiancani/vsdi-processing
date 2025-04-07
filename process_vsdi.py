@@ -223,7 +223,7 @@ def get_best_coordinate(image, coords, radius=3):
 
         # Extract neighborhood
         print(f'Indeces {x_min, x_max, y_min, y_max}')
-        neighborhood = image[x_min:x_max, y_min:y_max]
+        neighborhood = image[y_min:y_max, x_min:x_max]
         neighborhood[~np.isfinite(neighborhood)] = np.nanpercentile(image, 10)
         print(f'Neighborhood {neighborhood}')
         print(f'Peak value {image[y, x]}')
