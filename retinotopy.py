@@ -903,6 +903,7 @@ class Retinotopy:
         if (len(centroids)>0):
             print(centroids)
             (a,b) = process.get_best_coordinate(blurred, centroids)
+            print(a,b)
         else:
             (a,b) = (np.nan, np.nan)
         # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
