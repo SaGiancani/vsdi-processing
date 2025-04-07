@@ -222,13 +222,14 @@ def get_best_coordinate(image, coords, radius=3):
         y_max = np.nanmin([image.shape[1], y + radius + 1])
 
         # Extract neighborhood
+        print(f'Indeces {x_min, x_max, y_min, y_max}')
         neighborhood = image[x_min:x_max, y_min:y_max]
         neighborhood[~np.isfinite(neighborhood)] = np.nanpercentile(image, 10)
-        print(neighborhood)
-        print(image[y, x])
+        print(f'Neighborhood {neighborhood}')
+        print(f'Peak value {image[y, x]}')
         # Compute average ignoring NaNs
         avg = np.nanmean(neighborhood)
-        print(avg, max_avg)
+        print(f'Average {avg} and max average {max_avg}')
         # Update max if needed
         if avg > max_avg:
             max_avg = avg
