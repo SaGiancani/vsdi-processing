@@ -910,8 +910,8 @@ class Retinotopy:
         # coords = np.array(list(zip(*centroids)))
         # if (coords is not None) and (len(coords)>0) :
         #     (a,b), _ = process.centroid_max(coords[0], coords[1], blurred)                           
-        # else:
-        #     (a,b) = (np.nan, np.nan)
+        else:
+            (a,b) = (np.nan, np.nan)
         # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
         if (global_centroid is None) or (not flag_adjust_centroid):
             c,d = ((a,b))
