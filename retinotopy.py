@@ -900,11 +900,14 @@ class Retinotopy:
         lim_inf = np.nanpercentile(cleaned, lim_blob_detect)
         lim_sup = np.nanpercentile(cleaned, 100)
         centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
-        if (len(centroids)>0):
-            (a,b) = process.get_best_coordinate(blurred, centroids)
-            if (a is None) or (b is None):
-                coords_singl = np.array(list(zip(*centroids)))
-                (a,b), _ = process.centroid_max(coords_singl[0], coords_singl[1], blurred)                    
+        # if (len(centroids)>0):
+        #     (a,b) = process.get_best_coordinate(blurred, centroids)
+        #     if (a is None) or (b is None):
+        #         coords_singl = np.array(list(zip(*centroids)))
+        #         (a,b), _ = process.centroid_max(coords_singl[0], coords_singl[1], blurred)         
+        coords = np.array(list(zip(*centroids)))
+        if (coords is not None) and (len(coords)>0) :
+            (a,b), _ = process.centroid_max(coords[0], coords[1], blurred)                           
         else:
             (a,b) = (np.nan, np.nan)
         # Problematic if: global_centroid could be not None and still not need to adjust the c, d values. TO TEST
@@ -917,9 +920,7 @@ class Retinotopy:
 
 def get_retinotopic_features(FOI, min_lim = 90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):
     num_for_nan = np.nanpercentile(FOI, 20)
-    #num_for_nan = -33e-10
     print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
-    #averaged_df1 = np.nan_to_num(averaged_df1, nan=np.nanmin(averaged_df1), neginf=np.nanmin(averaged_df1[np.where(averaged_df1 != -np.inf)]), posinf=np.nanmax(averaged_df1[np.where(averaged_df1 != np.inf)]))
     blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
     _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, min_2_lim = thresh_gaus, adaptive_thresh=adaptive_thresh)
     if mask_switch:
