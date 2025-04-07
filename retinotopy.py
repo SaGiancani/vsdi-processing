@@ -893,13 +893,15 @@ class Retinotopy:
 
         # Thresholding values
         frame_to_analyze = np.nanmean(ztmp, axis=0)               
-        #print(lim_inf, lim_sup)
+
         if mask is not None:
             frame_to_analyze = frame_to_analyze*mask   
         cleaned = frame_to_analyze[np.isfinite(frame_to_analyze)]        
         lim_inf = np.nanpercentile(cleaned, lim_blob_detect)
         lim_sup = np.nanpercentile(cleaned, 98)
         centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
+
+        # It picks only the centroid that returns the higher average in the neighborhood of the centroid        
         if (len(centroids)>0):
             (a,b) = process.get_best_coordinate(blurred, centroids)
             if (a is None) or (b is None):
@@ -1093,17 +1095,17 @@ def subtraction_among_conditions(path_session,
                                                                               fullframe = fullframe)
         
         # Refining the centroid position: after using the control position finding the actual centroid position out of the single trial centroids distribution
-        if control_centroid:
-            FOI_reiterated = np.nanmean(pos_inferred_averaged.signal[time_window_inference[0]:time_window_inference[1], :, :], axis=0)*pos_inferred_averaged.mask
+        if control_centroid:    
+            FOI_reiterated = np.nanmean(pos_inferred_averaged.signal[time_window_inference[0]:time_window_inference[1], :, :], axis=0)#*pos_inferred_averaged.mask
             # Compute valid bounds
             x_reiterated, y_reiterated = np.nanmean(pos_inferred_averaged.distribution_positions[0]), np.nanmean(pos_inferred_averaged.distribution_positions[1])
             reduced_window = int(dim_window*.8)
-
+            utils.stampa(f'Average centroid in distribution: ({x_reiterated, y_reiterated}), Reduced window dim {reduced_window}')
             x_min = np.nanmax([0, x_reiterated - reduced_window//2])
             x_max = int(x_min + 2*(reduced_window//2))
             y_min = np.nanmax([0, y_reiterated - reduced_window//2])
             y_max = int(y_min + 2*(reduced_window//2))
-            
+            utils.stampa(f'Indeces for cropping {(x_min, x_max, y_min, y_max)}')
             FOI_reiterated = FOI_reiterated[y_min:y_max, x_min:x_max]
 
             # Find retinotopic position in averaged signal over 15 frames
