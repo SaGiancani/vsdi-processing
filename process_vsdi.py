@@ -210,7 +210,7 @@ def find_highest_sum_area(matrix, window_size, start_row=None, end_row=None, sta
 
     return max_position
 
-def get_best_coordinate(image, coords, radius=3):
+def get_best_coordinate(image, coords, radius=15):
     max_avg    = -np.inf
     best_coord = (None, None) 
     
@@ -222,10 +222,8 @@ def get_best_coordinate(image, coords, radius=3):
         y_max = int(y_min + 2*radius)
 
         # Extract neighborhood
-        print(f'Indeces {x_min, x_max, y_min, y_max}')
         neighborhood = image[y_min:y_max, x_min:x_max]
         neighborhood[~np.isfinite(neighborhood)] = np.nanpercentile(image, 10)
-        print(f'Neighborhood {neighborhood}')
         print(f'Peak value {image[y, x]}')
         # Compute average ignoring NaNs
         avg = np.nanmean(neighborhood)
