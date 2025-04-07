@@ -216,10 +216,10 @@ def get_best_coordinate(image, coords, radius=3):
     
     for x, y in coords:
         # Define neighborhood bounds
-        x_min = max(0, x - radius)
-        x_max = min(image.shape[0], x + radius + 1)
-        y_min = max(0, y - radius)
-        y_max = min(image.shape[1], y + radius + 1)
+        x_min = np.nanmax(0, x - radius)
+        x_max = np.nanmin(image.shape[0], x + radius + 1)
+        y_min = np.nanmax(0, y - radius)
+        y_max = np.nanmin(image.shape[1], y + radius + 1)
 
         # Extract neighborhood
         neighborhood = image[x_min:x_max, y_min:y_max]
