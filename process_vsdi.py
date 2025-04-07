@@ -227,7 +227,7 @@ def get_best_coordinate(image, coords, radius=3):
 
         # Compute average ignoring NaNs
         avg = np.nanmean(neighborhood)
-        
+        print(avg, max_avg)
         # Update max if needed
         if avg > max_avg:
             max_avg = avg
