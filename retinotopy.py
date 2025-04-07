@@ -1111,8 +1111,8 @@ def subtraction_among_conditions(path_session,
             # Find retinotopic position in averaged signal over 15 frames
             centroids, blobs, _, _ = get_retinotopic_features(FOI_reiterated, mask_switch = False)   
             blb                 = np.zeros((pos_inferred_averaged.signal[0, :, :].shape))         
-            blb[y_min:y_max, x_min:x_max] = blobs
             utils.stampa(f'Blobs shape {(blb.shape, blobs.shape)}')
+            blb[y_min:y_max, x_min:x_max] = blobs
 
             pos_inferred_averaged.retino_pos     = [centroids[0][0] + x_min, centroids[0][1] + y_min]
             pos_inferred_averaged.blob           = blb
