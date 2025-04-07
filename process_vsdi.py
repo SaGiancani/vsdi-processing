@@ -210,7 +210,7 @@ def find_highest_sum_area(matrix, window_size, start_row=None, end_row=None, sta
 
     return max_position
 
-def get_best_coordinate(image, coords, radius=15):
+def get_best_coordinate(image, coords, radius=2):
     max_avg    = -np.inf
     best_coord = (None, None) 
     
