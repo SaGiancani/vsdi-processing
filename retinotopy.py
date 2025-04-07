@@ -1098,7 +1098,7 @@ def subtraction_among_conditions(path_session,
         if control_centroid:    # This control also in stroke within AM
             FOI_reiterated = np.nanmean(pos_inferred_averaged.signal[time_window_inference[0]:time_window_inference[1], :, :], axis=0)#*pos_inferred_averaged.mask
             # Compute valid bounds
-            x_reiterated, y_reiterated = np.nanmean(pos_inferred_averaged.distribution_positions[0]), np.nanmean(pos_inferred_averaged.distribution_positions[1])
+            x_reiterated, y_reiterated = np.ceil(np.nanmean(pos_inferred_averaged.distribution_positions[0])), np.ceil(np.nanmean(pos_inferred_averaged.distribution_positions[1]))
             reduced_window = int(dim_window*.8)
             utils.stampa(f'Average centroid in distribution: ({x_reiterated, y_reiterated}), Reduced window dim {reduced_window}')
             x_min = int(np.nanmax([0, x_reiterated - reduced_window//2]))
