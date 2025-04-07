@@ -882,7 +882,7 @@ class Retinotopy:
             ztmp = process.zeta_score(tmp[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
         else:
             ztmp = process.zeta_score(check_seq[start_frame:end_frame, :, :], sig_blank, std_blank, full_seq = True)
-            ztmp[~np.isfinite(ztmp)] = np.nanpercentile(ztmp, 15)
+            ztmp[~np.isfinite(ztmp)] = np.nanpercentile(ztmp, 5)
 
         
         # If want to store information from single frame
@@ -898,7 +898,7 @@ class Retinotopy:
             frame_to_analyze = frame_to_analyze*mask   
         cleaned = frame_to_analyze[np.isfinite(frame_to_analyze)]        
         lim_inf = np.nanpercentile(cleaned, lim_blob_detect)
-        lim_sup = np.nanpercentile(cleaned, 100)
+        lim_sup = np.nanpercentile(cleaned, 98)
         centroids, blobs, _, blurred = get_retinotopic_features(frame_to_analyze, min_lim=lim_inf, max_lim = lim_sup, mask_switch = False, adaptive_thresh=False, thresh_gaus=all_frame_thres)
         # if (len(centroids)>0):
         #     (a,b) = process.get_best_coordinate(blurred, centroids)
