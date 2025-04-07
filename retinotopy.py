@@ -903,6 +903,9 @@ class Retinotopy:
         if (len(centroids)>0):
             print(centroids)
             (a,b) = process.get_best_coordinate(blurred, centroids)
+            if (a is None) or (b is None):
+                coords_singl = np.array(list(zip(*centroids)))
+                (a,b), _ = process.centroid_max(coords_singl[0], coords_singl[1], blurred)                    
             print(a,b)
         else:
             (a,b) = (np.nan, np.nan)
