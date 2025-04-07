@@ -222,17 +222,35 @@ def get_best_coordinate(image, coords, radius=3):
         y_max = np.nanmin([image.shape[1], y + radius + 1])
 
         # Extract neighborhood
-        neighborhood = image[x_min:x_max, y_min:y_max]
+        neighborhood               = image[x_min:x_max, y_min:y_max]
+        neighborhood[~np.isfinite] = np.nanpercentile(image, 10)
 
         # Compute average ignoring NaNs
         avg = np.nanmean(neighborhood)
-
+        
         # Update max if needed
         if avg > max_avg:
             max_avg = avg
             best_coord = (x, y)
 
     return best_coord
+
+def centroid_max(X, Y, data):
+    '''
+    OBSOLETE
+    Pick the point in the matrix data with higher value.
+    X and Y are list of x and y coordinates.
+    The method returns the coordinates and the value of higher point.
+    '''
+    max_point = -np.inf
+    for i, (x, y) in enumerate(zip(X, Y)):
+        #print(data[y, x])
+        if data[y, x] >= max_point:
+            index = (x, y)
+            max_point = data[y, x]
+        elif i == 0:
+            print('Something wrong with the centroid_max method')
+    return index, max_point
 
 
 def get_centroids(contours):
