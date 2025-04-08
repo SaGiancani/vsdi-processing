@@ -406,17 +406,11 @@ class RetinoSession(md.Session):
         # dF/F0 of only autoselected trials 
         df = md.get_selected(cd.df_fz, cd.autoselection)
         avr_df = np.nanmean(df, axis = 0)
-        utils.stampa(f'NaNs in average signal: {(np.isnan(avr_df).sum()/(np.size(((avr_df))))*100)}%', logger=self.log)
-        utils.stampa(f'NaNs in global signal: {(np.isnan(df).sum()/(np.size(((df))))*100)}%', logger=self.log)
 
-        # COUNTERCHECK THIS BLANK 
         mean_blank = np.nanmean(self.mean_blank, axis = 0)
         mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15) 
         mean_blank = np.nan_to_num(mean_blank, copy=False, nan=np.nanpercentile(mean_blank, 20), posinf=None, neginf=None)
-        utils.stampa(f'NaNs in average blank: {(np.isnan(mean_blank).sum()/(np.size(((mean_blank))))*100)}%', logger=self.log)
-        utils.stampa(f'NaNs in std blank: {(np.isnan(self.std_blank).sum()/(np.size(((self.std_blank))))*100)}%', logger=self.log)
 
-        utils.stampa(f'The blank employed in the zscore has shape {mean_blank.shape}', logger=self.log)   
         z_s_visual                = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
 
         # Instance retinotopy object: single stroke
@@ -443,7 +437,7 @@ class RetinoSession(md.Session):
             end_time   = r.time_limits[1] + int(np.ceil(0.06/(1/self.acquisition_frequency)))
             foi        = None
 
-        utils.stampa(f'Begin and end frames are: {(begin_time, end_time)}', logger=self.log)   
+        utils.stampa(f'Begin and end frames are: {(begin_time, end_time)} on a sequence of dimension {avr_df.shape[0]} and stimulus onset at frame {r.time_limits[0]}', logger=self.log)   
 
         _, blurred, blobs, centroids, norm_centroids, _, _ = r.single_seq_retinotopy(avr_df, 
                                                                                      None, None,
@@ -464,19 +458,16 @@ class RetinoSession(md.Session):
         else:
             centroid_to_use = r.retino_pos                    
 
-        utils.stampa(f'Retinotopic averaged position at: {r.retino_pos}\n', logger=self.log)   
-
         blurred[~r.mask] = np.NAN
         r.map = blurred
 
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n')
-        utils.stampa(f'Shape of signal for single trial extracting centroids: {df.shape}\n', logger=self.log)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
-        print(r.retino_pos, self.window_dimension, begin_time, end_time)   
 
         if not self.full_frame:
             window_dim      = self.window_dimension
         else:
             window_dim      = None
+        utils.stampa(f'Retinotopic averaged position: {r.retino_pos}, window side dimension: {self.window_dimension}, Time window starts at frame {begin_time} and ends at frame {end_time}', logger=self.log)  
         utils.stampa(f'Centroids and dimension of windows employeed: {(centroid_to_use, window_dim)}\n', logger=self.log)   
         pos_single_trials_data = [r.single_seq_retinotopy(i, 
                                                           centroid_to_use,
@@ -615,13 +606,12 @@ class RetinoSession(md.Session):
             frames_start  = time_stepping + a[first_cond]['start']
             utils.stampa(f'Name sub {name_subtrcts}, space stepping {space_step}', logger = self.log)   
             s    = self.stimulus_metadata['speed']            
-            strk = len(dict_components_[first_cond])-1                                            
-            utils.stampa(f'Frame start: {frames_start}, speed {s}, n° strokes - 1 {strk}, fq {self.acquisition_frequency}', logger = self.log)                                                               
 
             # Time window twice the regular stroke stepping
             frames_end = frames_start + 2*time_stepping
             
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
+            utils.stampa(f'Speed {s}, n° strokes - {len(dict_components_[first_cond])-1 }, sampling frequency {self.acquisition_frequency}', logger = self.log)                                                               
                 
             params, sub_x = subtraction_among_conditions(self.path_session, 
                                                          np.nanmean(first_cd.df_fz, axis = 0),
@@ -1055,7 +1045,7 @@ def subtraction_among_conditions(path_session,
                                        stroke_type  = 'multiple stroke')
 
     pos_inferred_averaged.time_limits = ((time_limits_first[0], time_limits_first[1]))
-    FOI                               = np.nanmean(pos_inferred_averaged.signal, axis=0)*pos_inferred_averaged.mask
+    FOI                               = np.nanmean(pos_inferred_averaged.signal[time_window_inference[0]:time_window_inference[1], :, :], axis=0)*pos_inferred_averaged.mask
 
     # Find retinotopic position in averaged signal over 15 frames
     centroids, blobs, _, blurred = get_retinotopic_features(FOI, mask_switch = False)
