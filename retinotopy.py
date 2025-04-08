@@ -1097,7 +1097,7 @@ def subtraction_among_conditions(path_session,
 
             # If the control centroid has been picked for peaks detection, then recomputing of average centroid
             utils.stampa(f'The control centroid has been picked: recomputing the centroid from the single trial distribution')
-            utils.stampa(f'Time window inference {time_window_inference} and signal shape {pos_inferred_averaged.signal}', logger=logger)
+            utils.stampa(f'Time window inference {time_window_inference} and signal shape {pos_inferred_averaged.signal.shape}', logger=logger)
             FOI_reiterated = np.nanmean(pos_inferred_averaged.signal[time_window_inference[0]:time_window_inference[1], :, :], axis=0) # Check this signal and the corresponding time window
             
             # Compute valid bounds
