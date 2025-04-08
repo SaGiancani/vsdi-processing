@@ -611,14 +611,15 @@ class RetinoSession(md.Session):
             name_subtrcts = f'{first_cond}-{second_cond}'
             a             = self.stimulus_metadata['pos metadata']
             space_step    = a[first_cond]['inter stimulus space']
-            frames_start  = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency)) + a[first_cond]['start']
+            time_stepping = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency)) 
+            frames_start  = time_stepping + a[first_cond]['start']
             utils.stampa(f'Name sub {name_subtrcts}, space stepping {space_step}', logger = self.log)   
             s    = self.stimulus_metadata['speed']            
             strk = len(dict_components_[first_cond])-1                                            
             utils.stampa(f'Frame start: {frames_start}, speed {s}, n° strokes - 1 {strk}, fq {self.acquisition_frequency}', logger = self.log)                                                               
 
-            # 4 frames after the start for averaging out and checking for peaks
-            frames_end = frames_start + 3
+            # Time window twice the regular stroke stepping
+            frames_end = frames_start + 2*time_stepping
             
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
                 
@@ -1073,7 +1074,7 @@ def subtraction_among_conditions(path_session,
         utils.stampa(f'Proportion between distances Distance Between Centroids/Frame Side length: {d_frameside/d_centroids}')
 
         if (d_centroids >= d_frameside*.3):
-            centroid_for_sub = stroke_centroid # This should be used only for reframing the spatial window. Then it should be recomputed on the new cluster of peaks
+            centroid_for_sub = stroke_centroid 
             utils.stampa(f'The control centroid is picked instead.')
             control_centroid = True
 
@@ -1098,7 +1099,7 @@ def subtraction_among_conditions(path_session,
             # If the control centroid has been picked for peaks detection, then recomputing of average centroid
             utils.stampa(f'The control centroid has been picked: recomputing the centroid from the single trial distribution')
             utils.stampa(f'Time window inference {time_window_inference} and signal shape {pos_inferred_averaged.signal.shape}', logger=logger)
-            FOI_reiterated = np.nanmean(pos_inferred_averaged.signal[time_window_inference[0]:time_window_inference[1], :, :], axis=0) # Check this signal and the corresponding time window
+            FOI_reiterated = np.nanmean(pos_inferred_averaged.signal[time_window_inference[0]:time_window_inference[1], :, :], axis=0) 
             
             # Compute valid bounds
             x_reiterated, y_reiterated = np.ceil(np.nanmean(pos_inferred_averaged.distribution_positions[0])), np.ceil(np.nanmean(pos_inferred_averaged.distribution_positions[1]))
@@ -1111,7 +1112,7 @@ def subtraction_among_conditions(path_session,
 
             # Find retinotopic position in averaged signal over 15 frames
             centroids, blobs, _, _ = get_retinotopic_features(FOI_reiterated, mask_switch = False)   
-            blb                 = np.zeros((pos_inferred_averaged.signal[0, :, :].shape))         
+            blb                    = np.zeros((pos_inferred_averaged.signal[0, :, :].shape))         
             blb[y_min:y_max, x_min:x_max] = blobs
 
             pos_inferred_averaged.retino_pos     = [centroids[0][0] + x_min, centroids[0][1] + y_min]
