@@ -224,10 +224,10 @@ def get_best_coordinate(image, coords, radius=2):
         # Extract neighborhood
         neighborhood = image[y_min:y_max, x_min:x_max]
         neighborhood[~np.isfinite(neighborhood)] = np.nanpercentile(image, 10)
-        print(f'Peak value {image[y, x]}')
+
         # Compute average ignoring NaNs
         avg = np.nanmean(neighborhood)
-        print(f'Average {avg} and max average {max_avg}')
+
         # Update max if needed
         if avg > max_avg:
             max_avg = avg
