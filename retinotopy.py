@@ -913,7 +913,6 @@ class Retinotopy:
 
 def get_retinotopic_features(FOI, min_lim = 90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):
     num_for_nan = np.nanpercentile(FOI, 20)
-    print(f'Minimum limit {min_lim}, maximum limit {max_lim}')
     blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
     _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, min_2_lim = thresh_gaus, adaptive_thresh=adaptive_thresh)
     if mask_switch:
@@ -1132,9 +1131,7 @@ def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, pat
     session_id_name = utils.get_session_id_name(path_session)
     if denoise_flag:
         session_id_name = f'{session_id_name}_Denoise'
-    print(path_session)
-    print(session_id_name)
-    print(single_pos_cd_names)
+
     for v in single_pos_cd_names:
         single_pos_tmp           = Retinotopy(path_session)
         tmp_folder               = os.path.join(retinotopic_path_folder, session_id_name, v, 'retino', f'retinotopy_{v}')
@@ -1142,6 +1139,57 @@ def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, pat
         single_pos_tmp.load_retino(tmp_folder)
         single_pos_retinotopy.append(single_pos_tmp.retino_pos)
     return single_pos_retinotopy
+
+def load_all_retino_per_session(path_session, 
+                                flag_denoise = True, 
+                                storage_path = dv.STORAGE_PATH, 
+                                name_retino_analysis = utils.NAME_RETINO_ANALYSIS):
+    
+    retino_pos_am = utils.get_conditions_correspondance(path_session)
+    cd_am   = list(retino_pos_am.keys())
+    cd_pos  = list(set([pos for i in retino_pos_am.values() for pos in i]))
+    all_cds = cd_am + cd_pos
+
+    cd_all  = retino_pos_am
+    for i in cd_pos:
+        cd_all[i] = [i]
+
+    dict_subs   = utils.find_subsets(cd_all)     
+    subs        = [f'{k}-{v}'for k,v in dict_subs.items()]
+    subs_retino = [f'{k}_{v}'for k,v in dict_subs.items()]
+    
+    id_name = utils.get_session_id_name(path_session)                   
+    if flag_denoise:
+        id_name = f'{id_name}_Denoise'       
+
+    path_analysis  = os.path.join(storage_path, name_retino_analysis, id_name)
+    
+    dict_cd = {}
+    for i in cd_am:
+        path_analysis_cond = os.path.join(path_analysis, i)
+        print(path_analysis_cond)
+        list_retino = list()
+        for pos in range(len(retino_pos_am[i])-1):
+            folder_name_cond = f'{i}-{retino_pos_am[i][pos+1]}_{pos+2}'
+            print(folder_name_cond)
+            folder_name_stroke = os.path.join(path_analysis_cond, folder_name_cond, 'retino', f'retinotopy_{i}')
+            cd_retino =  Retinotopy(path_session)
+            cd_retino.load_retino(folder_name_stroke)
+            list_retino.append(cd_retino)
+        dict_cd[i] = list_retino
+
+    for pos, pos_ in zip((cd_pos + subs), (cd_pos + subs_retino)):
+        list_retino = list()
+        folder_name_cond = f'{pos}'
+        print(folder_name_cond)
+        folder_name_stroke = os.path.join(path_analysis, folder_name_cond, 'retino', f'retinotopy_{pos_}')
+        print(folder_name_stroke)
+        cd_retino =  Retinotopy(path_session)
+        cd_retino.load_retino(folder_name_stroke)
+        list_retino.append(cd_retino)    
+        dict_cd[pos] = list_retino
+
+    return dict_cd
 
 # Example of script running sbatch Desktop/runpy_giancani.sh retinotopy.py --path_md /envau/work/neopto/DATA_AnDO/exp-AM3_VSDI/sub-Bretzel/sess-20131127_001/derivatives/spcbin1_timebin1_zerofrms6_strategymae_n_chunk1_movFalse_deblankTrue/ --ss_label p --vis --store --denoised
 if __name__=="__main__":

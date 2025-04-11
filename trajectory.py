@@ -1,5 +1,30 @@
 import numpy as np
+import math
 import utils
+
+def clean_coords_tuple(x_dist, y_dist):
+    
+    # Zip and filter out any pair where either element is NaN
+    filtered = [(x, y) for x, y in zip(x_dist, y_dist) if not (math.isnan(x) or math.isnan(y))]
+
+    # Unzip the filtered list back into two tuples
+    x_clean, y_clean = zip(*filtered) if filtered else ((), ())
+    return x_clean, y_clean
+
+def polish_coordinates(dict_cds, theta_trj):
+    dict_dists = {}
+    for k, v in dict_cds.items():
+        print(k)
+        pos_in_am = list()
+
+        for i in v:
+            x_dist, y_dist            = clean_coords_tuple(*i.distribution_positions)
+            x_dist_rot, y_dist_rot, _ = rotate_distribution(x_dist, y_dist, theta = theta_trj)        
+            pos_in_am.append((x_dist_rot, y_dist_rot))
+
+        dict_dists[k] = pos_in_am
+    return dict_dists
+
 
 def distribution_coords_normalize(points_distribution, unity, center, rotation_theta):
     '''
@@ -48,6 +73,14 @@ def get_angle_distribution(points_distribution, dim_frame):
     # Return the detected angle of the distribution -in rad-
     return theta
 
+def get_cond_names(retino_pos_am, ss_label = 'pos'):
+    cd_am         = list(retino_pos_am.keys())
+    cd_pos        = list(set([pos for i in retino_pos_am.values() for pos in i]))
+
+    tmp           = sorted([int(i.split(ss_label)[1]) for i in cd_pos])
+    sorted_cd_pos = [f'{ss_label}{i}' for i in tmp]    
+    return cd_am, sorted_cd_pos 
+
 def get_mask_on_trajectory(dims, xs, ys, radius = 2):
     up = int(np.max(xs))
     bottom = int(np.min(xs))
@@ -65,6 +98,26 @@ def get_rad(xs, ys):
     or set of points.
     '''
     return -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
+
+def get_spacing_dva(dict_metadata_session, sorted_cd_pos, retino_pos_am, ss_label = 'pos'):
+    
+    cd_am, sorted_cd_pos = get_cond_names(retino_pos_am, ss_label = ss_label)
+    tmp_am_cds           = list(dict_metadata_session['pos metadata'].keys())
+    
+    for k in tmp_am_cds:
+        tmp_list = dict_metadata_session['pos metadata'][k]['conditions']
+        if (sorted_cd_pos[-1] in tmp_list) and (sorted_cd_pos[0] in tmp_list):
+            last_id  = tmp_list.index(sorted_cd_pos[-1])
+            first_id = tmp_list.index(sorted_cd_pos[0])
+            spacing_between_strokes = int(abs((last_id - first_id)*dict_metadata_session['pos metadata'][k]['inter stimulus space']))
+
+    return spacing_between_strokes 
+
+def get_spacing_pixel(point_on_trajectory, stepping):
+    xs = list(list(zip(*point_on_trajectory))[0])
+    ys = list(list(zip(*point_on_trajectory))[1])
+    return (abs((xs[-1] - xs[0])/stepping), abs((ys[-1] - ys[0])/stepping))
+
 
 def get_trajectory(xs, ys, limits):
     """
@@ -95,11 +148,44 @@ def get_trajectory_mask(points_in_space, frame_dimension, extremities = (0,0)):
     traject_mask = get_mask_on_trajectory(frame_dimension, a, b, radius = 15)
     return traject_mask
 
+def normalize_distributions(dict_metadata_session, cond_am, dict_dists, unity, theta_trj):
+    
+    single_stroke = dict_metadata_session['pos metadata'][cond_am]['conditions']
+    print(single_stroke)
+    p0    = single_stroke[0]
+    pLast = single_stroke[-1]
+#     print(f'p0 {p0}: {(np.nanmean(dict_dists[p0][0][0]), np.nanmean(dict_dists[p0][0][1]) )} pLast {pLast}: {(np.nanmean(dict_dists[pLast][0][0]), np.nanmean(dict_dists[pLast][0][1]) )} step {step}')
+    
+    center = (np.nanmean(dict_dists[pLast][0][0]), np.nanmean(dict_dists[pLast][0][1]))
+    sub_cd = [i for i in list(dict_dists.keys()) if f'{cond_am}-' in i][0]
+    print(f'Unity {unity} center {center} Sub condition {sub_cd}')
+
+    x_norm_am, y_norm_am   = distribution_coords_normalize([(np.array([dict_dists[cond_am][-1][0]]))[0], dict_dists[cond_am][-1][1]], 
+                                                           unity, 
+                                                           center, 
+                                                           theta_trj)
+    x_norm_am  = [i[0] for i in x_norm_am]
+    y_norm_am  = [i[0] for i in y_norm_am]
+
+    x_norm, y_norm         = distribution_coords_normalize([(np.array([dict_dists[pLast][-1][0]]))[0], dict_dists[pLast][-1][1]], 
+                                                           unity, 
+                                                           center, 
+                                                           theta_trj)
+    x_norm     = [i[0] for i in x_norm]
+    y_norm     = [i[0] for i in y_norm]
+
+    x_norm_sub, y_norm_sub = distribution_coords_normalize([(np.array([dict_dists[sub_cd][-1][0]]))[0], dict_dists[sub_cd][-1][1]],
+                                                           unity, 
+                                                           center, 
+                                                           theta_trj)
+    x_norm_sub = [i[0] for i in x_norm_sub]
+    y_norm_sub = [i[0] for i in y_norm_sub]    
+    return (x_norm_am, y_norm_am), (x_norm, y_norm), (x_norm_sub, y_norm_sub)
+
 
 def rotate_distribution(xs, ys, theta = None):
     if theta is None:
         theta = get_rad(xs, ys)
-    print(theta)
     # subtracting mean from original coordinates and saving result to X_new and Y_new 
     X_new = xs - np.mean(xs)
     Y_new = ys - np.mean(ys)
