@@ -579,6 +579,9 @@ class RetinoSession(md.Session):
             dict_components_[i] = [i]
         
         dict_subs   = utils.find_subsets(dict_components_)     
+
+        # METHOD BUILT ON THE LINES ABOVE. CHECK UTILS
+
         utils.stampa(f'Dictionary of subtractions: {dict_subs}', logger = self.log)                                                               
         utils.stampa(f'Full frame switch: {self.full_frame}', logger = self.log)                                                               
         params      = defaultdict(list)

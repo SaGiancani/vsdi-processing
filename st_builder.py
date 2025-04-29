@@ -364,16 +364,37 @@ class SpatioTemporalSession:
         utils.stampa(f'Start processing spatiotemporal profile analysis \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)     
         dict_ss    = {}   
+
         # Single stroke conditions
         utils.stampa(f'Start processing single stroke conditions\n', logger=self.log)
         for cond_id, cond_name in self.cond_pos.items():
             averaged_signal    = self.get_spatiotemporal_maps(cond_name) 
             dict_ss[cond_name] = averaged_signal
-        # Apparent motion conditions
-        utils.stampa(f'Start processing apparent motion conditions\n', logger=self.log)
+
+        # Apparent motion conditions and corresponding linear predictions with subtraction
+        utils.stampa(f'Start processing apparent motion conditions and corresponding linear prediction with subtractions\n', logger=self.log)
         for cond_id, cond_name in self.cond_am.items():
             _                  = self.get_spatiotemporal_maps(cond_name, single_pos_cds = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
         
+        utils.stampa(f'Start processing subtractions among conditions -not linear prediction-')
+        dict_subtrs = utils.get_conds_for_sub(self.path_session)
+        for c1, c2 in dict_subtrs.items():
+            cd1       = self.data_dictionary[c1]
+            cd2       = self.data_dictionary[c2]
+            colors    = [self.color_pos[i] for i in self.retino_pos_am[c1]]
+            positions = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[c1]]
+            times     = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) for ss in self.retino_pos_am[c1]]
+            
+            if cd1.interstimulus_delay == cd2.interstimulus_delay:  
+                # Subtraction between maps goes here
+                self.get_subtraction_condition(cd2, 
+                                               cd1, 
+                                               cd1.interstimulus_delay, 
+                                               colors, 
+                                               positions,
+                                               times)                
+            else:
+                utils.stampa(f'{c1}-{c2} skipped!', logger=self.log)
         utils.stampa(f'End processing spatiotemporal profile analysis', logger=self.log)   
         utils.stampa(f'Analysis elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                 
         return

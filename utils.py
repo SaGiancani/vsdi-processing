@@ -300,6 +300,14 @@ def find_subsets(data):
                     break  # Stop once a valid match is found
     return result
 
+def get_conds_for_sub(path_session):
+    retino_pos_am    = get_conditions_correspondance(path_session)
+    single_pos       = list(set([i for v in retino_pos_am.values() for i in v]))
+    dict_components_ = retino_pos_am
+    for i in single_pos:
+        dict_components_[i] = [i]
+    dict_subs   = find_subsets(dict_components_)     
+    return dict_subs
 
 def get_session_id_name(path_session):                
     # Session names extraction
