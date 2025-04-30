@@ -308,21 +308,25 @@ class SpatioTemporalSession:
         self.timing_am_sequence      = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
        
         if self.zmaps_flag:
-            self.id_name           = f'{self.retino_session.id_name}_z'
-            # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
-            cd_x       = Condition() 
-            conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
-            conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
-            cd_x.load_cond(conds_list[0].split('.pickle')[0])  
-            _, _, y2check, _ = cd_x.df_fz.shape
+            if not self.denoise_switch:
+                self.id_name           = f'{self.retino_session.id_name}_z'
+                # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
+                cd_x       = Condition() 
+                conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
+                conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
+                cd_x.load_cond(conds_list[0].split('.pickle')[0])  
+                _, _, y2check, _ = cd_x.df_fz.shape
 
-            bin_tmp = int(np.ceil(y2check/self.ny))
+                bin_tmp = int(np.ceil(y2check/self.ny))
 
-            utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
-            self.dict_zeta         = get_classic_signal(self.path_session, 
-                                                        np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
-                                                        bin_value = bin_tmp, 
-                                                        log = self.log)
+                utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
+                self.dict_zeta         = get_classic_signal(self.path_session, 
+                                                            np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
+                                                            bin_value = bin_tmp, 
+                                                            log = self.log)
+            else: #To modify for using zscore on denoised data
+                self.id_name           = self.retino_session.id_name
+                self.dict_zeta         = None                
         else:
             self.id_name           = self.retino_session.id_name
             self.dict_zeta         = None
@@ -368,14 +372,16 @@ class SpatioTemporalSession:
         # Single stroke conditions
         utils.stampa(f'Start processing single stroke conditions\n', logger=self.log)
         for cond_id, cond_name in self.cond_pos.items():
-            averaged_signal    = self.get_spatiotemporal_maps(cond_name) 
+            starting_time      = int(np.ceil(0.06/(1/self.acquisition_frequency))) #60ms of synaptic delay injected
+            averaged_signal    = self.get_spatiotemporal_maps(cond_name, synaptic_latency = starting_time) 
             dict_ss[cond_name] = averaged_signal
 
         # Apparent motion conditions and corresponding linear predictions with subtraction
         utils.stampa(f'Start processing apparent motion conditions and corresponding linear prediction with subtractions\n', logger=self.log)
         for cond_id, cond_name in self.cond_am.items():
-            _                  = self.get_spatiotemporal_maps(cond_name, single_pos_cds = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
-        
+            a                  = self.stimulus_metadata['pos metadata']
+            starting_time      = a[cond_name]['start'] #In frames            
+            _                  = self.get_spatiotemporal_maps(cond_name, synaptic_latency = starting_time, single_pos_cds = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
         utils.stampa(f'Start processing subtractions among conditions -not linear prediction-')
         dict_subtrs = utils.get_conds_for_sub(self.path_session)
         for c1, c2 in dict_subtrs.items():
