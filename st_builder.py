@@ -368,11 +368,11 @@ class SpatioTemporalSession:
         utils.stampa(f'Start processing spatiotemporal profile analysis \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)     
         dict_ss    = {}   
+        starting_time  = int(np.ceil(0.06/(1/self.acquisition_frequency))) #60ms of synaptic delay injected
 
         # Single stroke conditions
         utils.stampa(f'Start processing single stroke conditions\n', logger=self.log)
         for cond_id, cond_name in self.cond_pos.items():
-            starting_time      = int(np.ceil(0.06/(1/self.acquisition_frequency))) #60ms of synaptic delay injected
             averaged_signal    = self.get_spatiotemporal_maps(cond_name, synaptic_latency = starting_time) 
             dict_ss[cond_name] = averaged_signal
 
@@ -380,7 +380,7 @@ class SpatioTemporalSession:
         utils.stampa(f'Start processing apparent motion conditions and corresponding linear prediction with subtractions\n', logger=self.log)
         for cond_id, cond_name in self.cond_am.items():
             a                  = self.stimulus_metadata['pos metadata']
-            starting_time      = a[cond_name]['start'] #In frames            
+            starting_time      = a[cond_name]['start'] + starting_time#In frames            
             _                  = self.get_spatiotemporal_maps(cond_name, synaptic_latency = starting_time, single_pos_cds = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
         utils.stampa(f'Start processing subtractions among conditions -not linear prediction-')
         dict_subtrs = utils.get_conds_for_sub(self.path_session)
