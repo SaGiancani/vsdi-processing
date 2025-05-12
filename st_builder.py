@@ -379,8 +379,6 @@ class SpatioTemporalSession:
         # Apparent motion conditions and corresponding linear predictions with subtraction
         utils.stampa(f'Start processing apparent motion conditions and corresponding linear prediction with subtractions\n', logger=self.log)
         for cond_id, cond_name in self.cond_am.items():
-            a                  = self.stimulus_metadata['pos metadata']
-            starting_time      = a[cond_name]['start'] + starting_time#In frames            
             _                  = self.get_spatiotemporal_maps(cond_name, synaptic_latency = starting_time, single_pos_cds = [dict_ss[i] for i in self.retino_pos_am[cond_name]]) 
         utils.stampa(f'Start processing subtractions among conditions -not linear prediction-')
         dict_subtrs = utils.get_conds_for_sub(self.path_session)
@@ -546,10 +544,11 @@ class SpatioTemporalSession:
             cd_type_flag  = 'am'
             ISspacing     = self.stimulus_metadata['pos metadata'][name_cond]['inter stimulus space'] #in dva
             ISinterval    = int(np.ceil((ISspacing/self.stimulus_speed)*1000))
-            start_time_cd = self.timing_am_sequence[0]
+            start_time    = self.stimulus_metadata['pos metadata'][name_cond]['start'] 
+            start_time_cd = self.timing_am_sequence[0] - start_time           
             positions     = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[name_cond]] 
-            times         = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) for ss in self.retino_pos_am[name_cond]] 
-            utils.stampa(f'InterStimulus spacing: {ISspacing}, ISI: {ISinterval}, Starting time {start_time_cd}', logger = self.log)
+            times         = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) - start_time for ss in self.retino_pos_am[name_cond]] 
+            utils.stampa(f'InterStimulus spacing: {ISspacing}, ISI: {ISinterval}, Starting time {start_time_cd}, MultiAM starting frame {start_time}', logger = self.log)
             colors        = [self.color_pos[i] for i in self.retino_pos_am[name_cond]]
         
         start_time_cd -= synaptic_latency
