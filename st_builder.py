@@ -389,7 +389,7 @@ class SpatioTemporalSession:
             cd2       = self.data_dictionary[c2]
             colors    = [self.color_pos[i] for i in self.retino_pos_am[c1]]
             positions = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[c1]]
-            times     = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) for ss in self.retino_pos_am[c1]]
+            times     = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) - self.stimulus_metadata['pos metadata'][c1]['start'] for ss in self.retino_pos_am[c1]]
             
             if cd1.interstimulus_delay == cd2.interstimulus_delay:  
                 # Subtraction between maps goes here
