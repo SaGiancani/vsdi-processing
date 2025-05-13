@@ -309,28 +309,21 @@ class SpatioTemporalSession:
        
         if self.zmaps_flag:
             self.id_name           = f'{self.retino_session.id_name}_z'
-            if not self.denoise_switch:
-                # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
-                cd_x       = Condition() 
-                conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
-                conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
-                cd_x.load_cond(conds_list[0].split('.pickle')[0])  
-                _, _, y2check, _ = cd_x.df_fz.shape
+            # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
+            cd_x       = Condition() 
+            conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
+            conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
+            cd_x.load_cond(conds_list[0].split('.pickle')[0])  
+            _, _, y2check, _ = cd_x.df_fz.shape
 
-                bin_tmp = int(np.ceil(y2check/self.ny))
+            bin_tmp = int(np.ceil(y2check/self.ny))
+            utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
 
-                utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
-                self.dict_zeta         = get_classic_signal(self.path_session, 
-                                                            np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
-                                                            bin_value = bin_tmp, 
-                                                            denoise_flag = False,
-                                                            log = self.log)
-            else: #To modify for using zscore on denoised data
-                self.dict_zeta         = get_classic_signal(self.path_session, 
-                                                            np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
-                                                            bin_value = bin_tmp, 
-                                                            denoise_flag = True,
-                                                            log = self.log)
+            self.dict_zeta         = get_classic_signal(self.path_session, 
+                                                        np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
+                                                        bin_value = bin_tmp, 
+                                                        denoise_flag = self.denoise_switch,
+                                                        log = self.log)
         else:
             self.id_name           = self.retino_session.id_name
             self.dict_zeta         = None
