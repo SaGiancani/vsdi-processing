@@ -1174,7 +1174,7 @@ def get_classic_signal(path_session, zero_frames, bin_value = 2, denoise_flag = 
     if denoise_flag:
         directory_path      = os.path.join(path_session, 'denoised')    
         files_denoise       = os.listdir(directory_path)        
-        dict_data           = utils.load_all_files(path_session, files_denoise, particle = 'rem_', log = log)
+        dict_data           = utils.load_all_files(directory_path, files_denoise, particle = 'rem_', log = log)
     else:
         dict_data           = load_all_mds(path_session, zero_frames, bin_val = bin_value, log = log)        
 
