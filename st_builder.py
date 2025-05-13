@@ -319,7 +319,7 @@ class SpatioTemporalSession:
             bin_tmp = int(np.ceil(y2check/self.ny))
             utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
 
-            self.dict_zeta         = get_classic_signal(self.path_session, 
+            self.dict_zeta         = get_classic_signal(self.path_to_derivatives, 
                                                         np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
                                                         bin_value = bin_tmp, 
                                                         denoise_flag = self.denoise_switch,
