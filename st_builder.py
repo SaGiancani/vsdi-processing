@@ -308,8 +308,8 @@ class SpatioTemporalSession:
         self.timing_am_sequence      = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
        
         if self.zmaps_flag:
+            self.id_name           = f'{self.retino_session.id_name}_z'
             if not self.denoise_switch:
-                self.id_name           = f'{self.retino_session.id_name}_z'
                 # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
                 cd_x       = Condition() 
                 conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
@@ -323,10 +323,14 @@ class SpatioTemporalSession:
                 self.dict_zeta         = get_classic_signal(self.path_session, 
                                                             np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
                                                             bin_value = bin_tmp, 
+                                                            denoise_flag = False,
                                                             log = self.log)
             else: #To modify for using zscore on denoised data
-                self.id_name           = self.retino_session.id_name
-                self.dict_zeta         = None                
+                self.dict_zeta         = get_classic_signal(self.path_session, 
+                                                            np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
+                                                            bin_value = bin_tmp, 
+                                                            denoise_flag = True,
+                                                            log = self.log)
         else:
             self.id_name           = self.retino_session.id_name
             self.dict_zeta         = None
@@ -626,8 +630,13 @@ class SpatioTemporalSession:
             # filtered_pred      = process.gaussian3d(filtered_pred, std = 1.5, size = 5)
             filtered_pred      = linear_prediction            
             slide_ss_am        = self.timing_single_stroke[0] - self.timing_am_sequence[0]
-            filtered_pred      = filtered_pred[slide_ss_am:, :, :]
-            time_slide         = (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
+            if slide_ss_am > 0:
+                filtered_pred      = filtered_pred[slide_ss_am:, :, :]
+                time_slide         = (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
+            else:
+                filtered_pred      = filtered_pred
+                time_slide         = 0
+
             utils.stampa(f'Time bins to remove: {time_slide}, Time step: {time_step}, Starting time {start_time_cd}', logger = self.log)                                                                                  
             st_map_cd = SpatioTemporalMap(self.path_session, 
                                           trajectory_mask = self.trajectory_mask,

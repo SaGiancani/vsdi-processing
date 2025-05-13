@@ -1168,10 +1168,16 @@ def get_selected(matrix, autoselection):
     return df
 
 
-def get_classic_signal(path_session, zero_frames, bin_value = 2, log = None):
+def get_classic_signal(path_session, zero_frames, bin_value = 2, denoise_flag = False, log = None):
     # PARAMETERS INSTANCE
     # LOAD RAW DATA    
-    dict_data               = load_all_mds(path_session, zero_frames, bin_val = bin_value, log = log)
+    if denoise_flag:
+        directory_path      = os.path.join(path_session, 'denoised')    
+        files_denoise       = os.listdir(directory_path)        
+        dict_data           = utils.load_all_files(path_session, files_denoise, particle = 'rem_', log = log)
+    else:
+        dict_data           = load_all_mds(path_session, zero_frames, bin_val = bin_value, log = log)        
+
     p_dfs                   = np.vstack([v for v in dict_data.values()])
     all_zeros, norm_factor  = get_all_zero_frames(dict_data['blank'], p_dfs, zero_frames, log = log)
     del p_dfs
@@ -1261,8 +1267,6 @@ def get_zscore(dict_data, mean_zero, std_zero, logger = None):
 
     return dict_z
  
-
-
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching autoselection pipeline')

@@ -502,3 +502,18 @@ def write_parse(args_dict, pathname):
     with open(os.path.join(pathname,'args_values.json'), "w") as json_file:
         json.dump(args_dict, json_file)
     return
+
+def load_all_files(directory_path, files_denoise, particle = 'rem_', log = None):
+    loaded_arrays  = [filename for filename in files_denoise if particle in filename] 
+    cds_name       = [i.split('.npy')[0].split(particle)[1] for i in loaded_arrays]
+    dict_data      = {}
+
+    stampa(f'{loaded_arrays}', logger=log)
+    for n_id, filename in enumerate(loaded_arrays):
+        stampa(f'Load {filename}...', logger=log)
+        file_path = os.path.join(directory_path, filename)
+        # Load the numpy array
+        array = np.load(file_path)
+        dict_data[cds_name[n_id]] = array
+
+    return dict_data
