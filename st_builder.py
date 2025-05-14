@@ -396,6 +396,18 @@ class SpatioTemporalSession:
                                                times)                
             else:
                 utils.stampa(f'{c1}-{c2} skipped!', logger=self.log)
+
+        meta_dict = {'id_name': self.id_name,
+                     'acquisition_freq': self.acquisition_frequency,
+                     'denoise_flag': self.denoise_switch,
+                     'pixel_spacing': self.pixel_spacing, 
+                     'storing_folder': self.storing_folder,
+                     'data_folder': self.path_to_derivatives,
+                     'zscore_flag': self.zmaps_flag, 
+                     'start_time_am': self.timing_am_sequence,
+                     'start_time_ss': self.timing_single_stroke, 
+                     'stimulus_speed': self.stimulus_speed}
+        utils.write_parse(meta_dict, os.path.join(self.storing_folder, self.id_name))
         utils.stampa(f'End processing spatiotemporal profile analysis', logger=self.log)   
         utils.stampa(f'Analysis elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                 
         return
