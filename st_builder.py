@@ -457,13 +457,24 @@ class SpatioTemporalSession:
         # Sanity check in dimensions
         tmp_map       = map_cond.avrg_signal
         tmp_linear    = map_linear_pred.avrg_signal
-        utils.stampa(f'Linear prediction map shape {tmp_linear.shape}', logger = self.log)
-        utils.stampa(f'AM sequence map shape {tmp_map.shape}', logger = self.log)
-        frames_to_fix = map_cond.onset_time - map_linear_pred.onset_time
+
+        # First alignment: mismatch due to the linear summation that makes you lose as many frames as the time stepping between dots
+        utils.stampa(f'AM sequence map shape {tmp_map.shape}, Linear prediction map shape {tmp_linear.shape}', logger = self.log)
+        utils.stampa(f'Onset time Map cd {map_cond.onset_time}, Onset time Map linear {map_linear_pred.onset_time}', logger = self.log)
+        frames_to_fix = tmp_map.shape[0] - tmp_linear.shape[0]
         utils.stampa(f'Mismatch between two stimuli onset (for linear pred and actual am seq) {frames_to_fix}', logger = self.log)
+        tmp_map       = tmp_map[frames_to_fix:, :, :]
+        
+        # Second alignment: mismatch due to temporal misalignment of AM and ss condition
+        misalign_time_cds   = self.timing_single_stroke[0] - self.timing_am_sequence[0]
+        if misalign_time_cds > 0:
+            tmp_linear = tmp_linear[misalign_time_cds:, :, :]
+        elif misalign_time_cds < 0:
+            tmp_map    = tmp_map[misalign_time_cds:, :, :]            
+
         time_pred           = tmp_linear.shape[0]
-        tmp_map             = tmp_map[frames_to_fix:, :, :]
         terminal_correction = tmp_map.shape[0] - time_pred
+
         utils.stampa(f'AM sequence map reshape {tmp_map.shape}', logger = self.log)
         name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
 
