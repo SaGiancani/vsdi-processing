@@ -464,6 +464,7 @@ class SpatioTemporalSession:
         frames_to_fix = tmp_map.shape[0] - tmp_linear.shape[0]
         utils.stampa(f'Mismatch between two stimuli onset (for linear pred and actual am seq) {frames_to_fix}', logger = self.log)
         tmp_map       = tmp_map[frames_to_fix:, :, :]
+        utils.stampa(f'AM sequence map reshape as linear map {tmp_map.shape}', logger = self.log)
         
         # Second alignment: mismatch due to temporal misalignment of AM and ss condition
         misalign_time_cds   = self.timing_single_stroke[0] - self.timing_am_sequence[0]
@@ -472,17 +473,20 @@ class SpatioTemporalSession:
         elif misalign_time_cds < 0:
             tmp_map    = tmp_map[misalign_time_cds:, :, :]            
 
-        time_pred           = tmp_linear.shape[0]
-        terminal_correction = tmp_map.shape[0] - time_pred
+        terminal_correction = tmp_map.shape[0] - tmp_linear.shape[0]
 
-        utils.stampa(f'AM sequence map reshape {tmp_map.shape}', logger = self.log)
+        utils.stampa(f'AM sequence map reshape misalign {tmp_map.shape}', logger = self.log)
+        utils.stampa(f'Linear sequence map reshape misalign {tmp_linear.shape}', logger = self.log)
         name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
 
         # Drop out of the last frames for shape coherency
         if terminal_correction > 0:
-            tmp_map       = tmp_map[:(time_pred), :, :]
+            tmp_map       = tmp_map[:(tmp_linear.shape[0]), :, :]
         else:
             tmp_linear    = tmp_linear[:(tmp_map.shape[0]), :, :]
+
+        utils.stampa(f'AM sequence map reshape terminal {tmp_map.shape}', logger = self.log)
+        utils.stampa(f'Linear sequence map reshape terminal {tmp_linear.shape}', logger = self.log)
 
         subtraction   =  tmp_map - tmp_linear                    
 
