@@ -649,13 +649,7 @@ class SpatioTemporalSession:
             # filtered_pred      = np.array([median_filter(i, size=(5,5)) for i in linear_prediction])
             # filtered_pred      = process.gaussian3d(filtered_pred, std = 1.5, size = 5)
             filtered_pred      = linear_prediction            
-            slide_ss_am        = self.timing_single_stroke[0] - self.timing_am_sequence[0]
-            # if slide_ss_am >= 0:
-            #     filtered_pred      = filtered_pred[slide_ss_am:, :, :]
-            #     time_slide         = (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
-            # else:
-            filtered_pred      = filtered_pred
-            time_slide         = 0
+            time_slide         = (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
 
             utils.stampa(f'Time bins to remove: {time_slide}, Time step: {time_step}, Starting time {start_time_cd}', logger = self.log)                                                                                  
             st_map_cd = SpatioTemporalMap(self.path_session, 
