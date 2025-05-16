@@ -432,7 +432,7 @@ class SpatioTemporalSession:
 
         # Linear prediction
         if (single_pos_cds is not None) and (name_cond in list(self.cond_am.values())):
-            st_map_linear_pred, time_slide, time_step = self.get_linear_predicted_maps(name_cond, 
+            st_map_linear_pred, new_times = self.get_linear_predicted_maps(name_cond, 
                                                                                        self.timing_single_stroke[0] - synaptic_latency, 
                                                                                        colors, times, positions, 
                                                                                        (max_level, min_level, thresh),
@@ -445,7 +445,7 @@ class SpatioTemporalSession:
                                            st_map_cd, 
                                            ISinterval, 
                                            colors, positions, 
-                                           np.array(times)-time_slide)     
+                                           new_times)     
 
         self.data_dictionary[name_cond] = st_map_cd               
         utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}', logger=self.log)
@@ -461,23 +461,24 @@ class SpatioTemporalSession:
         # First alignment: mismatch due to the linear summation that makes you lose as many frames as the time stepping between dots
         utils.stampa(f'AM sequence map shape {tmp_map.shape}, Linear prediction map shape {tmp_linear.shape}', logger = self.log)
         utils.stampa(f'Onset time Map cd {map_cond.onset_time}, Onset time Map linear {map_linear_pred.onset_time}', logger = self.log)
-        frames_to_fix = tmp_map.shape[0] - tmp_linear.shape[0]
-        utils.stampa(f'Mismatch between two stimuli onset (for linear pred and actual am seq) {frames_to_fix}', logger = self.log)
-        tmp_map       = tmp_map[frames_to_fix:, :, :]
+        # frames_to_fix = tmp_map.shape[0] - tmp_linear.shape[0]
+        # utils.stampa(f'Mismatch between two stimuli onset (for linear pred and actual am seq) {frames_to_fix}', logger = self.log)
+        # tmp_map       = tmp_map[frames_to_fix:, :, :]
         utils.stampa(f'AM sequence map reshape as linear map {tmp_map.shape}', logger = self.log)
         
         # Second alignment: mismatch due to temporal misalignment of AM and ss condition
-        misalign_time_cds   = self.timing_single_stroke[0] - self.timing_am_sequence[0]
-        if misalign_time_cds > 0:
-            tmp_linear = tmp_linear[misalign_time_cds:, :, :]
-        elif misalign_time_cds < 0:
+        misalign_time_cds   = map_cond.onset_time - map_linear_pred.onset_time
+        if misalign_time_cds < 0:
+            tmp_linear = tmp_linear[abs(misalign_time_cds):, :, :]
+        elif misalign_time_cds > 0:
             tmp_map    = tmp_map[misalign_time_cds:, :, :]            
 
+        # Sanity check on dimensionality and dropping out last frames
+        name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
         terminal_correction = tmp_map.shape[0] - tmp_linear.shape[0]
 
         utils.stampa(f'AM sequence map reshape misalign {tmp_map.shape}', logger = self.log)
         utils.stampa(f'Linear sequence map reshape misalign {tmp_linear.shape}', logger = self.log)
-        name_cond_sub = f'{map_cond.condition_name} - {map_linear_pred.condition_name}'
 
         # Drop out of the last frames for shape coherency
         if terminal_correction > 0:
@@ -665,7 +666,7 @@ class SpatioTemporalSession:
                                           storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond_pred), 
                                           logger          = self.log)
             utils.stampa(f'Linear prediction {name_cond_pred} elaborated!', logger = self.log)
-
+            new_times = np.array(times) - time_slide + (self.timing_single_stroke[0] - self.timing_am_sequence[0])
         # Visualize linear prediction
         if self.vis_switch:
             dv.whole_time_sequence(st_map_cd.avrg_signal, 
@@ -678,7 +679,7 @@ class SpatioTemporalSession:
 
             st_map_cd.visualize_maps(colors, thresholds[2], 
                                      retino_pos = positions, 
-                                     retino_time = np.array(times) - time_slide + (self.timing_single_stroke[0] - self.timing_am_sequence[0]),
+                                     retino_time = new_times,
                                      high_level = thresholds[0], 
                                      low_level = thresholds[1])
             utils.stampa(f'Data shape of linear prediction sequence {st_map_cd.masked_data.shape}', logger=self.log)  
@@ -686,7 +687,7 @@ class SpatioTemporalSession:
         if self.store_switch:
             st_map_cd.store_stmap(os.path.join(self.storing_folder, self.id_name, st_map_cd.condition_name))                
 
-        return st_map_cd, time_slide, time_step
+        return st_map_cd, new_times
 
 def derivative_filter(arr, threshold):
     # Compute the derivative of the array
