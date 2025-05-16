@@ -678,7 +678,7 @@ class SpatioTemporalSession:
 
             st_map_cd.visualize_maps(colors, thresholds[2], 
                                      retino_pos = positions, 
-                                     retino_time = np.array(times) - time_slide,
+                                     retino_time = np.array(times) - time_slide + (self.timing_single_stroke[0] - self.timing_am_sequence[0]),
                                      high_level = thresholds[0], 
                                      low_level = thresholds[1])
             utils.stampa(f'Data shape of linear prediction sequence {st_map_cd.masked_data.shape}', logger=self.log)  
