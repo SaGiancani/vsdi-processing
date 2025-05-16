@@ -386,7 +386,7 @@ class SpatioTemporalSession:
             positions = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[c1]]
             times     = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) for ss in self.retino_pos_am[c1]]
             
-            if cd1.interstimulus_delay == cd2.interstimulus_delay:  
+            if (cd1.interstimulus_delay == cd2.interstimulus_delay) or (c2 in list(self.cond_pos.values())):  
                 # Subtraction between maps goes here
                 self.get_subtraction_condition(cd2, 
                                                cd1, 
@@ -453,20 +453,18 @@ class SpatioTemporalSession:
         return avrg_signal
     
     def get_subtraction_condition(self, map_linear_pred, map_cond, ISinterval, colors, positions, times, sanity_switch = True):
-        # adjust_frame  = self.timing_single_stroke[0] - self.timing_am_sequence[0]  
+
         # Sanity check in dimensions
         tmp_map       = map_cond.avrg_signal
         tmp_linear    = map_linear_pred.avrg_signal
 
-        # First alignment: mismatch due to the linear summation that makes you lose as many frames as the time stepping between dots
         utils.stampa(f'AM sequence map shape {tmp_map.shape}, Linear prediction map shape {tmp_linear.shape}', logger = self.log)
         utils.stampa(f'Onset time Map cd {map_cond.onset_time}, Onset time Map linear {map_linear_pred.onset_time}', logger = self.log)
-        # frames_to_fix = tmp_map.shape[0] - tmp_linear.shape[0]
-        # utils.stampa(f'Mismatch between two stimuli onset (for linear pred and actual am seq) {frames_to_fix}', logger = self.log)
-        # tmp_map       = tmp_map[frames_to_fix:, :, :]
         utils.stampa(f'AM sequence map reshape as linear map {tmp_map.shape}', logger = self.log)
-        
+
+        # First alignment: mismatch due to the linear summation that makes you lose as many frames as the time stepping between dots        
         # Second alignment: mismatch due to temporal misalignment of AM and ss condition
+        # Considering the Onset times (the first vertical line for onset stimulus) the realignment is automatic and takes in account both aspects
         misalign_time_cds   = map_cond.onset_time - map_linear_pred.onset_time
         if misalign_time_cds < 0:
             tmp_linear = tmp_linear[abs(misalign_time_cds):, :, :]
