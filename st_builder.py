@@ -433,7 +433,7 @@ class SpatioTemporalSession:
         # Linear prediction
         if (single_pos_cds is not None) and (name_cond in list(self.cond_am.values())):
             st_map_linear_pred, time_slide, time_step = self.get_linear_predicted_maps(name_cond, 
-                                                                                       start_time_cd, 
+                                                                                       self.timing_single_stroke[0] - synaptic_latency, 
                                                                                        colors, times, positions, 
                                                                                        (max_level, min_level, thresh),
                                                                                        ISinterval = ISinterval, 
