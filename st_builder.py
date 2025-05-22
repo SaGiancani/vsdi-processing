@@ -79,9 +79,10 @@ class SpatioTemporalMap:
             self.retino_pos                    = retino_pos
             self.retino_time                   = retino_time
         else:
-            a , b = process.find_highest_sum_area(self.map, AREA_MAXIMI_FOR_PEAK, *bounds_for_max_seek)
-            self.retino_pos                    = [a]
-            self.retino_time                   = [b]          
+            if self.map is not None:
+                a , b = process.find_highest_sum_area(self.map, AREA_MAXIMI_FOR_PEAK, *bounds_for_max_seek)
+                self.retino_pos                    = [a]
+                self.retino_time                   = [b]          
 
         self.pixel_spacing            = pixel_spacing
         self.interstimulus_delay      = is_delay#ms
@@ -466,6 +467,7 @@ class SpatioTemporalSession:
         # Second alignment: mismatch due to temporal misalignment of AM and ss condition
         # Considering the Onset times (the first vertical line for onset stimulus) the realignment is automatic and takes in account both aspects
         misalign_time_cds   = map_cond.onset_time - map_linear_pred.onset_time
+        new_onset_time      = np.nanmin([map_cond.onset_time, map_linear_pred.onset_time]) 
         if misalign_time_cds < 0:
             tmp_linear = tmp_linear[abs(misalign_time_cds):, :, :]
         elif misalign_time_cds > 0:
@@ -522,7 +524,7 @@ class SpatioTemporalSession:
         st_map_cd = SpatioTemporalMap(self.path_session, 
                                       trajectory_mask = self.trajectory_mask,
                                       rotation_theta  = self.orient_traj,
-                                      onset_time      = map_linear_pred.onset_time,
+                                      onset_time      = new_onset_time,
                                       condition_name  = name_cond_sub,
                                       data            = subtraction,
                                       condition_type  = 'am',
@@ -544,7 +546,7 @@ class SpatioTemporalSession:
                    
             st_map_cd.visualize_maps(colors, np.nanpercentile(map_cond.maps, 60), 
                                      retino_pos = positions, 
-                                     retino_time = times,
+                                     retino_time = times, # This could be bugged if cd2/linear pred onset time > cd1/am seq onset time 
                                      high_level = np.nanpercentile(map_cond.maps, 80), 
                                      low_level  = -np.nanpercentile(map_cond.maps, 80))
         
