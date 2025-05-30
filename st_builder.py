@@ -701,7 +701,7 @@ class SpatioTemporalSession:
         
         for k,v in self.cond_pos.items():
             utils.stampa(f'Single pos cond: {v}', logger = self.log)
-            st_map = self.SpatioTemporalMap(path_session)
+            st_map = SpatioTemporalMap(path_session)
             st_map.load_stmap(os.path.join(map_folder, v, 'spatiotemporal_profile', f'st_map_{v}'))
             utils.stampa(f'(pos, time) : ({st_map.retino_pos, st_map.retino_time})', logger = self.log)
             self.data_pos_frame[v] = [st_map.retino_pos[0], st_map.retino_time[0]]      
