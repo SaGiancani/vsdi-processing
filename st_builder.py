@@ -6,7 +6,7 @@ import process_vsdi as process
 from middle_process import get_classic_signal, Condition 
 import retinotopy 
 from scipy.ndimage.filters import median_filter
-from scipy.ndimage import rotate
+from scipy.ndimage import rotate, zoom
 import trajectory as trj 
 import utils
 
@@ -76,20 +76,23 @@ class SpatioTemporalMap:
 
         # Pos and timing of peak
         if (retino_pos is not None) and (retino_time is not None):
-            self.retino_pos                    = retino_pos
-            self.retino_time                   = retino_time
+            self.retino_pos      = retino_pos
+            self.retino_time     = retino_time
         else:
             if self.map is not None:
                 a , b = process.find_highest_sum_area(self.map, AREA_MAXIMI_FOR_PEAK, *bounds_for_max_seek)
-                self.retino_pos                    = [a]
-                self.retino_time                   = [b]          
+                self.retino_pos  = [a]
+                self.retino_time = [b]    
+            else:
+                self.retino_pos  = None
+                self.retino_time = None    
 
         self.pixel_spacing            = pixel_spacing
         self.interstimulus_delay      = is_delay#ms
         self.sampling_rate            = sampling_rate
 
         # Contours level
-        if (high_level is None) and (low_level is None):
+        if (high_level is None) and (low_level is None) and (self.map is not None):
             self.high_level   =  np.nanpercentile(self.map, 97.7)
             self.low_level    =  np.nanpercentile(self.map, 15)
         else:
@@ -101,10 +104,11 @@ class SpatioTemporalMap:
         self.condition_type        = condition_type
 
         # Adjusting color 
-        if (self.condition_type == 'ss') and (len(self.retino_pos) == 1):
-            self.colors_retinotopy = ['grey']
-        else:
-            self.colors_retinotopy = colors_ret
+        if self.retino_pos is not None:
+            if (self.condition_type == 'ss') and (len(self.retino_pos) == 1):
+                self.colors_retinotopy = ['grey']
+            else:
+                self.colors_retinotopy = colors_ret
 
     def visualize_maps(self, 
                        colors_retinotopy, 
@@ -255,6 +259,7 @@ class SpatioTemporalSession:
                  denoise_flag    = False,
                  retin_fold_path = None,
                  zmaps_flag      = False,
+                 load_data       = True,
                  **kwargs):
 
         self.acquisition_frequency = acquisition_fq #Hz
@@ -310,21 +315,22 @@ class SpatioTemporalSession:
        
         if self.zmaps_flag:
             self.id_name           = f'{self.retino_session.id_name}_z'
-            # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
-            cd_x       = Condition() 
-            conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
-            conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
-            cd_x.load_cond(conds_list[0].split('.pickle')[0])  
-            _, _, y2check, _ = cd_x.df_fz.shape
+            if  load_data:
+                # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
+                cd_x       = Condition() 
+                conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
+                conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
+                cd_x.load_cond(conds_list[0].split('.pickle')[0])  
+                _, _, y2check, _ = cd_x.df_fz.shape
 
-            bin_tmp = int(np.ceil(y2check/self.ny))
-            utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
+                bin_tmp = int(np.ceil(y2check/self.ny))
+                utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
 
-            self.dict_zeta         = get_classic_signal(self.path_to_derivatives, 
-                                                        np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
-                                                        bin_value = bin_tmp, 
-                                                        denoise_flag = self.denoise_switch,
-                                                        log = self.log)
+                self.dict_zeta   = get_classic_signal(self.path_to_derivatives, 
+                                                      np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
+                                                      bin_value = bin_tmp, 
+                                                      denoise_flag = self.denoise_switch,
+                                                      log = self.log)
         else:
             self.id_name           = self.retino_session.id_name
             self.dict_zeta         = None
@@ -356,11 +362,11 @@ class SpatioTemporalSession:
                                                                         self.path_session, 
                                                                         denoise_flag = self.denoise_switch)
         utils.stampa(f'{self.single_pos}', logger = self.log)  
-        self.trajectory_mask    = trj.get_trajectory_mask(self.single_pos, (self.ny, self.nx), extremities = (0,0))        
-        _, _, self.orient_traj  = trj.rotate_distribution(list(list(zip(*self.single_pos))[0]), 
+        self.trajectory_mask     = trj.get_trajectory_mask(self.single_pos, (self.ny, self.nx), extremities = (0,0))        
+        _, _, self.orient_traj   = trj.rotate_distribution(list(list(zip(*self.single_pos))[0]), 
                                                           list(list(zip(*self.single_pos))[1])) #in rad
-        self.data_dictionary    = {}
-        self.data_pos_frame     = {}
+        self.data_dictionary     = {}
+        self.data_pos_frame      = {}
 
     def get_session(self):
         utils.stampa(f'Start processing spatiotemporal profile analysis \n', logger=self.log)
@@ -434,12 +440,12 @@ class SpatioTemporalSession:
         # Linear prediction
         if (single_pos_cds is not None) and (name_cond in list(self.cond_am.values())):
             st_map_linear_pred, new_times = self.get_linear_predicted_maps(name_cond, 
-                                                                                       self.timing_single_stroke[0] - synaptic_latency, 
-                                                                                       colors, times, positions, 
-                                                                                       (max_level, min_level, thresh),
-                                                                                       ISinterval = ISinterval, 
-                                                                                       single_pos_cds = single_pos_cds, 
-                                                                                       cd_type_flag = cd_type_flag)
+                                                                           self.timing_single_stroke[0] - synaptic_latency, 
+                                                                           colors, times, positions, 
+                                                                           (max_level, min_level, thresh),
+                                                                           ISinterval = ISinterval, 
+                                                                           single_pos_cds = single_pos_cds, 
+                                                                           cd_type_flag = cd_type_flag)
             
             # Subtraction between maps goes here
             self.get_subtraction_condition(st_map_linear_pred, 
@@ -647,8 +653,6 @@ class SpatioTemporalSession:
                                                         nonlinear_zeroframe = start_time_cd-time_step,
                                                         log = self.log)
             # Filtering linear_prediction
-            # filtered_pred      = np.array([median_filter(i, size=(5,5)) for i in linear_prediction])
-            # filtered_pred      = process.gaussian3d(filtered_pred, std = 1.5, size = 5)
             filtered_pred      = linear_prediction            
             time_slide         = (single_pos_cds[0].shape[0] - linear_prediction.shape[0])
 
@@ -688,6 +692,121 @@ class SpatioTemporalSession:
             st_map_cd.store_stmap(os.path.join(self.storing_folder, self.id_name, st_map_cd.condition_name))                
 
         return st_map_cd, new_times
+    
+
+    def get_maximi_single_pos(self):
+        path_session = self.path_session
+        map_folder   = os.path.join(self.storing_folder, self.id_name)
+        map_folder   = utils.normalize_path_os(map_folder)    
+        
+        for k,v in self.cond_pos.items():
+            utils.stampa(f'Single pos cond: {v}', logger = self.log)
+            st_map = self.SpatioTemporalMap(path_session)
+            st_map.load_stmap(os.path.join(map_folder, v, 'spatiotemporal_profile', f'st_map_{v}'))
+            utils.stampa(f'(pos, time) : ({st_map.retino_pos, st_map.retino_time})', logger = self.log)
+            self.data_pos_frame[v] = [st_map.retino_pos[0], st_map.retino_time[0]]      
+        return 
+
+    def get_nonlinear_pred_maps(self): 
+        path_session = self.path_session
+        map_folder   = os.path.join(self.storing_folder, self.id_name)
+        map_folder   = utils.normalize_path_os(map_folder)    
+
+        dict_sub_lin = {} 
+        peak_dots    = {}
+        timing_frame = (1/self.acquisition_frequency)*1000
+
+        for k,v in self.retino_pos_am.items():
+
+            start_time = self.stimulus_metadata['pos metadata'][k]['start'] 
+            name_cond_pred = ''
+            positions  = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[k]] 
+            times      = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) - start_time for ss in self.retino_pos_am[k]]       
+
+            st_map_sub = SpatioTemporalMap(path_session)
+
+            for n, i in enumerate(v):
+                name_cond_pred  += i 
+
+            # Checking the slide to add to the peaks
+            st_map_sub.load_stmap(os.path.join(map_folder, name_cond_pred, 'spatiotemporal_profile', f'st_map_{name_cond_pred}'))   
+            tmp_lin = st_map_sub.map.shape[1]    
+            st_map_sub.load_stmap(os.path.join(map_folder, k, 'spatiotemporal_profile', f'st_map_{k}'))   
+            tmp_cd  = st_map_sub.map.shape[1]
+            corrective_slide = tmp_cd - tmp_lin
+            
+            # Linear prediction name
+            sub_cond = f'{k} - {name_cond_pred}'    
+            utils.stampa(f'Subtraction condition: {sub_cond}', logger=self.log)            
+            utils.stampa(f'Time linear pred and AM: {tmp_lin, tmp_cd}', logger=self.log)            
+            
+            st_map_sub.load_stmap(os.path.join(map_folder, sub_cond, 'spatiotemporal_profile', f'st_map_{sub_cond}'))   
+
+
+            for n, i in enumerate(v):
+                isi_frames   = int(np.ceil(st_map_sub.interstimulus_delay/timing_frame))
+                times[n]     = times[n] + n*isi_frames - corrective_slide       
+
+            dict_sub_lin[sub_cond] = st_map_sub
+            peak_dots[sub_cond]    = list(zip(times, positions))
+
+        return dict_sub_lin, peak_dots
+
+
+    def get_subtraction_maps(self):
+        # Instance folder paths
+        path_session = self.path_session
+        map_folder = os.path.join(self.storing_folder, self.id_name)
+        map_folder = utils.normalize_path_os(map_folder)    
+        # Load dict for possible cond subtractions 
+        dict_subtrs  = utils.get_conds_for_sub(path_session)
+        
+        # Instance variables
+        dict_sub     = {} 
+        peak_dots    = {}
+        timing_frame = (1/self.acquisition_frequency)*1000
+
+
+        for c1, c2 in dict_subtrs.items():
+            name_cond_sub = f'{c1} - {c2}'
+            st_map_sub = SpatioTemporalMap(path_session)
+            st_map_sub.load_stmap(os.path.join(map_folder, name_cond_sub, 'spatiotemporal_profile', f'st_map_{name_cond_sub}'))    
+
+            # colors    = [st_session.color_pos[i] for i in st_session.retino_pos_am[c1]]
+            positions = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[c1]]
+            times     = [self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) for ss in self.retino_pos_am[c1]]
+
+            for n, _ in enumerate(self.retino_pos_am[c1]):
+                isi_frames   = int(np.ceil(st_map_sub.interstimulus_delay/timing_frame))
+                times[n]     = times[n] + n*isi_frames     
+
+            dict_sub[name_cond_sub]  = st_map_sub
+            peak_dots[name_cond_sub] = list(zip(times, positions))
+        return dict_sub, peak_dots
+
+
+    def get_maps_last_dot(self, dict_sub, peak_dots, list_dots=[2, 3], list_space=[.5, 1], list_direction=[-1, 1], matrix_dict = None):   
+        # Create the nested dictionary with direction as the innermost level
+        directions = get_directions(self.data_pos_frame, self.retino_pos_am) 
+
+        if matrix_dict is None:
+            matrix_dict = {outer: {middle: {inner: [] for inner in list_direction} 
+                                for middle in list_space} for outer in list_dots}
+
+        for k, v in dict_sub.items():
+            tmp = k.split(' -')[0]
+
+            n_dots = len(self.stimulus_metadata['pos metadata'][tmp]['conditions'])
+            spacing = self.stimulus_metadata['pos metadata'][tmp]['inter stimulus space']
+            
+            direction = directions[tmp] 
+            tmp_coord = peak_dots[k][-1]         
+            tmp_map = dict_sub[k].map[:, tmp_coord[0]:]
+            
+            matrix_dict[n_dots][spacing][direction].append(tmp_map)
+            
+        return matrix_dict
+
 
 def derivative_filter(arr, threshold):
     # Compute the derivative of the array
@@ -700,6 +819,9 @@ def derivative_filter(arr, threshold):
     arr_filtered = arr.copy()
     arr_filtered[indices_to_remove] = np.nan
     return arr_filtered
+
+def get_directions(data_pos_frame, retino_pos_am):
+    return {k: np.sign(data_pos_frame[v[-1]][0] - data_pos_frame[v[0]][0]) for k, v in retino_pos_am.items()}    
 
 def get_spatio_temporal_profile(frames, trajectory_mask, theta, correction_factor = 0, discard_thresh = 1e-7):
     '''
@@ -858,6 +980,21 @@ def maximi_inda_blob(st_matrix, blob, activity_mask = None):
 
     # Create a list of tuples containing the maximum values' indices and their corresponding positions
     return list(zip(zero_array, np.linspace(0, st_matrix.shape[1]-1, st_matrix.shape[1])))
+
+def resample_spatiotemporal_map(matrix, dt_original, dx_original, dt_target = 10, dx_target = .1):
+    """
+    Resample a 2D spatiotemporal matrix to target resolutions.
+    Assumes:
+    - Axis 0: Time (rows)
+    - Axis 1: Space (columns)
+    """
+    # Compute scale factors (time, space)
+    scale_t = dt_original / dt_target  # Temporal scaling
+    scale_x = dx_original / dx_target  # Spatial scaling
+    
+    # Resample with per-axis scaling (order=1 for linear interpolation)
+    resampled = zoom(matrix, (scale_x, scale_t), order=1)
+    return resampled
 
 def rotate_map(profile_1, theta, correction_factor = 0, discard_thresh = 1e-5, kernel = 15):
     # Rad to deg transformation

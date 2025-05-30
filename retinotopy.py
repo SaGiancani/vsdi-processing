@@ -699,7 +699,14 @@ class Retinotopy:
     
 
     def load_retino(self, path):
-        tp = utils.inputs_load(path)
+        if os.name != 'nt':
+            normalized_path = os.path.normpath(path)
+            tp = utils.inputs_load(normalized_path)
+        else:
+            normalized_path = os.path.normpath(path.replace('envau', '\envau_cifs'))
+            print(normalized_path)
+            tp = utils.inputs_load(normalized_path)
+
         self.path_session = tp[0]
         self.cond_name = tp[1]
         self.name = tp[2]

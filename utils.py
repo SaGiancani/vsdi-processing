@@ -383,6 +383,15 @@ def nonlinear_custom_map():
     return custom_cmap
 
 
+def normalize_path_os(path_folder):
+    if os.name != 'nt':
+        path_folder = os.path.normpath(path_folder)
+    else:
+        path_folder = os.path.normpath(path_folder.replace('envau', '\envau_cifs'))
+        print(path_folder)
+    return path_folder
+
+
 def sector_mask(shape,centre,radius,angle_range):
     """
     From: https://stackoverflow.com/questions/18352973/mask-a-circular-sector-in-a-numpy-array
