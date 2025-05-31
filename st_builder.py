@@ -804,8 +804,11 @@ class SpatioTemporalSession:
             direction = directions[tmp] 
             tmp_coord = peak_dots[k][-1]         
             tmp_map = dict_sub[k].map[:, tmp_coord[0]:]
+
+            # Normalization of maps' scales across sessions
+            tmp_map, scale = resample_spatiotemporal_map(tmp_map, self.time_bin, self.pixel_spacing)
             
-            peaks_dict[n_dots][spacing][direction].append(tmp_coord[1])                  
+            peaks_dict[n_dots][spacing][direction].append(tmp_coord[1]*scale[0])                  
             matrix_dict[n_dots][spacing][direction].append(tmp_map)
             
         return matrix_dict
@@ -997,7 +1000,7 @@ def resample_spatiotemporal_map(matrix, dt_original, dx_original, dt_target = 10
     
     # Resample with per-axis scaling (order=1 for linear interpolation)
     resampled = zoom(matrix, (scale_x, scale_t), order=1)
-    return resampled
+    return resampled, (scale_x, scale_t)
 
 def rotate_map(profile_1, theta, correction_factor = 0, discard_thresh = 1e-5, kernel = 15):
     # Rad to deg transformation
