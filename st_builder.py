@@ -792,6 +792,7 @@ class SpatioTemporalSession:
         if matrix_dict is None:
             matrix_dict = {outer: {middle: {inner: [] for inner in list_direction} 
                                 for middle in list_space} for outer in list_dots}
+        if peaks_dict is None:            
             peaks_dict  = {outer: {middle: {inner: [] for inner in list_direction} 
                                 for middle in list_space} for outer in list_dots}
 
@@ -811,7 +812,7 @@ class SpatioTemporalSession:
             peaks_dict[n_dots][spacing][direction].append(tmp_coord[1]*scale[0])                  
             matrix_dict[n_dots][spacing][direction].append(tmp_map)
             
-        return matrix_dict
+        return matrix_dict, peaks_dict
 
 
 def derivative_filter(arr, threshold):
