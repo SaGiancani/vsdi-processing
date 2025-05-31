@@ -785,12 +785,14 @@ class SpatioTemporalSession:
         return dict_sub, peak_dots
 
 
-    def get_maps_last_dot(self, dict_sub, peak_dots, list_dots=[2, 3], list_space=[.5, 1], list_direction=[-1, 1], matrix_dict = None):   
+    def get_maps_last_dot(self, dict_sub, peak_dots, list_dots=[2, 3], list_space=[.5, 1], list_direction=[-1, 1], matrix_dict = None, peaks_dict = None):   
         # Create the nested dictionary with direction as the innermost level
         directions = get_directions(self.data_pos_frame, self.retino_pos_am) 
 
         if matrix_dict is None:
             matrix_dict = {outer: {middle: {inner: [] for inner in list_direction} 
+                                for middle in list_space} for outer in list_dots}
+            peaks_dict  = {outer: {middle: {inner: [] for inner in list_direction} 
                                 for middle in list_space} for outer in list_dots}
 
         for k, v in dict_sub.items():
@@ -803,6 +805,7 @@ class SpatioTemporalSession:
             tmp_coord = peak_dots[k][-1]         
             tmp_map = dict_sub[k].map[:, tmp_coord[0]:]
             
+            peaks_dict[n_dots][spacing][direction].append(tmp_coord[1])                  
             matrix_dict[n_dots][spacing][direction].append(tmp_map)
             
         return matrix_dict
