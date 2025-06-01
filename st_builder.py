@@ -785,7 +785,7 @@ class SpatioTemporalSession:
         return dict_sub, peak_dots
 
 
-    def get_maps_last_dot(self, dict_sub, peak_dots, list_dots=[2, 3], list_space=[.5, 1], list_direction=[-1, 1], matrix_dict = None, peaks_dict = None):   
+    def get_maps_last_dot(self, dict_sub, peak_dots, list_dots=[2, 3], list_space=[.5, 1], list_direction=[-1, 1], matrix_dict = None, peaks_dict = None, baseline = None):   
         # Create the nested dictionary with direction as the innermost level
         directions = get_directions(self.data_pos_frame, self.retino_pos_am) 
 
@@ -796,23 +796,31 @@ class SpatioTemporalSession:
             peaks_dict  = {outer: {middle: {inner: [] for inner in list_direction} 
                                 for middle in list_space} for outer in list_dots}
 
+        if baseline is None:
+            baseline    = {outer: {middle: {inner: [] for inner in list_direction} 
+                                for middle in list_space} for outer in list_dots}
+            
         for k, v in dict_sub.items():
             tmp = k.split(' -')[0]
 
-            n_dots = len(self.stimulus_metadata['pos metadata'][tmp]['conditions'])
+            n_dots  = len(self.stimulus_metadata['pos metadata'][tmp]['conditions'])
             spacing = self.stimulus_metadata['pos metadata'][tmp]['inter stimulus space']
             
-            direction = directions[tmp] 
-            tmp_coord = peak_dots[k][-1]         
-            tmp_map = dict_sub[k].map[:, tmp_coord[0]:]
+            direction    = directions[tmp] 
+            tmp_coord    = peak_dots[k][-1]         
+            tmp_map      = dict_sub[k].map[:, tmp_coord[0]:]
+            base_frames  = np.nanmin([self.timing_am_sequence[0], self.timing_single_stroke[0]])
+            tmp_baseline = dict_sub[k].map[:, :base_frames]
 
             # Normalization of maps' scales across sessions
-            tmp_map, scale = resample_spatiotemporal_map(tmp_map, self.time_bin, self.pixel_spacing)
+            tmp_map, scale  = resample_spatiotemporal_map(tmp_map, self.time_bin, self.pixel_spacing)
+            tmp_baseline, _ = resample_spatiotemporal_map(tmp_baseline, self.time_bin, self.pixel_spacing)
             
             peaks_dict[n_dots][spacing][direction].append(tmp_coord[1]*scale[0])                  
             matrix_dict[n_dots][spacing][direction].append(tmp_map)
+            baseline[n_dots][spacing][direction].append(tmp_baseline)
             
-        return matrix_dict, peaks_dict
+        return matrix_dict, peaks_dict, baseline
 
 
 def derivative_filter(arr, threshold):
