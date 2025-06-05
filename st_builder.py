@@ -35,6 +35,7 @@ class SpatioTemporalMap:
                  logger = None,
                  storing_path = None):
         self.signal                   = data                           #MODIFY THIS. It could get the full matrix, and then run the get_spatio_temporal_profile iteratively on single trials and on average across trials
+        self.avrg_signal              = None        
         self.path_session             = path_session
         self.storing_path             = storing_path
         self.session_name             = utils.get_session_id_name(self.path_session)
@@ -43,7 +44,7 @@ class SpatioTemporalMap:
         self.rotate_correction_factor = rotate_correction_factor
         self.discard_thresh           = discard_thresh
         self.logger                   = logger
-
+        
         if self.signal is not None:
             # Filtering of average across trials
             if len(self.signal.shape) == 4:
@@ -80,7 +81,7 @@ class SpatioTemporalMap:
             self.retino_time     = retino_time
         else:
             if self.map is not None:
-                a , b = process.find_highest_sum_area(self.map, AREA_MAXIMI_FOR_PEAK, *bounds_for_max_seek)
+                (a, b), _ = process.find_highest_sum_area(self.map, AREA_MAXIMI_FOR_PEAK, *bounds_for_max_seek)
                 self.retino_pos  = [a]
                 self.retino_time = [b]    
             else:
@@ -209,7 +210,8 @@ class SpatioTemporalMap:
               self.condition_type,
               self.colors_retinotopy,
               self.maps, 
-              self.masked_data_trials]
+              self.masked_data_trials,
+              self.avrg_signal]
         
         storage_path = os.path.join(t, 'spatiotemporal_profile')
         tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
@@ -240,7 +242,8 @@ class SpatioTemporalMap:
         self.condition_type             = tp[19]
         self.colors_retinotopy          = tp[20]
         self.maps                       = tp[21]
-        self.masked_data_trials         = tp[22]        
+        self.masked_data_trials         = tp[22]    
+        self.avrg_signal                = tp[23]    
         return
 
 class SpatioTemporalSession:
@@ -641,9 +644,9 @@ class SpatioTemporalSession:
 
         try:
             st_map_cd = SpatioTemporalMap(self.path_session, condition_type = cd_type_flag, logger = self.log)
-            tmp_name =  os.path.join(self.storing_folder, self.id_name, name_cond_pred, 'spatiotemporal_profile', f'st_map_{name_cond_pred}') 
-            utils.stampa(f'Linear prediction {tmp_name} loaded!', logger = self.log)
+            tmp_name  = os.path.join(self.storing_folder, self.id_name, name_cond_pred, 'spatiotemporal_profile', f'st_map_{name_cond_pred}') 
             st_map_cd.load_stmap(tmp_name)   
+            utils.stampa(f'Linear prediction {tmp_name} loaded!', logger = self.log)
 
         # If does not, it build it
         except:          
@@ -810,7 +813,7 @@ class SpatioTemporalSession:
             tmp_coord    = peak_dots[k][-1]         
             tmp_map      = dict_sub[k].map[:, tmp_coord[0]:]
             base_frames  = np.nanmin([self.timing_am_sequence[0], self.timing_single_stroke[0]])
-            tmp_baseline = dict_sub[k].map[:, :base_frames]
+            tmp_baseline = dict_sub[k].map[:, :(base_frames)]
 
             # Normalization of maps' scales across sessions
             tmp_map, scale  = resample_spatiotemporal_map(tmp_map, self.time_bin, self.pixel_spacing)
@@ -1110,7 +1113,7 @@ def plot_st(profilemap,
     
     # Plot highest spot
     if len(retinotopic_pos)>1:
-        a, b = process.find_highest_sum_area(profilemap*blobs_, 5, None, None, onset_time, 45)
+        (a, b), _ = process.find_highest_sum_area(profilemap*blobs_, 5, None, None, onset_time, 45)
         ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
         print(a, b)
     else:
