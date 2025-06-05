@@ -673,7 +673,9 @@ class SpatioTemporalSession:
                                           storing_path    = os.path.join(self.storing_folder, self.id_name, name_cond_pred), 
                                           logger          = self.log)
             utils.stampa(f'Linear prediction {name_cond_pred} elaborated!', logger = self.log)
-            new_times = np.array(times) - time_slide + (self.timing_single_stroke[0] - self.timing_am_sequence[0])
+
+        time_slide         = (single_pos_cds[0].shape[0] - st_map_cd.avrg_signal.shape[0])
+        new_times = np.array(times) - time_slide + (self.timing_single_stroke[0] - self.timing_am_sequence[0])
         # Visualize linear prediction
         if self.vis_switch:
             dv.whole_time_sequence(st_map_cd.avrg_signal, 
