@@ -822,6 +822,7 @@ class SpatioTemporalSession:
             tmp_baseline, _ = resample_spatiotemporal_map(tmp_baseline, self.time_bin, self.pixel_spacing)
             
             utils.stampa(f'Scale variable: {scale}', logger=self.log)
+            utils.stampa(f'Session: {tmp}, dots {n_dots}, spacing {spacing}, direction {direction}', logger=self.log)
 
             peaks_dict[n_dots][spacing][direction].append(tmp_coord[1]*scale[0])                  
             matrix_dict[n_dots][spacing][direction].append(tmp_map)
