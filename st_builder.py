@@ -793,6 +793,7 @@ class SpatioTemporalSession:
     def get_maps_last_dot(self, dict_sub, peak_dots, list_dots=[2, 3], list_space=[.5, 1], list_direction=[-1, 1], matrix_dict = None, peaks_dict = None, baseline = None):   
         # Create the nested dictionary with direction as the innermost level
         directions = get_directions(self.data_pos_frame, self.retino_pos_am) 
+        utils.stampa(f'directions: {directions}', logger=self.log)
 
         if matrix_dict is None:
             matrix_dict = {outer: {middle: {inner: [] for inner in list_direction} 
@@ -821,9 +822,6 @@ class SpatioTemporalSession:
             tmp_map, scale  = resample_spatiotemporal_map(tmp_map, self.time_bin, self.pixel_spacing)
             tmp_baseline, _ = resample_spatiotemporal_map(tmp_baseline, self.time_bin, self.pixel_spacing)
             
-            utils.stampa(f'Scale variable: {scale}', logger=self.log)
-            utils.stampa(f'Session: {tmp}, dots {n_dots}, spacing {spacing}, direction {direction}', logger=self.log)
-
             peaks_dict[n_dots][spacing][direction].append(tmp_coord[1]*scale[0])                  
             matrix_dict[n_dots][spacing][direction].append(tmp_map)
             baseline[n_dots][spacing][direction].append(tmp_baseline)
