@@ -814,19 +814,20 @@ class SpatioTemporalSession:
             spacing = self.stimulus_metadata['pos metadata'][tmp]['inter stimulus space']
             
             direction    = directions[tmp] 
-            tmp_coord    = peak_dots[k][-1]         
-            tmp_map      = dict_sub[k].map[:, tmp_coord[0]:]
-            base_frames  = np.nanmin([self.timing_am_sequence[0], self.timing_single_stroke[0]])
-            tmp_baseline = dict_sub[k].map[:, :(base_frames)]
+            if direction != 0:
+                tmp_coord    = peak_dots[k][-1]         
+                tmp_map      = dict_sub[k].map[:, tmp_coord[0]:]
+                base_frames  = np.nanmin([self.timing_am_sequence[0], self.timing_single_stroke[0]])
+                tmp_baseline = dict_sub[k].map[:, :(base_frames)]
 
-            # Normalization of maps' scales across sessions
-            tmp_map, scale  = resample_spatiotemporal_map(tmp_map, self.time_bin, self.pixel_spacing)
-            tmp_baseline, _ = resample_spatiotemporal_map(tmp_baseline, self.time_bin, self.pixel_spacing)
-            
-            peaks_dict[n_dots][spacing][direction].append(tmp_coord[1]*scale[0])                  
-            matrix_dict[n_dots][spacing][direction].append(tmp_map)
-            baseline[n_dots][spacing][direction].append(tmp_baseline)
-            
+                # Normalization of maps' scales across sessions
+                tmp_map, scale  = resample_spatiotemporal_map(tmp_map, self.time_bin, self.pixel_spacing)
+                tmp_baseline, _ = resample_spatiotemporal_map(tmp_baseline, self.time_bin, self.pixel_spacing)
+                
+                peaks_dict[n_dots][spacing][direction].append(tmp_coord[1]*scale[0])                  
+                matrix_dict[n_dots][spacing][direction].append(tmp_map)
+                baseline[n_dots][spacing][direction].append(tmp_baseline)
+                
         return matrix_dict, peaks_dict, baseline
 
 
