@@ -310,11 +310,11 @@ class RetinoSession(md.Session):
             retino_cond.load_retino(tmp_load) 
             utils.stampa(f'{name_cond} successfully loaded!', logger = self.log)                   
             # If does not, it build it
-            except:
-                retino_cond = self.get_single_stroke_retinotopy(name_cond, time_limits, cd, stroke_name=None)
-                # If true store variables
-                if self.storage_switch:
-                    retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond))
+            # except:
+            #     retino_cond = self.get_single_stroke_retinotopy(name_cond, time_limits, cd, stroke_name=None)
+            #     # If true store variables
+            #     if self.storage_switch:
+            #         retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond))
         
             # Extract visualization utility variables
             indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
