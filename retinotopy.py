@@ -662,10 +662,11 @@ class RetinoSession(md.Session):
         a = self.stimulus_metadata['pos metadata']
         space_step = a[name_cond]['inter stimulus space']
         starting_time = a[name_cond]['start']  # in frames
+        inter_stimulus_timing = int(np.ceil((1 / self.stimulus_metadata['speed']) * space_step * self.acquisition_frequency))
 
         # Calculate time_step if not provided
         if time_step is None:
-            time_step = int(np.ceil((1 / self.stimulus_metadata['speed']) * space_step * self.acquisition_frequency))
+            time_step = inter_stimulus_timing
 
         utils.stampa(f'Custom/computed time_step: {time_step}, starting_time: {starting_time}', logger=self.log)
 
@@ -681,7 +682,7 @@ class RetinoSession(md.Session):
 
         retinotopy_results = []
 
-        for repeat_idx in range(1, n_repeats + 1):
+        for repeat_idx in range(0, n_repeats):
 
             # Instantiate Retinotopy object
             r = Retinotopy(self.path_session,
@@ -697,7 +698,7 @@ class RetinoSession(md.Session):
                 r.time_limits = time_limits
 
             # Compute custom begin/end times per repeat
-            begin_time = (r.time_limits[0] + starting_time + stroke_number * time_step) * repeat_idx
+            begin_time = r.time_limits[0] + starting_time + stroke_number * inter_stimulus_timing  + time_step * repeat_idx
             end_time   = begin_time + time_step
             foi        = ((0, time_step))
 
@@ -748,7 +749,7 @@ class RetinoSession(md.Session):
 
             # Optional visualization
             if self.visualization_switch:
-                if repeat_idx > 1:
+                if repeat_idx > 0:
                     name_file = f'sanity_check_single_trial_stroke_n_{stroke_number}_{name_cond}{repeat_idx}_{self.id_name}'
                 else:
                     name_file = f'sanity_check_single_trial_stroke_n_{stroke_number}_{name_cond}_{self.id_name}'
