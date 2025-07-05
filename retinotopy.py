@@ -5,6 +5,7 @@ import data_visualization as dv
 import middle_process as md
 import numpy as np
 import process_vsdi as process
+import trajectory as trj
 
 from scipy.ndimage.filters import gaussian_filter
 
@@ -307,7 +308,8 @@ class RetinoSession(md.Session):
                 retino_cond.load_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
             # If does not, it build it
             except:
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, stroke_name = None, str_type = 'single stroke') 
+                retino_cond = self.get_single_stroke_retinotopy(name_cond, time_limits, cd, stroke_name=None)
+                # retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, stroke_name = None, str_type = 'single stroke') 
                 # Store single stroke condition
                 self.dictionary_retinotopies[name_cond] = retino_cond
                 # Extract visualization utility variables
@@ -326,7 +328,9 @@ class RetinoSession(md.Session):
             self.dictionary_retinotopies[name_cond] = dict()
             for i, j in enumerate(self.retino_pos_am[name_cond]):
                 utils.stampa(f'The stroke {j} is the number {i}\n', logger=self.log)
-                retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, stroke_name = j, str_type = 'multiple stroke')
+                retino_cond = self.get_multiple_stroke_retinotopy(name_cond, time_limits, cd, stroke_number=i, stroke_name=j, n_repeats=1)
+                retino_cond = retino_cond[0]
+                # retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, stroke_name = j, str_type = 'multiple stroke')
                 # Store single stroke within AM
                 self.dictionary_retinotopies[name_cond][j] = retino_cond
                 # Extract visualization utility variables
@@ -391,6 +395,7 @@ class RetinoSession(md.Session):
                               stroke_number = None,
                               stroke_name = None,                              
                               str_type = 'single stroke'):
+        '''DEPRECATED'''
 
         start_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -504,6 +509,252 @@ class RetinoSession(md.Session):
                                    name = f'sanity_check_single_trial_stroke_n_{stroke_number_fortitle}_{name_cond}_{self.id_name}' )
 
         return r
+
+    def get_single_stroke_retinotopy(self,
+                                    name_cond,
+                                    time_limits,
+                                    cd,
+                                    stroke_name=None):
+        """
+        Analyze retinotopy for a single stroke condition.
+
+        Parameters:
+            - name_cond (str): name of the condition
+            - time_limits (tuple): (start_frame, end_frame)
+            - cd (obj): calcium data object
+            - stroke_name (str or None): optional, to use centroid from another stroke
+
+        Returns:
+            - Retinotopy object
+        """
+
+        start_time = datetime.datetime.now().replace(microsecond=0)
+
+        # dF/F0 of only autoselected trials
+        df = md.get_selected(cd.df_fz, cd.autoselection)
+        avr_df = np.nanmean(df, axis=0)
+
+        # Clean up mean_blank
+        mean_blank = np.nanmean(self.mean_blank, axis=0)
+        mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15)
+        mean_blank = np.nan_to_num(mean_blank, nan=np.nanpercentile(mean_blank, 20))
+
+        # Z-score of visual response
+        z_s_visual = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq=True)
+
+        # Inject a synaptic delay (60ms)
+        delay = int(np.ceil(0.06 / (1 / self.acquisition_frequency)))
+        begin_time = time_limits[0] + delay
+        end_time = time_limits[1] + delay
+        foi = None
+
+        utils.stampa(f'Single stroke: Begin/End: {begin_time}/{end_time}, Delay: {delay}', logger=self.log)
+
+        # Create Retinotopy object
+        r = Retinotopy(self.path_session,
+                       cond_name=name_cond,
+                       name=f"{self.id_name}_cond_{name_cond}",
+                       session_name=self.id_name,
+                       signal=avr_df,
+                       mask=self.mask,
+                       green=self.green,
+                       stroke_type='single stroke')
+        r.time_limits = time_limits
+
+        # Compute retinotopy map
+        _, blurred, blobs, centroids, norm_centroids, _, _ = r.single_seq_retinotopy(avr_df,
+                                                                                     None, None,
+                                                                                     begin_time,
+                                                                                     end_time,
+                                                                                     sig_blank=mean_blank,
+                                                                                     std_blank=self.std_blank,
+                                                                                     zero_frames=r.time_limits[0],
+                                                                                     mask=self.mask,
+                                                                                     lim_blob_detect=self.limit_blob_detection,
+                                                                                     all_frame_thres=self.all_frame_threshold)
+
+        r.blob = blobs
+        r.retino_pos = centroids[0]
+        r.signal = z_s_visual
+        blurred[~r.mask] = np.nan
+        r.map = blurred
+
+        # Use precomputed centroid if specified
+        centroid_to_use = self.dictionary_retinotopies[stroke_name].retino_pos if stroke_name else r.retino_pos
+        window_dim = None if self.full_frame else self.window_dimension
+
+        utils.stampa(f'Retino pos: {r.retino_pos}, Using centroid: {centroid_to_use}, Window: {window_dim}', logger=self.log)
+
+        # Per-trial analysis
+        pos_single_trials_data = [r.single_seq_retinotopy(i,
+                                                          centroid_to_use,
+                                                          window_dim,
+                                                          begin_time,
+                                                          end_time,
+                                                          df_f0_foi=foi,
+                                                          mask=self.mask,
+                                                          zero_frames=r.time_limits[0],
+                                                          sig_blank=mean_blank,
+                                                          std_blank=self.std_blank,
+                                                          lim_blob_detect=self.limit_blob_detection,
+                                                          all_frame_thres=self.all_frame_threshold)
+                                  for i in df]
+
+        # Store trial data
+        pos_centroids = list(zip(*[trial[0] for trial in pos_single_trials_data]))
+        r.distribution_positions = pos_centroids
+
+        # Optional plotting
+        if self.visualization_switch:
+            centroids_plot = [[i] for i in list(zip(*pos_single_trials_data))[4]]
+            dv.whole_time_sequence(list(zip(*pos_single_trials_data))[1],
+                                   blbs=list(zip(*pos_single_trials_data))[2],
+                                   cntrds=centroids_plot,
+                                   mask=None,
+                                   max=95,
+                                   min=15,
+                                   blur=False,
+                                   adaptive_vm=True,
+                                   ext='png',
+                                   name_analysis_=os.path.join(self.retinotopic_path_folder, self.id_name, name_cond),
+                                   name = f'sanity_check_single_trial_stroke_n_0_{name_cond}_{self.id_name}')
+
+        utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0) - start_time}!\n', logger=self.log)
+
+        return r
+
+    def get_multiple_stroke_retinotopy(self,
+                                       name_cond,
+                                       time_limits,
+                                       cd,
+                                       stroke_number=0,
+                                       stroke_name=None,
+                                       time_step=None,
+                                       n_repeats=1):
+        """
+        Custom method to compute retinotopy maps for repeated presentations of the same stroke.
+
+        Parameters:
+            - name_cond (str): name of condition
+            - time_limits (tuple): (start_frame, end_frame)
+            - cd (obj): calcium data object
+            - stroke_number (int): which stroke within the sequence
+            - stroke_name (str): key for previous retinotopy results
+            - time_step (int): manually defined time step between strokes (in frames)
+            - n_repeats (int): how many repeated stroke appearances to analyze
+
+        Returns:
+            - List of Retinotopy objects, one for each repeated stroke instance.
+        """
+
+        start_time = datetime.datetime.now().replace(microsecond=0)
+
+        # Extract metadata
+        a = self.stimulus_metadata['pos metadata']
+        space_step = a[name_cond]['inter stimulus space']
+        starting_time = a[name_cond]['start']  # in frames
+
+        # Calculate time_step if not provided
+        if time_step is None:
+            time_step = int(np.ceil((1 / self.stimulus_metadata['speed']) * space_step * self.acquisition_frequency))
+
+        utils.stampa(f'Custom/computed time_step: {time_step}, starting_time: {starting_time}', logger=self.log)
+
+        # Pre-compute mean df/F0 and blanks
+        df = md.get_selected(cd.df_fz, cd.autoselection)
+        avr_df = np.nanmean(df, axis=0)
+
+        mean_blank = np.nanmean(self.mean_blank, axis=0)
+        mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15)
+        mean_blank = np.nan_to_num(mean_blank, nan=np.nanpercentile(mean_blank, 20))
+
+        z_s_visual = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq=True)
+
+        retinotopy_results = []
+
+        for repeat_idx in range(1, n_repeats + 1):
+            # Compute custom begin/end times per repeat
+            begin_time = (time_limits[0] + starting_time + stroke_number * time_step) * repeat_idx
+            end_time = begin_time + time_step
+
+            utils.stampa(f'\n[Repeat {repeat_idx}] Begin/End: {begin_time}/{end_time}', logger=self.log)
+
+            # Instantiate Retinotopy object
+            r = Retinotopy(self.path_session,
+                           cond_name=name_cond,
+                           name=f"{self.id_name}_cond_{name_cond}_rep{repeat_idx}",
+                           session_name=self.id_name,
+                           signal=avr_df,
+                           mask=self.mask,
+                           green=self.green,
+                           stroke_type='multiple stroke')
+            r.time_limits = time_limits
+
+            # Compute retinotopic map and blobs
+            _, blurred, blobs, centroids, norm_centroids, _, _ = r.single_seq_retinotopy(avr_df,
+                                                                                         None, None,
+                                                                                         begin_time,
+                                                                                         end_time, 
+                                                                                         sig_blank=mean_blank, 
+                                                                                         std_blank=self.std_blank, 
+                                                                                         zero_frames=r.time_limits[0], 
+                                                                                         mask=self.mask, 
+                                                                                         lim_blob_detect=self.limit_blob_detection, 
+                                                                                         all_frame_thres=self.all_frame_threshold)
+
+            r.blob = blobs
+            r.retino_pos = centroids[0]
+            r.signal = z_s_visual
+            blurred[~r.mask] = np.nan
+            r.map = blurred
+
+            centroid_to_use = self.dictionary_retinotopies[stroke_name].retino_pos if stroke_name else r.retino_pos
+            window_dim = None if self.full_frame else self.window_dimension
+
+            utils.stampa(f'→ Retino pos: {r.retino_pos}, Using centroid: {centroid_to_use}, Window: {window_dim}', logger=self.log)
+
+            # Single-trial analysis
+            pos_single_trials_data = [r.single_seq_retinotopy(i,
+                                                              centroid_to_use,
+                                                              window_dim,
+                                                              begin_time,
+                                                              end_time,
+                                                              df_f0_foi=(0, time_step),
+                                                              mask=self.mask,
+                                                              zero_frames=r.time_limits[0],
+                                                              sig_blank=mean_blank,
+                                                              std_blank=self.std_blank,
+                                                              lim_blob_detect=self.limit_blob_detection,
+                                                              all_frame_thres=self.all_frame_threshold)
+                                      for i in df]
+
+            # Save centroids
+            pos_centroids = list(zip(*[trial[0] for trial in pos_single_trials_data]))
+            r.distribution_positions = pos_centroids
+
+            # Optional visualization
+            if self.visualization_switch:
+                if repeat_idx > 1:
+                    name_file = f'sanity_check_single_trial_stroke_n_{stroke_number}_{name_cond}{repeat_idx}_{self.id_name}'
+                else:
+                    name_file = f'sanity_check_single_trial_stroke_n_{stroke_number}_{name_cond}_{self.id_name}'
+
+                centroid_lists = [[i] for i in list(zip(*pos_single_trials_data))[4]]
+                dv.whole_time_sequence(list(zip(*pos_single_trials_data))[1],
+                                       blbs=list(zip(*pos_single_trials_data))[2],
+                                       cntrds=centroid_lists,
+                                       mask=None,
+                                       max=95, min=15,
+                                       blur=False,
+                                       adaptive_vm=True,
+                                       ext='png',
+                                       name_analysis_= os.path.join(self.retinotopic_path_folder, self.id_name, name_cond),
+                                       name = name_file)
+
+            retinotopy_results.append(r)
+
+        utils.stampa(f'All repeats done in {datetime.datetime.now().replace(microsecond=0) - start_time}!', logger=self.log)
+        return retinotopy_results
 
     def plot_stuff(self, retinotopic_path_folder, name_cond, colrs, dict_retino):
         if name_cond not in list(self.cond_am.values()):
@@ -1135,20 +1386,91 @@ def subtraction_among_conditions(path_session,
     frames_single_trial    =  list(list(zip(*pos_single_trial_data))[1])
     params[name_params].append((frames_single_trial, blobs_single_trial, centroids_single_trial)) #For sanity check plots 9
     return params, pos_inferred_averaged 
-                
-def get_retinotopic_single_pos(retinotopic_path_folder, single_pos_cd_names, path_session, denoise_flag = False):
+
+def get_all_normalized_distributions(cond_dict, sess_names, flag_denoise = False):
+
+    dict_norm_dist = {}
+
+    for session, v in cond_dict.items():
+        dict_norm_dist[session] = {}
+        list_am, list_pos   = trj.get_cond_names(cond_dict[session])
+        metadata_conds_dict = utils.get_stimulus_metadata(sess_names[session])
+        dict_retino_conds   = load_all_retino_per_session(sess_names[session], flag_denoise = flag_denoise)
+        
+        point_on_trajectory, distributions_pos, map_shape = get_retinotopic_single_pos(dict_retino_conds, list_pos)
+        
+        xs_real       = list(list(zip(*point_on_trajectory))[0])
+        theta, xs, ys = trj.get_angle_distribution(point_on_trajectory, map_shape)
+        x, y, _       = trj.rotate_distribution(xs, ys, theta = theta)
+        
+        unit, center          = trj.get_unit_n_center(distributions_pos, metadata_conds_dict, list_pos, theta)
+        norm_distribution_pos = [trj.distribution_coords_normalize(i,
+                                                                   unit, 
+                                                                   center, 
+                                                                   theta) for i in distributions_pos]
+
+        dict_norm_dist[session] = {k:v for k, v in zip(list_pos, norm_distribution_pos)}
+        
+        # point_on_trajectory_am = list()
+        norm_distributions_am  = list()
+        norm_distributions_sub = list()
+    
+        sub_cds                = utils.get_conds_for_sub(sess_names[session])
+    
+        for cond, vv in v.items():
+            am_cd = dict_retino_conds[cond][-1]
+            # point_on_trajectory_am.append(am_cd.retino_pos)
+           
+            id_first = list_pos.index(vv[0])
+            id_last  = list_pos.index(vv[-1])
+    
+            print(f'Id first {id_first} and last {id_last}')
+            
+            x_amlast, y_amlast = trj.distribution_coords_normalize(am_cd.distribution_positions,
+                                                                   unit, 
+                                                                   center, 
+                                                                   theta) 
+    
+    
+            x_amlast = (np.array(x_amlast) - np.nanmedian(norm_distribution_pos[id_last][0]))*np.sign(xs_real[id_last] - xs_real[id_first])
+            y_amlast =  np.array(y_amlast) - np.nanmedian(norm_distribution_pos[id_last][1])
+            norm_distributions_am.append([x_amlast, y_amlast])
+
+            dict_norm_dist[session][cond] = [x_amlast, y_amlast]
+    
+            try:
+                sub    = f'{cond}-{sub_cds[cond]}'
+                sub_cd = dict_retino_conds[sub][0]
+        
+                x_amlast_sub, y_amlast_sub = trj.distribution_coords_normalize(sub_cd.distribution_positions,
+                                                                               unit, 
+                                                                               center, 
+                                                                               theta) 
+                x_amlast_sub = (np.array(x_amlast_sub) - np.nanmedian(norm_distribution_pos[id_last][0]))*np.sign(xs_real[id_last] - xs_real[id_first])
+                y_amlast_sub =  np.array(y_amlast_sub) - np.nanmedian(norm_distribution_pos[id_last][1])
+                norm_distributions_sub.append([x_amlast_sub, y_amlast_sub])        
+                dict_norm_dist[session][sub] = [x_amlast_sub, y_amlast_sub]
+
+            except:
+                print(f'{cond} has no possible subtraction')
+    
+        del dict_retino_conds
+        
+    return dict_norm_dist
+
+def get_retinotopic_single_pos(dict_retino_conds, single_pos_cd_names):
     single_pos_retinotopy = []
-    session_id_name = utils.get_session_id_name(path_session)
-    if denoise_flag:
-        session_id_name = f'{session_id_name}_Denoise'
+    distributions_pos     = []
 
     for v in single_pos_cd_names:
-        single_pos_tmp           = Retinotopy(path_session)
-        tmp_folder               = os.path.join(retinotopic_path_folder, session_id_name, v, 'retino', f'retinotopy_{v}')
-        print(f'Load retinotopy for {v} at {tmp_folder}')
-        single_pos_tmp.load_retino(tmp_folder)
+        single_pos_tmp = dict_retino_conds[v][0]
         single_pos_retinotopy.append(single_pos_tmp.retino_pos)
-    return single_pos_retinotopy
+        
+        # Sanity check on nan values
+        x_clean, y_clean = trj.clean_coords_tuple(single_pos_tmp.distribution_positions[0], single_pos_tmp.distribution_positions[1])
+        distributions_pos.append([x_clean, y_clean])
+
+    return single_pos_retinotopy, distributions_pos, single_pos_tmp.map.shape
 
 def load_all_retino_per_session(path_session, 
                                 flag_denoise = True, 
