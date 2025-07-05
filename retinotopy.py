@@ -303,18 +303,19 @@ class RetinoSession(md.Session):
         # Single stroke condition
         if name_cond in list(self.cond_pos.values()):
             # Try to check if retino_cond already exists
-            # try:
-            retino_cond = Retinotopy(self.path_session)
-            tmp_load = os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, 'retino', f'retinotopy_{name_cond}')
-            utils.stampa(f'Attempt to load retino file: {tmp_load}', logger=self.log)
-            retino_cond.load_retino(tmp_load) 
-            utils.stampa(f'{name_cond} successfully loaded!', logger = self.log)                   
+            try:
+                retino_cond = Retinotopy(self.path_session)
+                tmp_retino_folder = os.path.join(dv.STORAGE_PATH, utils.NAME_RETINO_ANALYSIS)
+                tmp_load = os.path.join(tmp_retino_folder, self.id_name, name_cond, 'retino', f'retinotopy_{name_cond}')
+                utils.stampa(f'Attempt to load retino file: {tmp_load}', logger=self.log)
+                retino_cond.load_retino(tmp_load) 
+                utils.stampa(f'{name_cond} successfully loaded!', logger = self.log)                   
             # If does not, it build it
-            # except:
-            #     retino_cond = self.get_single_stroke_retinotopy(name_cond, time_limits, cd, stroke_name=None)
-            #     # If true store variables
-            #     if self.storage_switch:
-            #         retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond))
+            except:
+                retino_cond = self.get_single_stroke_retinotopy(name_cond, time_limits, cd, stroke_name=None)
+                # If true store variables
+                if self.storage_switch and (self.session_switch and not self.peak_stability_switch):
+                    retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond))
         
             # Extract visualization utility variables
             indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
@@ -341,8 +342,9 @@ class RetinoSession(md.Session):
                     retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j + '_'+str(i+1)))
 
         # If true, store pictures
-        if self.visualization_switch:
+        if self.visualization_switch and (self.session_switch and not self.peak_stability_switch):
             self.plot_stuff(self.retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
+            
         utils.stampa(f'End processing retinotopy analysis for condition {name_cond}')
         utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
         return 
@@ -608,7 +610,7 @@ class RetinoSession(md.Session):
         r.distribution_positions = pos_centroids
 
         # Optional plotting
-        if self.visualization_switch:
+        if self.visualization_switch and (self.session_switch and not self.peak_stability_switch):
             centroids_plot = [[i] for i in list(zip(*pos_single_trials_data))[4]]
             dv.whole_time_sequence(list(zip(*pos_single_trials_data))[1],
                                    blbs=list(zip(*pos_single_trials_data))[2],
