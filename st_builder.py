@@ -360,7 +360,7 @@ class SpatioTemporalSession:
         utils.stampa(f'Original frame shape: {self.original_frame_shape}\n', logger = self.log)  
         utils.stampa(f'Pixel Spacing: {self.pixel_spacing}\n', logger = self.log)  
  
-        self.single_pos         = retinotopy.get_retinotopic_single_pos(self.retin_folder, 
+        self.single_pos, _, _   = retinotopy.get_retinotopic_single_pos(self.retin_folder, 
                                                                         list(self.retino_session.cond_pos.values()), 
                                                                         self.path_session, 
                                                                         denoise_flag = self.denoise_switch)
