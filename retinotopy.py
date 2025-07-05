@@ -67,6 +67,8 @@ class RetinoSession(md.Session):
                     # window_dim = 600,
                     acquisition_fq = 100,#Hz
                     denoise_flag = False,
+                    session_switch = True,
+                    peak_stability_switch = False,                    
                     **kwargs):
         #path_session, logs_switch = False, deblank_switch = False
 
@@ -96,6 +98,8 @@ class RetinoSession(md.Session):
             self.log = logger        
         # If denoised data stored, it's gonna load those
         self.denoise_switch = denoise_flag
+        self.session_switch = session_switch 
+        self.peak_stability_switch = peak_stability_switch            
         self.cond_names = None
         self.header = super().get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         # All blks names loaded
@@ -1733,7 +1737,9 @@ if __name__=="__main__":
                                    mask_switch=args.mask_switch,
                                    denoise_flag=args.denoised_switch,
                                    acquisition_fq= args.acquisition_fq,
-                                   data_vis_switch=args.data_vis_switch) 
+                                   data_vis_switch=args.data_vis_switch,
+                                   session_switch = args.session_switch,
+                                   peak_stability_switch = args.peak_stability_switch) 
     
     if args.session_switch and not args.peak_stability_switch:
         retino_session.get_retino_session()
