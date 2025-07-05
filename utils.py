@@ -2,7 +2,7 @@ import cv2 as cv
 import json
 import numpy as np
 import scipy.io as scio
-import datetime, fnmatch, logging, os, pickle, sys, struct
+import datetime, fnmatch, logging, os, pickle, re, sys, struct
 
 from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
@@ -113,7 +113,15 @@ class DrawLineWidget(object):
 
     def show_image(self):
         return self.clone
-
+    
+def cardinal_sort(strings):
+    def alphanum_key(s):
+        match = re.match(r"([a-zA-Z]+)(\d+)", s)
+        if match:
+            prefix, number = match.groups()
+            return (prefix, int(number))
+        return (s, 0)  # fallback
+    return sorted(strings, key=alphanum_key)
 
 
 def detrending(signal):
