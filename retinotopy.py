@@ -303,10 +303,12 @@ class RetinoSession(md.Session):
         # Single stroke condition
         if name_cond in list(self.cond_pos.values()):
             # Try to check if retino_cond already exists
-            try:
-                retino_cond = Retinotopy(self.path_session)
-                retino_cond.load_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, 'retino', f'retinotopy_{name_cond}')) 
-                utils.stampa(f'{name_cond} successfully loaded!', logger = self.log)                   
+            # try:
+            retino_cond = Retinotopy(self.path_session)
+            tmp_load = os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, 'retino', f'retinotopy_{name_cond}')
+            utils.stampa(f'Attempt to load retino file: {tmp_load}', logger=self.log)
+            retino_cond.load_retino(tmp_load) 
+            utils.stampa(f'{name_cond} successfully loaded!', logger = self.log)                   
             # If does not, it build it
             except:
                 retino_cond = self.get_single_stroke_retinotopy(name_cond, time_limits, cd, stroke_name=None)
