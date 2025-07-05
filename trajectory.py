@@ -45,9 +45,11 @@ def distribution_coords_normalize(points_distribution, unity, center, rotation_t
     # Linearize coordinates
     xs = points_distribution[0]
     ys = points_distribution[1]
+    
+    x_clean, y_clean = clean_coords_tuple(xs, ys)
 
     # Rotate distribution according the rotation_theta provided
-    x_to_normalize, y_to_normalize, _ = rotate_distribution(xs, ys, theta = rotation_theta)
+    x_to_normalize, y_to_normalize, _ = rotate_distribution(x_clean, y_clean, theta = rotation_theta)
 
     # Normalization of the coordinates for their center and the picked unity
     x_dva_rotated = [(i-center[0])/unity for i in x_to_normalize]
@@ -71,14 +73,12 @@ def get_angle_distribution(points_distribution, dim_frame):
     # Then extraction of slope of the fitting
     theta = get_rad(a, b)
     # Return the detected angle of the distribution -in rad-
-    return theta
+    return theta, a, b
 
-def get_cond_names(retino_pos_am, ss_label = 'pos'):
+def get_cond_names(retino_pos_am):
     cd_am         = list(retino_pos_am.keys())
     cd_pos        = list(set([pos for i in retino_pos_am.values() for pos in i]))
-
-    tmp           = sorted([int(i.split(ss_label)[1]) for i in cd_pos])
-    sorted_cd_pos = [f'{ss_label}{i}' for i in tmp]    
+    sorted_cd_pos = utils.cardinal_sort(cd_pos)
     return cd_am, sorted_cd_pos 
 
 def get_mask_on_trajectory(dims, xs, ys, radius = 2):
@@ -99,9 +99,8 @@ def get_rad(xs, ys):
     '''
     return -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
 
-def get_spacing_dva(dict_metadata_session, sorted_cd_pos, retino_pos_am, ss_label = 'pos'):
+def get_spacing_dva(dict_metadata_session, sorted_cd_pos):
     
-    cd_am, sorted_cd_pos = get_cond_names(retino_pos_am, ss_label = ss_label)
     tmp_am_cds           = list(dict_metadata_session['pos metadata'].keys())
     
     for k in tmp_am_cds:
@@ -148,6 +147,24 @@ def get_trajectory_mask(points_in_space, frame_dimension, extremities = (0,0)):
     traject_mask = get_mask_on_trajectory(frame_dimension, a, b, radius = 15)
     return traject_mask
 
+def get_unit_n_center(distributions_pos, metadata_conds_dict, list_pos, theta):
+    max_distance =  get_spacing_dva(metadata_conds_dict, list_pos)
+    print(f'Max distance {max_distance}')
+    id_first = 0
+    id_last  = len(list_pos)-1
+
+    x1, y1, _ = rotate_distribution(distributions_pos[id_first][0], 
+                                        distributions_pos[id_first][1], 
+                                        theta = theta)
+
+    x2, y2, _ = rotate_distribution(distributions_pos[id_last][0], 
+                                        distributions_pos[id_last][1], 
+                                        theta = theta)
+
+    unit   = np.abs(np.nanmean(x1)-np.nanmean(x2))/max_distance
+    center = (np.nanmean(x1), np.nanmean(y1))
+    return unit, center
+
 def normalize_distributions(dict_metadata_session, cond_am, dict_dists, unity, theta_trj):
     
     single_stroke = dict_metadata_session['pos metadata'][cond_am]['conditions']
@@ -187,11 +204,11 @@ def rotate_distribution(xs, ys, theta = None):
     if theta is None:
         theta = get_rad(xs, ys)
     # subtracting mean from original coordinates and saving result to X_new and Y_new 
-    X_new = xs - np.mean(xs)
-    Y_new = ys - np.mean(ys)
+    X_new = xs - np.nanmean(xs)
+    Y_new = ys - np.nanmean(ys)
 
     X_apu = [np.cos(theta)*i-np.sin(theta)*j for i, j in zip(X_new, Y_new) ]
     Y_apu = [np.sin(theta)*i+np.cos(theta)*j for i, j in zip(X_new, Y_new) ]
 
     # adding mean back to rotated coordinates
-    return X_apu + np.mean(xs), Y_apu + np.mean(ys), theta
+    return X_apu + np.nanmean(xs), Y_apu + np.nanmean(ys), theta
