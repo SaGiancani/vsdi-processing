@@ -305,23 +305,21 @@ class RetinoSession(md.Session):
             # Try to check if retino_cond already exists
             try:
                 retino_cond = Retinotopy(self.path_session)
-                retino_cond.load_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, 'retino'))                    
+                retino_cond.load_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, 'retino', f'retinotopy_{name_cond}')) 
+                utils.stampa(f'{name_cond} successfully loaded!', logger = self.log)                   
             # If does not, it build it
             except:
                 retino_cond = self.get_single_stroke_retinotopy(name_cond, time_limits, cd, stroke_name=None)
-                # retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = None, stroke_name = None, str_type = 'single stroke') 
-                # Store single stroke condition
-                self.dictionary_retinotopies[name_cond] = retino_cond
-                # Extract visualization utility variables
-                indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
-                colrs.append(dv.COLORS_7[indeces_colors])
-                # If true, store pictures
-                if self.visualization_switch:
-                    self.plot_stuff(self.retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
                 # If true store variables
                 if self.storage_switch:
                     retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond))
         
+            # Extract visualization utility variables
+            indeces_colors = [list(self.cond_pos.values()).index(name_cond)][0]
+            colrs.append(dv.COLORS_7[indeces_colors])
+            # Store single stroke condition
+            self.dictionary_retinotopies[name_cond] = retino_cond
+
         # Multiple stroke condition
         elif name_cond in list(self.cond_am.values()):
             # Storing variable
@@ -330,7 +328,6 @@ class RetinoSession(md.Session):
                 utils.stampa(f'The stroke {j} is the number {i}\n', logger=self.log)
                 retino_cond = self.get_multiple_stroke_retinotopy(name_cond, time_limits, cd, stroke_number=i, stroke_name=j, n_repeats=1)
                 retino_cond = retino_cond[0]
-                # retino_cond = self.get_stroke_retinotopy(name_cond, time_limits, cd, stroke_number = i, stroke_name = j, str_type = 'multiple stroke')
                 # Store single stroke within AM
                 self.dictionary_retinotopies[name_cond][j] = retino_cond
                 # Extract visualization utility variables
@@ -340,9 +337,10 @@ class RetinoSession(md.Session):
                 # If true store variables
                 if self.storage_switch:
                     retino_cond.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, name_cond +'-'+j + '_'+str(i+1)))
-            # If true, store pictures
-            if self.visualization_switch:
-                self.plot_stuff(self.retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
+
+        # If true, store pictures
+        if self.visualization_switch:
+            self.plot_stuff(self.retinotopic_path_folder, name_cond, colrs, self.dictionary_retinotopies)
         utils.stampa(f'End processing retinotopy analysis for condition {name_cond}')
         utils.stampa(f'Condition {name_cond} elaborated in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)                     
         return 
@@ -895,6 +893,46 @@ class RetinoSession(md.Session):
                                                          logger = self.log)
             dict_subtrs[name_subtrcts] = sub_x                
         return params, dict_subtrs
+
+    def get_time_evolution_peak(self, time_limits = None, repeatitions = 4, time_window_length = 2):
+        start_time = datetime.datetime.now().replace(microsecond=0)
+        utils.stampa(f'Peak stability analysis for data session {self.id_name} start to process...\n', logger=self.log)
+
+        self.retinotopic_path_folder = dv.set_storage_folder(storage_path = dv.STORAGE_PATH, name_analysis = os.path.join(utils.NAME_PEAK_STABILITY_ANALYSIS))
+
+        # Create Retinotopic Analysis folder path
+        utils.stampa(f'Data are gonna be stored at {self.retinotopic_path_folder}\n', logger=self.log)                                         
+
+        # Storing/Loading single stroke retinotopy
+        for cond_id, cond_name in self.cond_pos.items():
+            self.get_retinotopy(cond_name, None)
+
+        for name_cond in list(self.cond_am.values()):
+            # Load data
+            cd          = self.get_data_to_process(name_cond)
+            # Instance dict for new cond AM
+            self.dictionary_retinotopies[name_cond] = dict()
+            # Pick last stroke of the sequence
+            id_strokes  = len(self.retino_pos_am[name_cond])-1
+            stroke_pos  = self.retino_pos_am[name_cond][-1]
+            utils.stampa(f'The stroke {stroke_pos} is the number {id_strokes+1}\n', logger=self.log)
+            retino_cond = self.get_multiple_stroke_retinotopy(name_cond, 
+                                                              time_limits, 
+                                                              cd, 
+                                                              stroke_number=id_strokes, 
+                                                              stroke_name=stroke_pos, 
+                                                              n_repeats = repeatitions, 
+                                                              time_step = time_window_length)
+            self.dictionary_retinotopies[name_cond][id_strokes] = retino_cond
+
+            if self.storage_switch:
+                tmp = dv.set_storage_folder(storage_path = self.retinotopic_path_folder, name_analysis = os.path.join(self.id_name, name_cond))
+                folder_path_store= os.path.join(tmp, f'{name_cond}-{stroke_pos}_nsstroke{id_strokes+1}_reps{repeatitions}_twind{time_window_length}')
+                utils.inputs_save(self.dictionary_retinotopies, folder_path_store)
+    
+        utils.stampa(f'Peak stability elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                                         
+        return
+
 
 class Retinotopy:
     def __init__(self, 
@@ -1594,7 +1632,20 @@ if __name__=="__main__":
                         default = 100,
                         required=False,
                         help='Frequency of acquisition') 
-
+    
+    parser.add_argument('--reps', 
+                        dest='repeatitions',
+                        type=int,
+                        default = 4,
+                        required=False,
+                        help='Repeatitions for Peak stability analysis') 
+    
+    parser.add_argument('--time_wind', 
+                        dest='time_window_length',
+                        type=int,
+                        default = 2,
+                        required=False,
+                        help='Length of time window for Peak stability analysis') 
 
     parser.add_argument('--full_frame', 
                         dest='full_frame_switch', 
@@ -1636,6 +1687,22 @@ if __name__=="__main__":
                         action='store_false')
     parser.set_defaults(denoised_switch=False)   
 
+    parser.add_argument('--peak_stability', 
+                        dest='peak_stability_switch',
+                        action='store_true')
+    parser.add_argument('--no-peak_stability', 
+                        dest='peak_stability_switch', 
+                        action='store_false')
+    parser.set_defaults(peak_stability_switch=False)     
+
+    parser.add_argument('--flag_regular_session', 
+                        dest='session_switch',
+                        action='store_true')
+    parser.add_argument('--no-flag_regular_session', 
+                        dest='session_switch', 
+                        action='store_false')
+    parser.set_defaults(session_switch=True)     
+
 
     start_process_time = datetime.datetime.now().replace(microsecond=0)
     args = parser.parse_args()
@@ -1664,6 +1731,12 @@ if __name__=="__main__":
                                    acquisition_fq= args.acquisition_fq,
                                    data_vis_switch=args.data_vis_switch) 
     
-    retino_session.get_retino_session()
+    if args.session_switch and not args.peak_stability_switch:
+        retino_session.get_retino_session()
+
+    elif args.peak_stability_switch:
+        retino_session.get_time_evolution_peak(repeatitions = args.repeatitions, 
+                                               time_window_length = args.time_window_length)
+
     utils.write_parse(vars(args), os.path.join(retino_session.retinotopic_path_folder, retino_session.id_name))
     utils.stampa(f'Retinotopic analysis for session {retino_session.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
