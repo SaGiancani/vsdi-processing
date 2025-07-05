@@ -292,8 +292,8 @@ class RetinoSession(md.Session):
 
 
     def get_retinotopy(self,
-                        name_cond, 
-                        time_limits):
+                       name_cond, 
+                       time_limits):
         utils.stampa(f'Start processing retinotopy analysis for condition {name_cond} \n', logger=self.log)
 
         start_time = datetime.datetime.now().replace(microsecond=0)            
@@ -452,7 +452,7 @@ class RetinoSession(md.Session):
                                                                                      std_blank = self.std_blank,
                                                                                      zero_frames = r.time_limits[0],
                                                                                      mask = self.mask,
-                                                                                     lim_blob_detect  = self.limit_blob_detection,
+                                                                                     lim_blob_detect = self.limit_blob_detection,
                                                                                      all_frame_thres = self.all_frame_threshold)
 
         r.blob       = blobs
@@ -542,14 +542,6 @@ class RetinoSession(md.Session):
         # Z-score of visual response
         z_s_visual = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq=True)
 
-        # Inject a synaptic delay (60ms)
-        delay = int(np.ceil(0.06 / (1 / self.acquisition_frequency)))
-        begin_time = time_limits[0] + delay
-        end_time = time_limits[1] + delay
-        foi = None
-
-        utils.stampa(f'Single stroke: Begin/End: {begin_time}/{end_time}, Delay: {delay}', logger=self.log)
-
         # Create Retinotopy object
         r = Retinotopy(self.path_session,
                        cond_name=name_cond,
@@ -559,7 +551,18 @@ class RetinoSession(md.Session):
                        mask=self.mask,
                        green=self.green,
                        stroke_type='single stroke')
-        r.time_limits = time_limits
+        
+        if (time_limits is not None):
+            r.time_limits = time_limits     
+
+        # Inject a synaptic delay (60ms)
+        delay      = int(np.ceil(0.06 / (1 / self.acquisition_frequency)))
+        begin_time = r.time_limits[0] + delay
+        end_time   = r.time_limits[1] + delay
+        foi        = None
+
+        utils.stampa(f'Single stroke: Begin/End: {begin_time}/{end_time}, Delay: {delay}', logger=self.log)
+
 
         # Compute retinotopy map
         _, blurred, blobs, centroids, norm_centroids, _, _ = r.single_seq_retinotopy(avr_df,
@@ -673,11 +676,6 @@ class RetinoSession(md.Session):
         retinotopy_results = []
 
         for repeat_idx in range(1, n_repeats + 1):
-            # Compute custom begin/end times per repeat
-            begin_time = (time_limits[0] + starting_time + stroke_number * time_step) * repeat_idx
-            end_time = begin_time + time_step
-
-            utils.stampa(f'\n[Repeat {repeat_idx}] Begin/End: {begin_time}/{end_time}', logger=self.log)
 
             # Instantiate Retinotopy object
             r = Retinotopy(self.path_session,
@@ -688,8 +686,18 @@ class RetinoSession(md.Session):
                            mask=self.mask,
                            green=self.green,
                            stroke_type='multiple stroke')
-            r.time_limits = time_limits
+            
+            if time_limits is not None:
+                r.time_limits = time_limits
 
+            # Compute custom begin/end times per repeat
+            begin_time = (r.time_limits[0] + starting_time + stroke_number * time_step) * repeat_idx
+            end_time   = begin_time + time_step
+            foi        = ((0, time_step))
+
+            utils.stampa(f'\n[Repeat {repeat_idx}] Begin/End: {begin_time}/{end_time}', logger=self.log)
+
+            
             # Compute retinotopic map and blobs
             _, blurred, blobs, centroids, norm_centroids, _, _ = r.single_seq_retinotopy(avr_df,
                                                                                          None, None,
@@ -719,7 +727,7 @@ class RetinoSession(md.Session):
                                                               window_dim,
                                                               begin_time,
                                                               end_time,
-                                                              df_f0_foi=(0, time_step),
+                                                              df_f0_foi=foi,
                                                               mask=self.mask,
                                                               zero_frames=r.time_limits[0],
                                                               sig_blank=mean_blank,
