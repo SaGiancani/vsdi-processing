@@ -802,16 +802,25 @@ class RetinoSession(md.Session):
                                  store_path = retinotopic_path_folder)
         
         else:
-            if len(list(self.retino_pos_am[name_cond])) <3:
-                col_distr = COLORS_STROKE_WITHIN_AM[0]
-            else:
-                col_distr = COLORS_STROKE_WITHIN_AM[1]
+            self.plot_multistroke(dict_retino, colrs, name_cond, retinotopic_path_folder)
+        return
+    
+    def plot_multistroke(self, dict_retino, colrs, name_cond, retinotopic_path_folder, name_pos = None, iter_value = None):
+        if len(list(self.retino_pos_am[name_cond])) <3:
+            col_distr = COLORS_STROKE_WITHIN_AM[0]
+        else:
+            col_distr = COLORS_STROKE_WITHIN_AM[1]
+
+        if name_pos is None:
             for c, name_pos in enumerate(list(self.retino_pos_am[name_cond])):
+                file_name = f'{name_cond}{name_pos}_{c+1}'
+                if iter_value is not None:
+                    file_name += f'_rep{iter_value}'
                 # Parameters for heatmap plotting
                 min_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 15)
                 max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
                 # Averaged hetmap plot
-                dv.plot_averaged_map(name_cond+name_pos+'_'+str(c+1), 
+                dv.plot_averaged_map(file_name, 
                                      dict_retino[name_cond][name_pos].blob, 
                                      dict_retino[name_cond][name_pos].retino_pos, 
                                      dict_retino[name_cond][name_pos].distribution_positions, 
@@ -823,18 +832,46 @@ class RetinoSession(md.Session):
                                      col_distr, 
                                      name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
                                      store_path = retinotopic_path_folder)
+        else:
+            c = list(self.retino_pos_am[name_cond]).index(name_pos)
+
+            if c<2:
+                col_distr = COLORS_STROKE_WITHIN_AM[0]
+            else:
+                col_distr = COLORS_STROKE_WITHIN_AM[1]
+
+            file_name = f'{name_cond}{name_pos}_{c+1}'
+            if iter_value is not None:
+                file_name += f'_rep{iter_value}'            
+            # Parameters for heatmap plotting
+            min_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 15)
+            max_bord = np.nanpercentile(dict_retino[name_cond][name_pos].map, 98)
+            # Averaged hetmap plot
+            dv.plot_averaged_map(file_name, 
+                                 dict_retino[name_cond][name_pos].blob, 
+                                 dict_retino[name_cond][name_pos].retino_pos, 
+                                 dict_retino[name_cond][name_pos].distribution_positions, 
+                                 dict_retino[name_cond][name_pos].map, 
+                                 dict_retino[name_pos].retino_pos, 
+                                 min_bord, max_bord, 
+                                 [colrs[c]], 
+                                 self.id_name, 
+                                 col_distr, 
+                                 name_analysis_ = os.path.join(self.id_name, name_cond, 'RetinotopicPositions'), 
+                                 store_path = retinotopic_path_folder)   
+
+        if iter_value is None:                     
             # Zscore
             dv.whole_time_sequence(dict_retino[name_cond][name_pos].signal, 
-                                   mask = dict_retino[name_cond][name_pos].mask,
-                                   name='z_sequence_'+ name_cond + self.id_name, 
-                                   max=80, min=20,
-                                   handle_lims_blobs = ((97.72, 100)),
-                                   #significant_thresh = np.percentile(dict_retino[name_cond][name_pos].signal, 97.72), 
-                                   global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
-                                   colors_centr = colrs,
-                                   ext='png',
-                                   name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))
-        return
+                                    mask = dict_retino[name_cond][name_pos].mask,
+                                    name='z_sequence_'+ name_cond + self.id_name, 
+                                    max=80, min=20,
+                                    handle_lims_blobs = ((97.72, 100)),
+                                    #significant_thresh = np.percentile(dict_retino[name_cond][name_pos].signal, 97.72), 
+                                    global_cntrds = [dict_retino[name_pos].retino_pos for name_pos in list(dict_retino[name_cond].keys())],
+                                    colors_centr = colrs,
+                                    ext='png',
+                                    name_analysis_= os.path.join(retinotopic_path_folder, self.id_name, name_cond))        
 
     def get_retino_subtraction(self, default_time_window = 20):
 
@@ -932,13 +969,26 @@ class RetinoSession(md.Session):
                                                               stroke_name=stroke_pos, 
                                                               n_repeats = repeatitions, 
                                                               time_step = time_window_length)
-            self.dictionary_retinotopies[name_cond][id_strokes] = retino_cond
+            
+            self.dictionary_retinotopies[name_cond][stroke_pos] = retino_cond
 
             if self.storage_switch:
-                tmp = dv.set_storage_folder(storage_path = self.retinotopic_path_folder, name_analysis = os.path.join(self.id_name, name_cond))
-                folder_path_store= os.path.join(tmp, f'{name_cond}-{stroke_pos}_nsstroke{id_strokes+1}_reps{repeatitions}_twind{time_window_length}')
-                utils.inputs_save(self.dictionary_retinotopies, folder_path_store)
-    
+                for n_r, retino_obj in enumerate(self.dictionary_retinotopies[name_cond][stroke_pos]):
+                    retino_obj.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, f'{name_cond}-{stroke_pos}_{id_strokes+1}-reps{n_r+1}'))
+
+            if self.visualization_switch:
+                colrs = list()
+                indeces_colors = [list(self.cond_pos.values()).index(stroke_pos)][0]
+                colrs = [dv.COLORS_7[indeces_colors]] * len(self.retino_pos_am[name_cond])
+
+                for n_r, retino_obj in enumerate(self.dictionary_retinotopies[name_cond][stroke_pos]):
+                    new_dict = {}
+                    new_dict[stroke_pos] = self.dictionary_retinotopies[stroke_pos]
+                    new_dict[name_cond]  = {}
+                    new_dict[name_cond][stroke_pos] = self.dictionary_retinotopies[name_cond][stroke_pos][n_r]
+
+                    self.plot_multistroke(new_dict, colrs, name_cond, self.retinotopic_path_folder, name_pos = stroke_pos, iter_value = n_r)
+
         utils.stampa(f'Peak stability elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                                         
         return
 
@@ -1744,10 +1794,10 @@ if __name__=="__main__":
     
     if args.session_switch and not args.peak_stability_switch:
         retino_session.get_retino_session()
+        utils.stampa(f'Retinotopic analysis for session {retino_session.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
 
     elif args.peak_stability_switch:
         retino_session.get_time_evolution_peak(repeatitions = args.repeatitions, 
                                                time_window_length = args.time_window_length)
 
     utils.write_parse(vars(args), os.path.join(retino_session.retinotopic_path_folder, retino_session.id_name))
-    utils.stampa(f'Retinotopic analysis for session {retino_session.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
