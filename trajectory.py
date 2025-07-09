@@ -99,6 +99,9 @@ def get_rad(xs, ys):
     '''
     return -(np.arctan2(np.array([ys[-1]-ys[0]]), np.array([xs[-1] - xs[0]])))
 
+def get_sign(xs_real, id_first, id_last):
+    return np.sign(xs_real[id_last] - xs_real[id_first])
+
 def get_spacing_dva(dict_metadata_session, sorted_cd_pos):
     
     tmp_am_cds           = list(dict_metadata_session['pos metadata'].keys())
@@ -165,40 +168,11 @@ def get_unit_n_center(distributions_pos, metadata_conds_dict, list_pos, theta):
     center = (np.nanmean(x1), np.nanmean(y1))
     return unit, center
 
-def normalize_distributions(dict_metadata_session, cond_am, dict_dists, unity, theta_trj):
-    
-    single_stroke = dict_metadata_session['pos metadata'][cond_am]['conditions']
-    print(single_stroke)
-    p0    = single_stroke[0]
-    pLast = single_stroke[-1]
-#     print(f'p0 {p0}: {(np.nanmean(dict_dists[p0][0][0]), np.nanmean(dict_dists[p0][0][1]) )} pLast {pLast}: {(np.nanmean(dict_dists[pLast][0][0]), np.nanmean(dict_dists[pLast][0][1]) )} step {step}')
-    
-    center = (np.nanmean(dict_dists[pLast][0][0]), np.nanmean(dict_dists[pLast][0][1]))
-    sub_cd = [i for i in list(dict_dists.keys()) if f'{cond_am}-' in i][0]
-    print(f'Unity {unity} center {center} Sub condition {sub_cd}')
-
-    x_norm_am, y_norm_am   = distribution_coords_normalize([(np.array([dict_dists[cond_am][-1][0]]))[0], dict_dists[cond_am][-1][1]], 
-                                                           unity, 
-                                                           center, 
-                                                           theta_trj)
-    x_norm_am  = [i[0] for i in x_norm_am]
-    y_norm_am  = [i[0] for i in y_norm_am]
-
-    x_norm, y_norm         = distribution_coords_normalize([(np.array([dict_dists[pLast][-1][0]]))[0], dict_dists[pLast][-1][1]], 
-                                                           unity, 
-                                                           center, 
-                                                           theta_trj)
-    x_norm     = [i[0] for i in x_norm]
-    y_norm     = [i[0] for i in y_norm]
-
-    x_norm_sub, y_norm_sub = distribution_coords_normalize([(np.array([dict_dists[sub_cd][-1][0]]))[0], dict_dists[sub_cd][-1][1]],
-                                                           unity, 
-                                                           center, 
-                                                           theta_trj)
-    x_norm_sub = [i[0] for i in x_norm_sub]
-    y_norm_sub = [i[0] for i in y_norm_sub]    
-    return (x_norm_am, y_norm_am), (x_norm, y_norm), (x_norm_sub, y_norm_sub)
-
+def normalize_distribution(raw_dist, unit, center, theta, ref_dist, flip_sign):
+    x, y = distribution_coords_normalize(raw_dist, unit, center, theta)
+    x = (np.array(x) - np.nanmedian(ref_dist[0])) * flip_sign
+    y = np.array(y) - np.nanmedian(ref_dist[1])
+    return [x, y]
 
 def rotate_distribution(xs, ys, theta = None):
     if theta is None:

@@ -4,6 +4,7 @@ import cv2 as cv
 import data_visualization as dv
 import middle_process as md
 import numpy as np
+import pandas as pd
 import process_vsdi as process
 import trajectory as trj
 
@@ -977,7 +978,6 @@ class RetinoSession(md.Session):
                     retino_obj.store_retino(os.path.join(self.retinotopic_path_folder, self.id_name, name_cond, f'{name_cond}-{stroke_pos}_{id_strokes+1}-reps{n_r+1}'))
 
             if self.visualization_switch:
-                colrs = list()
                 indeces_colors = [list(self.cond_pos.values()).index(stroke_pos)][0]
                 colrs = [dv.COLORS_7[indeces_colors]] * len(self.retino_pos_am[name_cond])
 
@@ -1055,13 +1055,8 @@ class Retinotopy:
     
 
     def load_retino(self, path):
-        if os.name != 'nt':
-            normalized_path = os.path.normpath(path)
-            tp = utils.inputs_load(normalized_path)
-        else:
-            normalized_path = os.path.normpath(path.replace('envau', '\envau_cifs'))
-            print(normalized_path)
-            tp = utils.inputs_load(normalized_path)
+        normalized_path = utils.normalize_path_os(path)
+        tp = utils.inputs_load(normalized_path)
 
         self.path_session = tp[0]
         self.cond_name = tp[1]
@@ -1099,7 +1094,7 @@ class Retinotopy:
             # returns JSON object as a dictionary
             data = json.load(f)
             a = json.loads(data)
-            print('Time limits loaded successfully')
+            # print('Time limits loaded successfully')
             return ((int(a[list(a.keys())[0]][stroke_type]['bottom limit']), int(a[list(a.keys())[0]][stroke_type]['upper limit'])))
             #return ((int(a[list(a.keys())[0]]['bottom limit']), int(a[list(a.keys())[0]]['upper limit'])))
 
@@ -1276,6 +1271,282 @@ class Retinotopy:
             c, d = ((x_min + a, y_min + b))
         return (c, d), blurred, blobs, centroids, (a,b), ztmp, single_centroids
     
+
+class RetinoLoaderManager:
+    def __init__(self, path_session, flag_denoise=True, storage_path=dv.STORAGE_PATH, peak_stability = False):
+        self.path_session        = path_session
+        self.flag_denoise        = flag_denoise
+        self.storage_path        = storage_path
+        self.peak_stability_flag = peak_stability
+        self.id_name = utils.get_session_id_name(path_session)
+        if self.flag_denoise:
+            self.id_name += "_Denoise"
+        self.retino_pos_am = utils.get_conditions_correspondance(path_session)
+        self.cond_am   = list(self.retino_pos_am.keys())
+        self.cond_pos  = list({pos for v in self.retino_pos_am.values() for pos in v})
+        self.dict_subs = utils.get_conds_for_sub(path_session)
+        self.data      = self.load_all()
+
+    def _get_base_path(self, name_analysis):
+        return os.path.join(self.storage_path, name_analysis, self.id_name)
+
+    def load_standard_pos(self, name_retino_analysis=utils.NAME_RETINO_ANALYSIS):
+        base_path = self._get_base_path(name_retino_analysis)
+        pos_data = {}
+        for pos in self.cond_pos:
+            folder = os.path.join(base_path, pos, "retino", f"retinotopy_{pos}")
+            # print(f'Path for loading single pos: {folder}')
+            r = Retinotopy(self.path_session)
+            r.load_retino(folder)
+            pos_data[pos] = [r]
+        return pos_data
+
+    def load_standard_am(self, name_retino_analysis=utils.NAME_RETINO_ANALYSIS):
+        base_path = self._get_base_path(name_retino_analysis)
+        am_data = {}
+        for cond, strokes in self.retino_pos_am.items():
+            retinos = []
+            for idx in range(len(strokes) - 1):
+                folder_name = f"{cond}-{strokes[idx]}_{idx + 1}"
+                folder_path = os.path.join(base_path, cond, folder_name, "retino", f"retinotopy_{cond}")
+                # print(f'Path for loading AM standard: {folder_path}')
+                r = Retinotopy(self.path_session)
+                r.load_retino(folder_path)
+                retinos.append(r)
+            if retinos:
+                am_data[cond] = retinos
+        return am_data
+
+    def load_standard_subtractions(self, name_retino_analysis=utils.NAME_RETINO_ANALYSIS):        
+        base_path = self._get_base_path(name_retino_analysis)
+        sub_data = {}
+        for am_cond, pos_cond in self.dict_subs.items():
+            sub_cond = f"{am_cond}-{pos_cond}"
+            folder = os.path.join(base_path, sub_cond, "retino", f"retinotopy_{am_cond}_{pos_cond}")
+            # print(f'Path for loading subs standard: {folder}')
+            r = Retinotopy(self.path_session)
+            r.load_retino(folder)
+            sub_data[sub_cond] = [r]
+        return sub_data
+
+    def load_peak_am(self, name_peak_analysis=utils.NAME_PEAK_STABILITY_ANALYSIS):
+        path_peak = utils.normalize_path_os(self._get_base_path(name_peak_analysis))
+        am_data = {}
+        for cond, strokes in self.retino_pos_am.items():
+            retinos = []
+            cd_folder    = os.path.join(path_peak, cond)  
+            reps_folders = os.listdir(cd_folder)
+            reps_folders = [i for i in reps_folders if '-reps' in i]
+            for rep in reps_folders:
+                folder_path = os.path.join(cd_folder, rep, "retino", f"retinotopy_{cond}")
+                # print(f'Path for loading AM peak stability: {folder_path}')
+                r = Retinotopy(self.path_session)
+                r.load_retino(folder_path)
+                retinos.append(r)
+            if retinos:
+                am_data[cond] = retinos
+        return am_data            
+
+    def load_all(self):
+        symmetric_difference_only = self.peak_stability_flag
+        data = {}
+        data.update(self.load_standard_pos())
+        print(data)
+        if symmetric_difference_only:
+            data.update(self.load_peak_am())
+        else:
+            data.update(self.load_standard_am())
+            data.update(self.load_standard_subtractions())
+        return data
+
+class PeakSet:
+    def __init__(self, session_path, cond_dict, stim_meta, flag_denoise=False, peak_stability=False):
+        self.session_path   = session_path
+        self.cond_dict      = cond_dict  # e.g., {'AM123': ['AM1', 'AM2', 'AM3'], ...}
+        self.list_am, self.list_pos = trj.get_cond_names(self.cond_dict)
+
+        self.stim_meta      = stim_meta  # metadata_dict[session]
+        self.flag_denoise   = flag_denoise
+        self.peak_stability = peak_stability
+
+        self.data_loader     = RetinoLoaderManager(self.session_path, peak_stability=peak_stability, flag_denoise=flag_denoise)
+        self.session_id_name = self.data_loader.id_name 
+        self.data = self.data_loader.data  # dict of condition -> RetinotopicObject(s)
+        
+        if not peak_stability:
+            self.sub_conds = utils.get_conds_for_sub(self.session_path)
+        else:
+            self.sub_conds = None
+
+        self.normalized_distributions = {}
+        self.single_pos_coords = {}
+        self.normalize()
+        self.meta_data_am      = self.normalize_cond_name()
+
+    def get_direction(self, list_pos):
+        tmp  = [self.single_pos_coords[j] for j in list_pos]
+        tmp  = list(list(zip(*tmp))[0])
+        sign = trj.get_sign(tmp, 0, -1)
+        if sign > 0:
+            tmp_dir = 'up'
+        else:
+            tmp_dir = 'dw'
+        return tmp_dir, sign
+
+    def normalize_cond_name(self):
+        dict_meta_data_am = {}
+
+        for n, loc in enumerate(self.list_pos):
+            dict_meta_data_am[loc] = f'pos{n+1}' 
+
+        for k,v in self.cond_dict.items():  
+            dict_meta_data_am[k] = {}
+            tmp_dir, _ = self.get_direction(v)
+            n_strokes = len(v)
+            isi       = self.stim_meta['pos metadata'][k]['inter stimulus space']
+
+            tmp_name = f'AM{n_strokes}_{tmp_dir}_isi{isi}'
+            dict_meta_data_am[k] = tmp_name
+
+        if not self.peak_stability:
+            for k,v in self.sub_conds.items():
+                tmp_dir, _ = self.get_direction(self.cond_dict[k])
+                isi  = self.stim_meta['pos metadata'][k]['inter stimulus space']
+
+                if v in self.cond_dict[k]:
+                    dict_meta_data_am[f'{k}-{v}'] = f'AM{len(self.cond_dict[k])}-pos_{tmp_dir}_isi{isi}'
+                else:
+                    dict_meta_data_am[f'{k}-{v}'] = f'AM{len(self.cond_dict[k])}-AM{len(self.cond_dict[v])}_{tmp_dir}_isi{isi}'
+
+        return dict_meta_data_am
+
+    def normalize(self):
+        """Normalize distributions per condition, storing result in self.normalized_distributions."""
+
+        point_on_trajectory, distributions_pos, map_shape = get_retinotopic_single_pos(self.data, self.list_pos)
+        self.single_pos_coords = {k:v for k, v in zip(self.list_pos, point_on_trajectory)} 
+
+        xs_real = list(list(zip(*point_on_trajectory))[0])
+        theta, _, _ = trj.get_angle_distribution(point_on_trajectory, map_shape)
+        unit, center = trj.get_unit_n_center(distributions_pos, self.stim_meta, self.list_pos, theta)
+
+        norm_distribution_pos = [trj.distribution_coords_normalize(i, unit, center, theta) for i in distributions_pos]
+
+        for loc in self.list_pos:
+            self.normalized_distributions[loc] = [trj.normalize_distribution(distributions_pos[self.list_pos.index(loc)], 
+                                                                             unit, 
+                                                                             center, 
+                                                                             theta, 
+                                                                             norm_distribution_pos[self.list_pos.index(loc)], 
+                                                                             1)]
+
+        for cond, pos_list in self.cond_dict.items():
+            try:
+                id_first = self.list_pos.index(pos_list[0])
+                id_last  = self.list_pos.index(pos_list[-1])
+            except ValueError:
+                continue  # skip if condition doesn't match list_pos
+    
+            flip_sign = trj.get_sign(xs_real, id_first, id_last)        
+            ref_dist  = norm_distribution_pos[id_last]
+
+            if self.peak_stability:
+                norm_reps = [trj.normalize_distribution(rep.distribution_positions, unit, center, theta, ref_dist, flip_sign) for rep in self.data[cond]]
+                self.normalized_distributions[cond] = norm_reps
+
+            else:
+                rep = self.data[cond][-1]
+                norm_reps = [trj.normalize_distribution(rep.distribution_positions, unit, center, theta, ref_dist, flip_sign)]
+                
+                self.normalized_distributions[cond] = norm_reps
+
+                # Subtraction
+                try:
+                    sub    = f'{cond}-{self.sub_conds[cond]}'
+                    sub_cd = self.data[sub][0]
+                    norm_reps = [trj.normalize_distribution(sub_cd.distribution_positions, unit, center, theta, ref_dist, flip_sign)]
+                    self.normalized_distributions[sub] = norm_reps
+
+                except:
+                    print(f'{cond} has no possible subtraction')
+
+    def summarize(self):
+        """Compute median and width summaries per condition."""
+        summary_rows = []
+
+        for cond, reps in self.normalized_distributions.items():
+            
+            if cond not in self.list_pos:
+                if cond in self.list_am:
+                    base_key = cond
+                else:
+                    for i in self.list_am:
+                        if i in cond:
+                            base_key = i                
+
+                positions = self.cond_dict.get(base_key, [])
+                matching_key = next(
+                    (k for k, v in self.stim_meta['pos metadata'].items()
+                    if v['conditions'] == positions or v['conditions'] == positions[::-1]), None)
+
+                if matching_key is None:
+                    continue
+
+                isi_val = self.stim_meta['pos metadata'][matching_key]['inter stimulus space']
+                n_pos = len(positions)
+
+                if cond in self.list_am:
+                    tmp_cd = self.cond_dict[cond]
+                    role = 'inAM'
+                else:
+                    for i in self.list_am:
+                        if i in cond:
+                            tmp_cd = self.cond_dict[i]
+                    role = 'sub'
+
+                _, sign = self.get_direction(tmp_cd)
+
+            else:
+                isi_val = 0
+                n_pos = 0
+                sign = 0
+                role = 'pos'
+
+            name_key = self.meta_data_am[cond]
+
+            for rep_index, (x, y) in enumerate(reps):
+                summary_rows.append({'session': self.session_id_name,
+                                     'condition': name_key,
+                                     'isi': isi_val,
+                                     'n_pos': n_pos,
+                                     'dir': sign,
+                                     'role': role,
+                                     'repeatition': rep_index,
+                                     'x_median': np.nanmedian(x),
+                                     'y_median': np.nanmedian(y),
+                                     'x_width': np.nanmax(x) - np.nanmin(x),
+                                     'y_width': np.nanmax(y) - np.nanmin(y)})
+
+        return summary_rows
+    
+    def summary_to_dataframe(self, summary, filepath=None):
+        """
+        Convert the list-based summary (one dict per repeatition) to a pandas DataFrame.
+        Optionally write to CSV if filepath is provided.
+
+        Parameters:
+        - summary: list of dicts, each representing one repetition entry.
+        - filepath: str path to CSV file to store results (optional).
+
+        Returns:
+        - pd.DataFrame
+        """
+        df = pd.DataFrame(summary)
+
+        if filepath is not None:
+            df.to_csv(filepath, index=False)
+
+        return df
 
 def get_retinotopic_features(FOI, min_lim = 90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):
     num_for_nan = np.nanpercentile(FOI, 20)
@@ -1492,77 +1763,6 @@ def subtraction_among_conditions(path_session,
     params[name_params].append((frames_single_trial, blobs_single_trial, centroids_single_trial)) #For sanity check plots 9
     return params, pos_inferred_averaged 
 
-def get_all_normalized_distributions(cond_dict, sess_names, flag_denoise = False):
-
-    dict_norm_dist = {}
-
-    for session, v in cond_dict.items():
-        dict_norm_dist[session] = {}
-        list_am, list_pos   = trj.get_cond_names(cond_dict[session])
-        metadata_conds_dict = utils.get_stimulus_metadata(sess_names[session])
-        dict_retino_conds   = load_all_retino_per_session(sess_names[session], flag_denoise = flag_denoise)
-        
-        point_on_trajectory, distributions_pos, map_shape = get_retinotopic_single_pos(dict_retino_conds, list_pos)
-        
-        xs_real       = list(list(zip(*point_on_trajectory))[0])
-        theta, xs, ys = trj.get_angle_distribution(point_on_trajectory, map_shape)
-        x, y, _       = trj.rotate_distribution(xs, ys, theta = theta)
-        
-        unit, center          = trj.get_unit_n_center(distributions_pos, metadata_conds_dict, list_pos, theta)
-        norm_distribution_pos = [trj.distribution_coords_normalize(i,
-                                                                   unit, 
-                                                                   center, 
-                                                                   theta) for i in distributions_pos]
-
-        dict_norm_dist[session] = {k:v for k, v in zip(list_pos, norm_distribution_pos)}
-        
-        # point_on_trajectory_am = list()
-        norm_distributions_am  = list()
-        norm_distributions_sub = list()
-    
-        sub_cds                = utils.get_conds_for_sub(sess_names[session])
-    
-        for cond, vv in v.items():
-            am_cd = dict_retino_conds[cond][-1]
-            # point_on_trajectory_am.append(am_cd.retino_pos)
-           
-            id_first = list_pos.index(vv[0])
-            id_last  = list_pos.index(vv[-1])
-    
-            print(f'Id first {id_first} and last {id_last}')
-            
-            x_amlast, y_amlast = trj.distribution_coords_normalize(am_cd.distribution_positions,
-                                                                   unit, 
-                                                                   center, 
-                                                                   theta) 
-    
-    
-            x_amlast = (np.array(x_amlast) - np.nanmedian(norm_distribution_pos[id_last][0]))*np.sign(xs_real[id_last] - xs_real[id_first])
-            y_amlast =  np.array(y_amlast) - np.nanmedian(norm_distribution_pos[id_last][1])
-            norm_distributions_am.append([x_amlast, y_amlast])
-
-            dict_norm_dist[session][cond] = [x_amlast, y_amlast]
-    
-            try:
-                sub    = f'{cond}-{sub_cds[cond]}'
-                sub_cd = dict_retino_conds[sub][0]
-        
-                x_amlast_sub, y_amlast_sub = trj.distribution_coords_normalize(sub_cd.distribution_positions,
-                                                                               unit, 
-                                                                               center, 
-                                                                               theta) 
-                x_amlast_sub = (np.array(x_amlast_sub) - np.nanmedian(norm_distribution_pos[id_last][0]))*np.sign(xs_real[id_last] - xs_real[id_first])
-                y_amlast_sub =  np.array(y_amlast_sub) - np.nanmedian(norm_distribution_pos[id_last][1])
-                norm_distributions_sub.append([x_amlast_sub, y_amlast_sub])        
-                dict_norm_dist[session][sub] = [x_amlast_sub, y_amlast_sub]
-
-            except:
-                print(f'{cond} has no possible subtraction')
-    
-        del dict_retino_conds
-        
-    return dict_norm_dist
-
 def get_retinotopic_single_pos(dict_retino_conds, single_pos_cd_names):
     single_pos_retinotopy = []
     distributions_pos     = []
@@ -1576,57 +1776,6 @@ def get_retinotopic_single_pos(dict_retino_conds, single_pos_cd_names):
         distributions_pos.append([x_clean, y_clean])
 
     return single_pos_retinotopy, distributions_pos, single_pos_tmp.map.shape
-
-def load_all_retino_per_session(path_session, 
-                                flag_denoise = True, 
-                                storage_path = dv.STORAGE_PATH, 
-                                name_retino_analysis = utils.NAME_RETINO_ANALYSIS):
-    
-    retino_pos_am = utils.get_conditions_correspondance(path_session)
-    cd_am   = list(retino_pos_am.keys())
-    cd_pos  = list(set([pos for i in retino_pos_am.values() for pos in i]))
-    all_cds = cd_am + cd_pos
-
-    cd_all  = retino_pos_am
-    for i in cd_pos:
-        cd_all[i] = [i]
-
-    dict_subs   = utils.find_subsets(cd_all)     
-    subs        = [f'{k}-{v}'for k,v in dict_subs.items()]
-    subs_retino = [f'{k}_{v}'for k,v in dict_subs.items()]
-    
-    id_name = utils.get_session_id_name(path_session)                   
-    if flag_denoise:
-        id_name = f'{id_name}_Denoise'       
-
-    path_analysis  = os.path.join(storage_path, name_retino_analysis, id_name)
-    
-    dict_cd = {}
-    for i in cd_am:
-        path_analysis_cond = os.path.join(path_analysis, i)
-        print(path_analysis_cond)
-        list_retino = list()
-        for pos in range(len(retino_pos_am[i])-1):
-            folder_name_cond = f'{i}-{retino_pos_am[i][pos+1]}_{pos+2}'
-            print(folder_name_cond)
-            folder_name_stroke = os.path.join(path_analysis_cond, folder_name_cond, 'retino', f'retinotopy_{i}')
-            cd_retino =  Retinotopy(path_session)
-            cd_retino.load_retino(folder_name_stroke)
-            list_retino.append(cd_retino)
-        dict_cd[i] = list_retino
-
-    for pos, pos_ in zip((cd_pos + subs), (cd_pos + subs_retino)):
-        list_retino = list()
-        folder_name_cond = f'{pos}'
-        print(folder_name_cond)
-        folder_name_stroke = os.path.join(path_analysis, folder_name_cond, 'retino', f'retinotopy_{pos_}')
-        print(folder_name_stroke)
-        cd_retino =  Retinotopy(path_session)
-        cd_retino.load_retino(folder_name_stroke)
-        list_retino.append(cd_retino)    
-        dict_cd[pos] = list_retino
-
-    return dict_cd
 
 # Example of script running sbatch Desktop/runpy_giancani.sh retinotopy.py --path_md /envau/work/neopto/DATA_AnDO/exp-AM3_VSDI/sub-Bretzel/sess-20131127_001/derivatives/spcbin1_timebin1_zerofrms6_strategymae_n_chunk1_movFalse_deblankTrue/ --ss_label p --vis --store --denoised
 if __name__=="__main__":
