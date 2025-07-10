@@ -292,6 +292,7 @@ class RetinoSession(md.Session):
                 cd_ = md.Condition()
                 cd_.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
                 cd.autoselection = cd_.autoselection
+                print(f'Debug: {cd.df_fz.shape[0]} and {len(cd.autoselection)}')
             else:
                 cd.autoselection = np.ones(len(cd.df_fz))
             
