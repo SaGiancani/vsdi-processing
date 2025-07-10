@@ -297,8 +297,9 @@ class RetinoSession(md.Session):
                 autoselection = np.ones(len(cd.df_fz))
 
             print(f'Debug: n° of trials {cd.df_fz.shape[0]} and autoselection length {len(autoselection)}')            
-            cd.df_fz         = md.get_selected(cd.df_fz, autoselection)
-            cd.averaged_df   = np.nanmean(cd.df_fz, axis = 0)
+            tmp_df           = md.get_selected(cd.df_fz, autoselection)
+            cd.averaged_df   = np.nanmean(tmp_df, axis = 0)
+            cd.autoselection = autoselection
 
             utils.stampa(f'Condition {name_cond} loaded successfully!\n', logger=self.log)
         utils.stampa(f'Condition {name_cond} loaded in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)    
