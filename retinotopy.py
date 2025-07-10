@@ -260,8 +260,7 @@ class RetinoSession(md.Session):
             mask = None
         return mask
 
-
-    def get_data_to_process(self, name_cond):
+    def get_data_to_process(self, name_cond, autoselection_flag = True):
         utils.stampa(f'Start to load condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -289,12 +288,17 @@ class RetinoSession(md.Session):
             cd.df_fz         = utils.get_denoised_cond(self.path_md, name_cond, log = self.log) # formally incorrect but for sake of process
             cd.cond_name     = name_cond
             cd.averaged_df   = np.nanmean(cd.df_fz, axis = 0)
-            cd.autoselection = np.ones(len(cd.df_fz))
-            utils.stampa(f'Condition {name_cond} loaded successfully!\n', logger=self.log)
 
+            if autoselection_flag:
+                cd_ = md.Condition()
+                cd_.load_cond(os.path.join(self.path_md, 'md_data','md_data_'+name_cond))
+                cd.autoselection = cd_.autoselection
+            else:
+                cd.autoselection = np.ones(len(cd.df_fz))
+
+            utils.stampa(f'Condition {name_cond} loaded successfully!\n', logger=self.log)
         utils.stampa(f'Condition {name_cond} loaded in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)    
         return cd
-
 
     def get_retinotopy(self,
                        name_cond, 
@@ -394,128 +398,6 @@ class RetinoSession(md.Session):
 
         utils.stampa(f'Retino session elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                                         
         return
-
-    def get_stroke_retinotopy(self,
-                              name_cond,
-                              time_limits, 
-                              cd,
-                              stroke_number = None,
-                              stroke_name = None,                              
-                              str_type = 'single stroke'):
-        '''DEPRECATED'''
-
-        start_time = datetime.datetime.now().replace(microsecond=0)
-
-        if str_type == 'multiple stroke':
-            a = self.stimulus_metadata['pos metadata']
-            space_step = a[name_cond]['inter stimulus space']
-            starting_time = a[name_cond]['start'] #In frames
-            time_step = np.ceil((1/self.stimulus_metadata['speed'])*space_step*self.acquisition_frequency)
-            time_step = int(time_step) # In frames                  
-            utils.stampa(f'The interstimulus space is {space_step}, for a starting time of {starting_time}\n', logger=self.log)                                     
-            utils.stampa(f'Frame step between the appearance of one stroke and the other: {time_step}', logger=self.log)   
-
-        # dF/F0 of only autoselected trials 
-        df = md.get_selected(cd.df_fz, cd.autoselection)
-        avr_df = np.nanmean(df, axis = 0)
-
-        mean_blank = np.nanmean(self.mean_blank, axis = 0)
-        mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15) 
-        mean_blank = np.nan_to_num(mean_blank, copy=False, nan=np.nanpercentile(mean_blank, 20), posinf=None, neginf=None)
-
-        z_s_visual                = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq = True)
-
-        # Instance retinotopy object: single stroke
-        r = Retinotopy(self.path_session,
-                       cond_name = name_cond,
-                       name = self.id_name + '_cond_' +name_cond, 
-                       session_name = self.id_name,
-                       signal = avr_df,
-                       mask = self.mask,
-                       green = self.green,
-                       stroke_type = str_type)
-
-        if (time_limits is not None):
-            r.time_limits = time_limits                                 
-
-        #z_s = process.zeta_score(cd_pos3.averaged_df, None, None, full_seq = True)
-        # Blob and centroids extraction
-        if str_type == 'multiple stroke':
-            begin_time = r.time_limits[0] + starting_time + stroke_number*time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*time of occurrence of the stroke
-            end_time   = r.time_limits[0] + starting_time + stroke_number*time_step + time_step # stimulus onset time  + actual onset w/o grey frames + number of the stroke*inter stimulus time + end time appearance of the stroke
-            foi = ((0, time_step))
-        else:
-            begin_time = r.time_limits[0] + int(np.ceil(0.06/(1/self.acquisition_frequency))) # Inject a synaptic delay to make it compatible with st_builder - 60ms
-            end_time   = r.time_limits[1] + int(np.ceil(0.06/(1/self.acquisition_frequency)))
-            foi        = None
-
-        utils.stampa(f'Begin and end frames are: {(begin_time, end_time)} on a sequence of dimension {avr_df.shape[0]} and stimulus onset at frame {r.time_limits[0]}', logger=self.log)   
-
-        _, blurred, blobs, centroids, norm_centroids, _, _ = r.single_seq_retinotopy(avr_df, 
-                                                                                     None, None,
-                                                                                     begin_time,
-                                                                                     end_time,
-                                                                                     sig_blank = mean_blank,
-                                                                                     std_blank = self.std_blank,
-                                                                                     zero_frames = r.time_limits[0],
-                                                                                     mask = self.mask,
-                                                                                     lim_blob_detect = self.limit_blob_detection,
-                                                                                     all_frame_thres = self.all_frame_threshold)
-
-        r.blob       = blobs
-        r.retino_pos = centroids[0]
-        r.signal     = z_s_visual          # Only for visualization sake
-        if str_type == 'multiple stroke':
-            centroid_to_use = self.dictionary_retinotopies[stroke_name].retino_pos                    
-        else:
-            centroid_to_use = r.retino_pos                    
-
-        blurred[~r.mask] = np.NAN
-        r.map = blurred
-
-        utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n')
-
-        if not self.full_frame:
-            window_dim      = self.window_dimension
-        else:
-            window_dim      = None
-        utils.stampa(f'Retinotopic averaged position: {r.retino_pos}, window side dimension: {self.window_dimension}, Time window starts at frame {begin_time} and ends at frame {end_time}', logger=self.log)  
-        utils.stampa(f'Centroids and dimension of windows employeed: {(centroid_to_use, window_dim)}\n', logger=self.log)   
-        pos_single_trials_data = [r.single_seq_retinotopy(i, 
-                                                          centroid_to_use,
-                                                          window_dim, 
-                                                          begin_time,
-                                                          end_time,
-                                                          df_f0_foi = foi,
-                                                          mask = self.mask,
-                                                          zero_frames = r.time_limits[0],
-                                                          sig_blank = mean_blank,
-                                                          std_blank = self.std_blank,
-                                                          lim_blob_detect = self.limit_blob_detection,
-                                                          all_frame_thres = self.all_frame_threshold) for i in df] 
-
-        # Storing distribution of points
-        pos_centroids = list(list(zip(*pos_single_trials_data))[0])
-        r.distribution_positions = list(zip(*pos_centroids))
-
-        # Single trial plot sanity check
-        if self.visualization_switch:
-            t = [[i] for i in list(list(zip(*pos_single_trials_data))[4])]
-            if stroke_number is None:
-                stroke_number_fortitle = 0 
-            else:
-                stroke_number_fortitle = stroke_number
-            dv.whole_time_sequence(list(list(zip(*pos_single_trials_data))[1]), 
-                                   blbs = list(list(zip(*pos_single_trials_data))[2]), 
-                                   cntrds = t, mask = None, 
-                                   max = 95, min = 15, 
-                                   blur = False, 
-                                   adaptive_vm = True, 
-                                   ext = 'png',
-                                   name_analysis_ = os.path.join(self.retinotopic_path_folder, self.id_name, name_cond),
-                                   name = f'sanity_check_single_trial_stroke_n_{stroke_number_fortitle}_{name_cond}_{self.id_name}' )
-
-        return r
 
     def get_single_stroke_retinotopy(self,
                                     name_cond,
