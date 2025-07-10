@@ -287,7 +287,6 @@ class RetinoSession(md.Session):
         else:
             cd.df_fz         = utils.get_denoised_cond(self.path_md, name_cond, log = self.log) # formally incorrect but for sake of process
             cd.cond_name     = name_cond
-            cd.averaged_df   = np.nanmean(cd.df_fz, axis = 0)
 
             if autoselection_flag:
                 cd_ = md.Condition()
@@ -295,6 +294,9 @@ class RetinoSession(md.Session):
                 cd.autoselection = cd_.autoselection
             else:
                 cd.autoselection = np.ones(len(cd.df_fz))
+            
+            cd.df_fz         = md.get_selected(cd.df_fz, cd.autoselection)
+            cd.averaged_df   = np.nanmean(cd.df_fz, axis = 0)
 
             utils.stampa(f'Condition {name_cond} loaded successfully!\n', logger=self.log)
         utils.stampa(f'Condition {name_cond} loaded in {str(datetime.datetime.now().replace(microsecond=0)-start_time)}!\n', logger=self.log)    
