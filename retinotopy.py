@@ -246,8 +246,12 @@ class RetinoSession(md.Session):
     
     def get_mask(self):
         # Loading handmade mask
+        if self.denoise_switch:
+            name_mask = 'handmade_mask_denoise.npy'
+        else:
+            name_mask = 'handmade_mask.npy'
         try:
-            mask = np.load(os.path.join(self.path_session, 'derivatives','handmade_mask.npy'))
+            mask = np.load(os.path.join(self.path_session, 'derivatives', name_mask))
             (y_size, x_size) = self.blank_condition.averaged_df[0, :,:].shape
             x_bnnd_size = x_size
             y_bnnd_size = y_size
