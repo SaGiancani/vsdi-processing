@@ -339,7 +339,7 @@ def inputs_load(filename):
     a = datetime.datetime.now().replace(microsecond=0)
     with open(filename + '.pickle', 'rb') as f:
         t = pickle.load(f)
-        print(datetime.datetime.now().replace(microsecond=0)-a)
+        # print(datetime.datetime.now().replace(microsecond=0)-a)
         return t    
     
 def inputs_save(inputs, filename):
@@ -393,11 +393,11 @@ def nonlinear_custom_map():
 
 
 def normalize_path_os(path_folder):
-    if os.name != 'nt':
-        path_folder = os.path.normpath(path_folder)
-    else:
-        path_folder = os.path.normpath(path_folder.replace('envau', '\envau_cifs'))
-        print(path_folder)
+    path_folder = os.path.normpath(path_folder)
+    if os.name == 'nt':
+        if '_cifs' not in path_folder:
+            path_folder = os.path.normpath(path_folder.replace('envau', '\envau_cifs'))
+
     return path_folder
 
 
@@ -535,3 +535,8 @@ def load_all_files(directory_path, files_denoise, particle = 'rem_', log = None)
         dict_data[cds_name[n_id]] = array
 
     return dict_data
+
+def remove_special_char(string, char = 'Â'):
+    # Sanity check for Hip's session with special character in cd names 
+    return string.replace(char, '') 
+    

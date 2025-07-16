@@ -359,11 +359,10 @@ class SpatioTemporalSession:
         utils.stampa(f'Optical ratio: {optical_ratio}\n', logger = self.log)  
         utils.stampa(f'Original frame shape: {self.original_frame_shape}\n', logger = self.log)  
         utils.stampa(f'Pixel Spacing: {self.pixel_spacing}\n', logger = self.log)  
+
+        retino_loading = retinotopy.RetinoLoaderManager(self.path_session, flag_denoise=self.denoise_switch, only_single_pos = True)       
+        self.single_pos, _, _   = retinotopy.get_retinotopic_single_pos(retino_loading.data, retino_loading.cond_pos)
  
-        self.single_pos, _, _   = retinotopy.get_retinotopic_single_pos(self.retin_folder, 
-                                                                        list(self.retino_session.cond_pos.values()), 
-                                                                        self.path_session, 
-                                                                        denoise_flag = self.denoise_switch)
         utils.stampa(f'{self.single_pos}', logger = self.log)  
         self.trajectory_mask     = trj.get_trajectory_mask(self.single_pos, (self.ny, self.nx), extremities = (0,0))        
         _, _, self.orient_traj   = trj.rotate_distribution(list(list(zip(*self.single_pos))[0]), 

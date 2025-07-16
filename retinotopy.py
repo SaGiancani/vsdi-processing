@@ -1164,7 +1164,7 @@ class Retinotopy:
     
 
 class RetinoLoaderManager:
-    def __init__(self, path_session, flag_denoise=True, storage_path=dv.STORAGE_PATH, peak_stability = False):
+    def __init__(self, path_session, flag_denoise=True, storage_path=dv.STORAGE_PATH, peak_stability = False, only_single_pos = False):
         self.path_session        = path_session
         self.flag_denoise        = flag_denoise
         self.storage_path        = storage_path
@@ -1175,8 +1175,18 @@ class RetinoLoaderManager:
         self.retino_pos_am = utils.get_conditions_correspondance(path_session)
         self.cond_am   = list(self.retino_pos_am.keys())
         self.cond_pos  = list({pos for v in self.retino_pos_am.values() for pos in v})
+
+        # Sanity check for Hip's session with special character in cd names 
+        if 'Â' in self.cond_am[0]:
+            self.cond_am = [utils.remove_special_char(k, char = 'Â') for k in self.cond_am]
+        if 'Â' in self.cond_pos[0]:
+            self.cond_pos = [utils.remove_special_char(k, char = 'Â') for k in self.cond_pos]
+            
         self.dict_subs = utils.get_conds_for_sub(path_session)
-        self.data      = self.load_all()
+        if not only_single_pos:
+            self.data      = self.load_all()
+        else:
+            self.data      = self.load_standard_pos()
 
     def _get_base_path(self, name_analysis):
         return os.path.join(self.storage_path, name_analysis, self.id_name)
@@ -1225,6 +1235,7 @@ class RetinoLoaderManager:
         am_data = {}
         for cond, strokes in self.retino_pos_am.items():
             retinos = []
+            cond = utils.remove_special_char(cond)
             cd_folder    = os.path.join(path_peak, cond)  
             reps_folders = os.listdir(cd_folder)
             reps_folders = [i for i in reps_folders if '-reps' in i]
@@ -1251,12 +1262,20 @@ class RetinoLoaderManager:
         return data
 
 class PeakSet:
-    def __init__(self, session_path, cond_dict, stim_meta, flag_denoise=False, peak_stability=False):
+    def __init__(self, session_path, cond_dict, stim_meta, flag_denoise=False, peak_stability=False, cond_to_discard = None):
         self.session_path   = session_path
         self.cond_dict      = cond_dict  # e.g., {'AM123': ['AM1', 'AM2', 'AM3'], ...}
+        if cond_to_discard is not None:
+            for k in cond_to_discard:
+                if k in self.cond_dict: #sanity check
+                    self.cond_dict.pop(k)
+                    print(f'{k} condition discarded') 
+        
         self.list_am, self.list_pos = trj.get_cond_names(self.cond_dict)
 
         self.stim_meta      = stim_meta  # metadata_dict[session]
+        self.stim_meta['pos metadata']  = {utils.remove_special_char(k): v for k, v in  self.stim_meta['pos metadata'].items()}
+
         self.flag_denoise   = flag_denoise
         self.peak_stability = peak_stability
 
@@ -1415,8 +1434,8 @@ class PeakSet:
                                      'repeatition': rep_index,
                                      'x_median': np.nanmedian(x),
                                      'y_median': np.nanmedian(y),
-                                     'x_width': np.nanmax(x) - np.nanmin(x),
-                                     'y_width': np.nanmax(y) - np.nanmin(y)})
+                                     'x_width': np.nanpercentile(x, 97.5),
+                                     'y_width': np.nanpercentile(y, 97.5)})
 
         return summary_rows
     
@@ -1439,10 +1458,10 @@ class PeakSet:
 
         return df
 
-def get_retinotopic_features(FOI, min_lim = 90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72):
+def get_retinotopic_features(FOI, min_lim = 90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72, std_gaus = 15, kernel_median = 3):
     num_for_nan = np.nanpercentile(FOI, 20)
     blurred = gaussian_filter(np.nan_to_num(FOI, copy=False, nan=num_for_nan, posinf=None, neginf=None), sigma=1)
-    _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, min_2_lim = thresh_gaus, adaptive_thresh=adaptive_thresh)
+    _, centroids, blobs = process.detection_blob(blurred, min_lim, max_lim, min_2_lim = thresh_gaus, adaptive_thresh=adaptive_thresh, std = std_gaus, kernel_median = kernel_median)
     if mask_switch:
         circular_mask = utils.sector_mask(np.shape(blurred), (centroids[0][1], centroids[0][0]), circular_mask_dim, (0,360))
     else:
@@ -1474,7 +1493,11 @@ def get_single_frame_peak(ztmp, time_window, global_centroid, dim_side, lim_blob
                     #print(f'from {i-time_window//2} to {len(ztmp)}')
         min_lim = np.nanpercentile(tmp_, lim_blob_detect)
         max_lim = np.nanpercentile(tmp_, 100)
-        centroids_singl, _, _, blurred_singl = get_retinotopic_features(tmp_, min_lim = min_lim, max_lim = max_lim, mask_switch = False, thresh_gaus=single_frame_thresh)
+        centroids_singl, _, _, blurred_singl = get_retinotopic_features(tmp_, 
+                                                                        min_lim = min_lim, 
+                                                                        max_lim = max_lim, 
+                                                                        mask_switch = False, 
+                                                                        thresh_gaus=single_frame_thresh)
         coords_singl = np.array(list(zip(*centroids_singl)))
         if (coords_singl is not None) and (len(coords_singl)>0) :
             # Centroid at maximum response
@@ -1735,7 +1758,7 @@ if __name__=="__main__":
     parser.add_argument('--reps', 
                         dest='repeatitions',
                         type=int,
-                        default = 4,
+                        default = 5,
                         required=False,
                         help='Repeatitions for Peak stability analysis') 
     
