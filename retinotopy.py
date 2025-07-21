@@ -69,7 +69,8 @@ class RetinoSession(md.Session):
                     acquisition_fq = 100,#Hz
                     denoise_flag = False,
                     session_switch = True,
-                    peak_stability_switch = False,                    
+                    peak_stability_switch = False,
+                    pretrigger_zero = False,                    
                     **kwargs):
         #path_session, logs_switch = False, deblank_switch = False
 
@@ -100,7 +101,8 @@ class RetinoSession(md.Session):
         # If denoised data stored, it's gonna load those
         self.denoise_switch = denoise_flag
         self.session_switch = session_switch 
-        self.peak_stability_switch = peak_stability_switch            
+        self.peak_stability_switch = peak_stability_switch      
+        self.pretrigger_zeros_switch = pretrigger_zero    
         self.cond_names = None
         self.header = super().get_session_header(path_session, spatial_bin, temporal_bin, tolerance, mov_switch, deblank_switch, conditions_id, chunks, strategy, logs_switch)
         # All blks names loaded
@@ -175,25 +177,51 @@ class RetinoSession(md.Session):
 
         self.mean_blank        = self.blank_condition.averaged_df
         self.mean_blank[~np.isfinite(self.mean_blank)] = np.nanpercentile(self.mean_blank, 15)
-        self.std_blank         = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
         utils.stampa(f'NaNs in average blank: {(np.isnan(self.mean_blank).sum()/(np.size(((self.mean_blank))))*100)}%', logger=self.log)
-        
+    
         self.full_frame        = full_frame 
         self.id_name           = utils.get_session_id_name(self.path_session)                   
 
         self.mask_switch       = mask_switch
         self.mask              = self.get_mask()
         if (not self.mask_switch) or (self.mask is None):
-            self.mask       = np.ones((self.std_blank.shape), dtype = bool)
+            self.mask       = np.ones((self.mean_blank.shape[-2], self.mean_blank[-1]), dtype = bool)
             utils.stampa('Impossible to properly load the mask. No masking applied', logger = self.log)
         else:
             utils.stampa(f'Mask of shape {self.mask.shape} properly loaded!', logger = self.log)
 
         if self.denoise_switch:        
             self.id_name    = f'{self.id_name}_Denoise'
+
+        if self.pretrigger_zeros_switch:
+            self.id_name    = f'{self.id_name}_zpretrig'
  
         utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
-        (ny, nx)                  = self.mean_blank [0, :,:].shape            
+        (ny, nx)                  = self.mean_blank[0, :,:].shape          
+
+        if self.pretrigger_zeros_switch:
+            cd_x       = md.Condition() 
+            conds_list = os.listdir(os.path.join(self.path_md, 'md_data'))
+            conds_list = [os.path.join(self.path_md, 'md_data', i) for i in conds_list if 'md_data_' in i]     
+            cd_x.load_cond(conds_list[0].split('.pickle')[0])  
+            _, y2check, _ = self.mean_blank.shape
+            bin_tmp = int(np.ceil(y2check/self.ny))
+            
+            utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
+
+            dict_to_del, self.mean_blank_pretrig , self.std_blank = md.get_classic_signal(self.path_session, 
+                                                                                          self.header['zero_frames'], 
+                                                                                          bin_value = bin_tmp, 
+                                                                                          denoise_flag = self.denoise_switch, 
+                                                                                          log = self.log)         
+            del dict_to_del
+
+        else:
+            self.std_blank           = np.nanstd(self.mean_blank, axis=0)/np.sqrt(np.shape(self.mean_blank)[0])
+            mean_blank = np.nanmean(self.mean_blank, axis=0)
+            mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15)
+            self.mean_blank_pretrig = np.nan_to_num(mean_blank, nan=np.nanpercentile(mean_blank, 20))
+
         self.green                = utils.get_green(green_name, self.path_session, size = (ny, nx), log=None)
         # Single centroid mask dimension
         self.tc_window_dimension  = time_course_window_dim
@@ -242,7 +270,6 @@ class RetinoSession(md.Session):
             conds = conds_full
         utils.stampa(f'Conditions picked: {conds}', logger=self.log)
         return conds
-    
     
     def get_mask(self):
         # Loading handmade mask
@@ -432,13 +459,8 @@ class RetinoSession(md.Session):
         df = md.get_selected(cd.df_fz, cd.autoselection)
         avr_df = np.nanmean(df, axis=0)
 
-        # Clean up mean_blank
-        mean_blank = np.nanmean(self.mean_blank, axis=0)
-        mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15)
-        mean_blank = np.nan_to_num(mean_blank, nan=np.nanpercentile(mean_blank, 20))
-
         # Z-score of visual response
-        z_s_visual = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq=True)
+        z_s_visual = process.zeta_score(avr_df, self.mean_blank_pretrig, self.std_blank, full_seq=True)
 
         # Create Retinotopy object
         r = Retinotopy(self.path_session,
@@ -467,7 +489,7 @@ class RetinoSession(md.Session):
                                                                                      None, None,
                                                                                      begin_time,
                                                                                      end_time,
-                                                                                     sig_blank=mean_blank,
+                                                                                     sig_blank=self.mean_blank_pretrig,
                                                                                      std_blank=self.std_blank,
                                                                                      zero_frames=r.time_limits[0],
                                                                                      mask=self.mask,
@@ -495,7 +517,7 @@ class RetinoSession(md.Session):
                                                           df_f0_foi=foi,
                                                           mask=self.mask,
                                                           zero_frames=r.time_limits[0],
-                                                          sig_blank=mean_blank,
+                                                          sig_blank=self.mean_blank_pretrig,
                                                           std_blank=self.std_blank,
                                                           lim_blob_detect=self.limit_blob_detection,
                                                           all_frame_thres=self.all_frame_threshold)
@@ -566,11 +588,7 @@ class RetinoSession(md.Session):
         df = md.get_selected(cd.df_fz, cd.autoselection)
         avr_df = np.nanmean(df, axis=0)
 
-        mean_blank = np.nanmean(self.mean_blank, axis=0)
-        mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15)
-        mean_blank = np.nan_to_num(mean_blank, nan=np.nanpercentile(mean_blank, 20))
-
-        z_s_visual = process.zeta_score(avr_df, mean_blank, self.std_blank, full_seq=True)
+        z_s_visual = process.zeta_score(avr_df, self.mean_blank_pretrig, self.std_blank, full_seq=True)
 
         retinotopy_results = []
 
@@ -602,7 +620,7 @@ class RetinoSession(md.Session):
                                                                                          None, None,
                                                                                          begin_time,
                                                                                          end_time, 
-                                                                                         sig_blank=mean_blank, 
+                                                                                         sig_blank=self.mean_blank_pretrig, 
                                                                                          std_blank=self.std_blank, 
                                                                                          zero_frames=r.time_limits[0], 
                                                                                          mask=self.mask, 
@@ -629,7 +647,7 @@ class RetinoSession(md.Session):
                                                               df_f0_foi=foi,
                                                               mask=self.mask,
                                                               zero_frames=r.time_limits[0],
-                                                              sig_blank=mean_blank,
+                                                              sig_blank=self.mean_blank_pretrig,
                                                               std_blank=self.std_blank,
                                                               lim_blob_detect=self.limit_blob_detection,
                                                               all_frame_thres=self.all_frame_threshold)
@@ -1823,7 +1841,15 @@ if __name__=="__main__":
     parser.add_argument('--no-flag_regular_session', 
                         dest='session_switch', 
                         action='store_false')
-    parser.set_defaults(session_switch=True)     
+    parser.set_defaults(session_switch=True) 
+
+    parser.add_argument('--zmaps', 
+                        dest='zmaps_flag', 
+                        action='store_true')
+    parser.add_argument('--no-zmaps', 
+                        dest='zmaps_flag', 
+                        action='store_false')
+    parser.set_defaults(zmaps_flag=False)          
 
 
     start_process_time = datetime.datetime.now().replace(microsecond=0)
@@ -1853,7 +1879,8 @@ if __name__=="__main__":
                                    acquisition_fq= args.acquisition_fq,
                                    data_vis_switch=args.data_vis_switch,
                                    session_switch = args.session_switch,
-                                   peak_stability_switch = args.peak_stability_switch) 
+                                   peak_stability_switch = args.peak_stability_switch, 
+                                   pretrigger_zero = args.zmaps_flag) 
     
     if args.session_switch and not args.peak_stability_switch:
         retino_session.get_retino_session()
