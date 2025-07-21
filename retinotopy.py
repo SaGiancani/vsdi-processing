@@ -221,12 +221,12 @@ class RetinoSession(md.Session):
             mean_blank[np.isnan(mean_blank)] = np.nanpercentile(mean_blank, 15)
             self.mean_blank_pretrig = np.nan_to_num(mean_blank, nan=np.nanpercentile(mean_blank, 20))
 
-        self.green                = utils.get_green(green_name, self.path_session, size = (ny, nx), log=None)
+        self.green                = utils.get_green(green_name, self.path_session, size = (self.ny, self.nx), log=None)
         # Single centroid mask dimension
         self.tc_window_dimension  = time_course_window_dim
-        self.window_dimension     = int(np.nanmax([ny, nx])/2.5)
+        self.window_dimension     = int(np.nanmax([self.ny, self.nx])/2.5)
         
-        utils.stampa(f'Data shape {(ny, nx)}', logger = self.log)
+        utils.stampa(f'Data shape {(self.ny, self.nx)}', logger = self.log)
         utils.stampa(f'Dimension of window {self.window_dimension}', logger = self.log)
 
         self.visualization_switch           = data_vis_switch
