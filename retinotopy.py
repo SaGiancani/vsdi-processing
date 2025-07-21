@@ -191,9 +191,9 @@ class RetinoSession(md.Session):
 
         self.mask_switch       = mask_switch
         self.mask              = self.get_mask()  
-        (ny, nx)                  = self.mean_blank[0, :,:].shape          
+        (self.ny, self.nx)     = self.mean_blank[0, :,:].shape          
         if (not self.mask_switch) or (self.mask is None):
-            self.mask       = np.ones((ny, nx), dtype = bool)
+            self.mask       = np.ones((self.ny, self.nx), dtype = bool)
             utils.stampa('Impossible to properly load the mask. No masking applied', logger = self.log)
         else:
             utils.stampa(f'Mask of shape {self.mask.shape} properly loaded!', logger = self.log)
