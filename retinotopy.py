@@ -208,7 +208,7 @@ class RetinoSession(md.Session):
             
             utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
 
-            dict_to_del, self.mean_blank_pretrig , self.std_blank = md.get_classic_signal(self.path_session, 
+            dict_to_del, self.mean_blank_pretrig , self.std_blank = md.get_classic_signal(self.path_md, 
                                                                                           self.header['zero_frames'], 
                                                                                           bin_value = bin_tmp, 
                                                                                           denoise_flag = self.denoise_switch, 
