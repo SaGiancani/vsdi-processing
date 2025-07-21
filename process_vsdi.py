@@ -6,7 +6,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 import numpy as np
 from scipy import optimize
-from scipy.ndimage.filters import convolve, gaussian_filter, median_filter, uniform_filter1d
+from scipy.ndimage import convolve, gaussian_filter, median_filter, uniform_filter1d
 from scipy.special import erf
 
 from trajectory import get_trajectory
@@ -76,7 +76,7 @@ def deltaf_up_fzero(vsdi_sign, n_frames_zero, deblank = False, blank_sign = None
 
     return df_fz
 
-def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, max_2_lim = 100, std = 15, adaptive_thresh = True, kind = 'zscore'):#From 90 to 99 of min_2_lim
+def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, max_2_lim = 100, std = 15, kernel_median = 3, adaptive_thresh = True, kind = 'zscore'):#From 90 to 99 of min_2_lim
     '''
     Method for automatic detection of blobs, contours and their centroids.
     '''
@@ -93,8 +93,11 @@ def detection_blob(averaged_zscore, min_lim=80, max_lim = 100, min_2_lim = 97, m
             min_thresh = min_lim
             max_thresh = max_lim
         # print('get_signal_profile called')
-        averaged_zscore = np.nan_to_num(averaged_zscore, nan=np.nanmin(averaged_zscore), neginf=np.nanmin(averaged_zscore[np.where(averaged_zscore != -np.inf)]), posinf=np.nanmax(averaged_zscore[np.where(averaged_zscore != np.inf)]))
-        blurred = get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = std)
+        averaged_zscore = np.nan_to_num(averaged_zscore, 
+                                        nan=np.nanmin(averaged_zscore), 
+                                        neginf=np.nanmin(averaged_zscore[np.where(averaged_zscore != -np.inf)]), 
+                                        posinf=np.nanmax(averaged_zscore[np.where(averaged_zscore != np.inf)]))
+        blurred = get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = std, median_filt_size = kernel_median)
 
         if kind == 'zscore':
             # Blob detection
@@ -282,11 +285,11 @@ def get_significant_sign(blurred, min_thresh2, max_thresh2):
     centroids = get_centroids(contours)
     return contours, centroids, blobs 
 
-def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15):
+def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15, median_filt_size = 3):
     # Thresholding of z_score
     _, threshed = cv.threshold(averaged_zscore, min_thresh, max_thresh, cv.THRESH_BINARY)
     # Median filter against salt&pepper noise
-    blurred_median = median_filter(threshed, size=(3,3))
+    blurred_median = median_filter(threshed, size=(median_filt_size, median_filt_size))
     # Gaussian filter for blob individuation
     blurred = gaussian_filter(np.nan_to_num(blurred_median, copy=False, nan=np.nanmin(blurred_median), posinf=None, neginf=None), sigma=std)
     # print(np.nanmin(blurred), np.nanmax(blurred))
