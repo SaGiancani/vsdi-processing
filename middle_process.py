@@ -1167,7 +1167,6 @@ def get_selected(matrix, autoselection):
         df = matrix[indeces, :]
     return df
 
-
 def get_classic_signal(path_session, zero_frames, bin_value = 2, denoise_flag = False, log = None):
     # PARAMETERS INSTANCE
     # LOAD RAW DATA    
@@ -1179,13 +1178,13 @@ def get_classic_signal(path_session, zero_frames, bin_value = 2, denoise_flag = 
         dict_data           = load_all_mds(path_session, zero_frames, bin_val = bin_value, log = log)        
 
     p_dfs                   = np.vstack([v for v in dict_data.values()])
-    all_zeros, norm_factor  = get_all_zero_frames(dict_data['blank'], p_dfs, zero_frames, log = log)
+    all_zeros, norm_factor  = get_all_zero_frames(p_dfs, zero_frames, log = log)
     del p_dfs
     mean_zero               = np.nanmean(all_zeros, axis = 0)
     std_zero                = np.nanstd(all_zeros, axis = 0)/norm_factor
     utils.stampa(f'Sanity check: mean value in zero frames mean {np.nanmean(mean_zero)} and std {np.nanmean(std_zero)}', logger=log)
     dict_z                  = get_zscore(dict_data, mean_zero, std_zero, logger = log)
-    return dict_z
+    return dict_z, mean_zero, std_zero
 
 def load_all_mds(path_session, zero_frames, bin_val = 2, log = None):
     # RAW DATA FOLDER DETECTION
@@ -1238,19 +1237,14 @@ def load_all_mds(path_session, zero_frames, bin_val = 2, log = None):
 
     return dict_data
 
-def get_all_zero_frames(blank_data, p_dfs, zero_frames, log = None):
+def get_all_zero_frames(p_dfs, zero_frames, log = None):
     # ABSOLUTE ZERO FRAME EXTRACTION                
-    # blnk      = blank_data.reshape(-1, blank_data.shape[-2], blank_data.shape[-1])
-    blnk      = blank_data[:, :zero_frames, :, :]
-    blnk_     = p_dfs[:, :zero_frames, :, :]
-    blnk_     = blnk_.reshape(-1, blnk_.shape[-2], blnk_.shape[-1])
-    blnk      = blnk.reshape(-1, blnk.shape[-2], blnk.shape[-1])
-    utils.stampa(blnk_.shape, logger=log)
-    utils.stampa(blnk.shape, logger=log)
-    all_zeros = np.concatenate([blnk, blnk_])
-    del blnk, blnk_
-    normalization_factor = all_zeros.shape[0]/len(p_dfs)  
-    utils.stampa(normalization_factor, logger=log)    
+    blnk_     = [i[:, :zero_frames, :, :] for i in p_dfs]
+    all_zeros = np.concatenate(blnk_)
+    utils.stampa(all_zeros.shape, logger=log)
+    del blnk_
+    normalization_factor = np.sqrt(all_zeros.shape[0])
+    utils.stampa(normalization_factor, logger=log)
     return all_zeros, normalization_factor 
 
 def get_zscore(dict_data, mean_zero, std_zero, logger = None):
