@@ -1178,6 +1178,7 @@ def get_classic_signal(path_session, zero_frames, bin_value = 2, denoise_flag = 
         dict_data           = load_all_mds(path_session, zero_frames, bin_val = bin_value, log = log)        
 
     p_dfs                   = np.vstack([v for v in dict_data.values()])
+    utils.stampa(f'Shape of all trials in session: {p_dfs.shape}')
     all_zeros, norm_factor  = get_all_zero_frames(p_dfs, zero_frames, log = log)
     del p_dfs
     mean_zero               = np.nanmean(all_zeros, axis = 0)
@@ -1239,7 +1240,7 @@ def load_all_mds(path_session, zero_frames, bin_val = 2, log = None):
 
 def get_all_zero_frames(p_dfs, zero_frames, log = None):
     # ABSOLUTE ZERO FRAME EXTRACTION                
-    blnk_     = [i[:, :zero_frames, :, :] for i in p_dfs]
+    blnk_     = [i[:zero_frames, :, :] for i in p_dfs]
     all_zeros = np.concatenate(blnk_)
     utils.stampa(all_zeros.shape, logger=log)
     del blnk_
