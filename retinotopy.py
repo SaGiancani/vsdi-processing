@@ -182,22 +182,21 @@ class RetinoSession(md.Session):
         self.full_frame        = full_frame 
         self.id_name           = utils.get_session_id_name(self.path_session)                   
 
-        self.mask_switch       = mask_switch
-        self.mask              = self.get_mask()
-        if (not self.mask_switch) or (self.mask is None):
-            self.mask       = np.ones((self.mean_blank.shape[-2], self.mean_blank[-1]), dtype = bool)
-            utils.stampa('Impossible to properly load the mask. No masking applied', logger = self.log)
-        else:
-            utils.stampa(f'Mask of shape {self.mask.shape} properly loaded!', logger = self.log)
-
         if self.denoise_switch:        
             self.id_name    = f'{self.id_name}_Denoise'
 
         if self.pretrigger_zeros_switch:
             self.id_name    = f'{self.id_name}_zpretrig'
- 
-        utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)     
+        utils.stampa(f'Session ID name: {self.id_name}\n', logger = self.log)   
+
+        self.mask_switch       = mask_switch
+        self.mask              = self.get_mask()  
         (ny, nx)                  = self.mean_blank[0, :,:].shape          
+        if (not self.mask_switch) or (self.mask is None):
+            self.mask       = np.ones((ny, nx), dtype = bool)
+            utils.stampa('Impossible to properly load the mask. No masking applied', logger = self.log)
+        else:
+            utils.stampa(f'Mask of shape {self.mask.shape} properly loaded!', logger = self.log)
 
         if self.pretrigger_zeros_switch:
             cd_x       = md.Condition() 
