@@ -290,6 +290,11 @@ class SpatioTemporalSession:
         self.single_stroke_label   = single_stroke_label
         self.multiple_stroke_label = multiple_stroke_label
 
+        if self.zmaps_flag:
+            pretrig_flag = True
+        else:
+            pretrig_flag = False
+
         # Create an instance of RetinoSession instead of inheriting
         self.retino_session = retinotopy.RetinoSession(path_session=self.path_session,
                                                        logger=self.log,
@@ -300,9 +305,11 @@ class SpatioTemporalSession:
                                                        conditions_id=conditions_id,
                                                        store_switch=self.store_switch,
                                                        data_vis_switch=self.vis_switch,
-                                                       denoise_flag=self.denoise_switch ,
+                                                       denoise_flag=self.denoise_switch,
+                                                       pretrigger_zero=pretrig_flag,
                                                        **kwargs)
         
+        self.id_name           = self.retino_session.id_name        
         self.ny, self.nx       = self.retino_session.std_blank.shape 
         self.cond_dict         = self.retino_session.cond_dict
         self.cond_pos          = self.retino_session.cond_pos
@@ -315,9 +322,9 @@ class SpatioTemporalSession:
         self.stimulus_speed          = self.stimulus_metadata['speed']
         self.timing_single_stroke    = (self.stimulus_metadata['single stroke']['bottom limit'], self.stimulus_metadata['single stroke']['upper limit'])
         self.timing_am_sequence      = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
+
        
         if self.zmaps_flag:
-            self.id_name           = f'{self.retino_session.id_name}_z'
             if  load_data:
                 # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
                 cd_x       = Condition() 
@@ -335,7 +342,6 @@ class SpatioTemporalSession:
                                                             denoise_flag = self.denoise_switch,
                                                             log = self.log)
         else:
-            self.id_name           = self.retino_session.id_name
             self.dict_zeta         = None
 
         self.time_sequence           = self.retino_session.header['n_frames']
