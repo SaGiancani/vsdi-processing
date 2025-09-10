@@ -81,6 +81,16 @@ def get_cond_names(retino_pos_am):
     sorted_cd_pos = utils.cardinal_sort(cd_pos)
     return cd_am, sorted_cd_pos 
 
+def get_direction(single_pos_coords, list_pos):
+    tmp  = [single_pos_coords[j] for j in list_pos]
+    tmp  = list(list(zip(*tmp))[0])
+    sign = get_sign(tmp, 0, -1)
+    if sign > 0:
+        tmp_dir = 'up'
+    else:
+        tmp_dir = 'dw'
+    return tmp_dir, sign
+
 def get_mask_on_trajectory(dims, xs, ys, radius = 2):
     up = int(np.max(xs))
     bottom = int(np.min(xs))
@@ -164,8 +174,8 @@ def get_unit_n_center(distributions_pos, metadata_conds_dict, list_pos, theta):
                                         distributions_pos[id_last][1], 
                                         theta = theta)
 
-    unit   = np.abs(np.nanmean(x1)-np.nanmean(x2))/max_distance
-    center = (np.nanmean(x1), np.nanmean(y1))
+    unit   = np.abs(np.nanmedian(x1)-np.nanmedian(x2))/max_distance
+    center = (np.nanmedian(x1), np.nanmedian(y1))
     return unit, center
 
 def normalize_distribution(raw_dist, unit, center, theta, ref_dist, flip_sign):
@@ -174,15 +184,28 @@ def normalize_distribution(raw_dist, unit, center, theta, ref_dist, flip_sign):
     y = np.array(y) - np.nanmedian(ref_dist[1])
     return [x, y]
 
-def rotate_distribution(xs, ys, theta = None):
+def rotate_distribution(xs, ys, theta = None, frame_width = None, frame_height = None):
+    
     if theta is None:
         theta = get_rad(xs, ys)
+
     # subtracting mean from original coordinates and saving result to X_new and Y_new 
-    X_new = xs - np.nanmean(xs)
-    Y_new = ys - np.nanmean(ys)
+    if (frame_width is None) and (frame_height is None):
+        frame_center_x = np.nanmean(xs)
+        frame_center_y = np.nanmean(ys)
+    else:
+        frame_center_x = frame_width / 2
+        frame_center_y = frame_height / 2
 
-    X_apu = [np.cos(theta)*i-np.sin(theta)*j for i, j in zip(X_new, Y_new) ]
-    Y_apu = [np.sin(theta)*i+np.cos(theta)*j for i, j in zip(X_new, Y_new) ]
+    X_new = xs - frame_center_x
+    Y_new = ys - frame_center_y
 
-    # adding mean back to rotated coordinates
-    return X_apu + np.nanmean(xs), Y_apu + np.nanmean(ys), theta
+    # Apply rotation
+    X_rot = np.cos(theta) * X_new - np.sin(theta) * Y_new
+    Y_rot = np.sin(theta) * X_new + np.cos(theta) * Y_new
+
+    # Translate back to original reference (still around frame center)
+    X_final = X_rot + frame_center_x
+    Y_final = Y_rot + frame_center_y
+
+    return X_final, Y_final, theta
