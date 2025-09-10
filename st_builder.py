@@ -242,8 +242,11 @@ class SpatioTemporalMap:
         self.condition_type             = tp[19]
         self.colors_retinotopy          = tp[20]
         self.maps                       = tp[21]
-        self.masked_data_trials         = tp[22]    
-        self.avrg_signal                = tp[23]    
+        self.masked_data_trials         = tp[22]
+        try: 
+            self.avrg_signal            = tp[23]
+        except:
+            self.avrg_signal            = None    
         return
 
 class SpatioTemporalSession:
@@ -370,9 +373,11 @@ class SpatioTemporalSession:
         self.single_pos, _, _   = retinotopy.get_retinotopic_single_pos(retino_loading.data, retino_loading.cond_pos)
  
         utils.stampa(f'{self.single_pos}', logger = self.log)  
-        self.trajectory_mask     = trj.get_trajectory_mask(self.single_pos, (self.ny, self.nx), extremities = (0,0))        
-        _, _, self.orient_traj   = trj.rotate_distribution(list(list(zip(*self.single_pos))[0]), 
-                                                          list(list(zip(*self.single_pos))[1])) #in rad
+        xs_real = list(list(zip(*self.single_pos))[0])
+        ys_real = list(list(zip(*self.single_pos))[1])
+        line_traj_x, line_traj_y = trj.get_trajectory(xs_real, ys_real, (0, self.nx -1))
+        _, _, self.orient_traj   = trj.rotate_distribution(line_traj_x, line_traj_y)#in rad
+
         self.data_dictionary     = {}
         self.data_pos_frame      = {}
 
@@ -835,6 +840,474 @@ class SpatioTemporalSession:
                 
         return matrix_dict, peaks_dict, baseline
 
+class STMapsLoaderManager:
+    def __init__(self, 
+                 path_session, 
+                 flag_denoise=True, 
+                 storage_path=None, 
+                 only_single_pos=False,
+                 pretrigger_flag=False,
+                 log_obj=None):
+        """
+        Initialize with a SpatioTemporalSession instance to access:
+        - Session paths and metadata
+        - Condition information  
+        - Timing parameters
+        """
+        # [Previous initialization code remains the same]
+        self.path_session = path_session
+        self.map_folder = os.path.join(storage_path or "", utils.NAME_SPACETIME_ANALYSIS)        
+        self.flag_denoise = flag_denoise
+        self.storage_path = storage_path
+        self.id_name = utils.get_session_id_name(path_session)
+        
+        if self.flag_denoise:
+            self.id_name += "_Denoise_z"
+        if pretrigger_flag:
+            self.id_name += "_zpretrig"
+            
+        self.map_session_folder = os.path.join(self.map_folder, self.id_name)
+        
+        self.retino_pos_am = utils.get_conditions_correspondance(path_session)
+        self.cond_am = list(self.retino_pos_am.keys())
+        self.cond_pos = list({pos for v in self.retino_pos_am.values() for pos in v})
+
+        self.stimulus_metadata = utils.get_stimulus_metadata(self.path_session)  
+        self.stimulus_speed = self.stimulus_metadata['speed']
+        self.timing_single_stroke = (
+            self.stimulus_metadata['single stroke']['bottom limit'], 
+            self.stimulus_metadata['single stroke']['upper limit']
+        )
+        self.timing_am_sequence = (
+            self.stimulus_metadata['multiple stroke']['bottom limit'], 
+            self.stimulus_metadata['multiple stroke']['upper limit']
+        )
+        
+        # self.logger = log_obj if log_obj is not None else utils.setup_custom_logger('myapp')
+        self.logger = None
+        
+        self.single_pos_maps = self.load_single_pos()
+        self.acquisition_frequency = self.single_pos_maps[self.cond_pos[0]].sampling_rate
+        self.time_bin              = (1/self.acquisition_frequency)*1000 #ms
+        self.pixel_spacing         = self.single_pos_maps[self.cond_pos[0]].pixel_spacing
+        
+        self.data_pos_frame = self.get_data_pos(self.single_pos_maps)
+        self.data_dict_frame = {k: v.map for k, v in self.single_pos_maps.items()}
+        self.data_dict_pos = {}
+        
+    # [All previous methods remain the same - load_single_pos, load_subtraction_maps, etc.]
+    def load_single_pos(self):
+        """Returns: (dict of SpatioTemporalMap objects)"""
+        single_pos_maps = {}
+        for pos in self.cond_pos:
+            utils.stampa(f'Pos {pos} starts to load!')
+            st_map = self._load_stmap(pos)
+            if st_map:
+                single_pos_maps[pos] = st_map
+        return single_pos_maps
+
+    def load_subtraction_maps(self):
+        """Returns: (dict of SpatioTemporalMap objects)"""
+        subtraction_maps = {}
+        dict_components_ = self.retino_pos_am.copy()
+        for i in self.cond_pos:
+            dict_components_[i] = [i]
+        dict_subs = utils.find_subsets(dict_components_)     
+        
+        for cond_am, cond_pos in dict_subs.items():
+            map_name = f"{cond_am} - {cond_pos}"
+            st_map = self._load_stmap(map_name)
+            if st_map:
+                subtraction_maps[map_name] = st_map
+        return subtraction_maps
+
+    def load_nonlinear_prediction_maps(self):
+        """Returns: (dict of SpatioTemporalMap objects)"""
+        prediction_maps = {}
+        for cond_am, pos_list in self.retino_pos_am.items():
+            pred_name = ''.join(pos_list)
+            map_name = f"{cond_am} - {pred_name}"
+            st_map = self._load_stmap(map_name)
+            if st_map:
+                prediction_maps[map_name] = st_map
+        return prediction_maps
+
+    def get_data_pos(self, dict_maps):
+        dict_frame = {}
+        for name_cond, map_ in dict_maps.items():
+            dict_frame[name_cond] = [map_.retino_pos[0], map_.retino_time[0]]    
+            utils.stampa(f'Space and time coordinates of peaks for {name_cond} picked', logger=self.logger)
+        return dict_frame
+    
+    def _load_stmap(self, map_name):
+        """Load a SpatioTemporalMap from disk"""
+        map_path = os.path.join(self.map_session_folder, map_name, 'spatiotemporal_profile')
+        if os.path.exists(map_path):
+            st_map = SpatioTemporalMap(self.path_session)
+            st_map.load_stmap(os.path.join(map_path, f'st_map_{map_name}'))
+            del st_map.maps
+            return st_map
+        else:
+            utils.stampa(f'{map_path} not found!', logger=self.logger)
+            return None
+
+    def get_nonlinear_pred_peaks(self, pred_dict, time_single_pos_peak): 
+        peak_dots = {}
+        timing_frame = (1/self.acquisition_frequency) * 1000
+
+        for k in self.cond_am:
+            v = self.retino_pos_am[k]
+            start_time = self.stimulus_metadata['pos metadata'][k]['start'] 
+            name_cond_pred = ''.join(v)
+            
+            positions = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[k]] 
+
+            sub_cond = f'{k} - {name_cond_pred}'    
+            
+            if sub_cond not in pred_dict:
+                utils.stampa(f'Warning: {sub_cond} not found in prediction maps', logger=self.logger)
+                continue
+                
+            st_map_sub = pred_dict[sub_cond]
+
+            times = list()
+            for n, i in enumerate(v):
+                isi_frames = int(np.ceil(st_map_sub.interstimulus_delay/timing_frame))
+                times.append((self.data_pos_frame[i][1] - self.single_pos_maps[i].onset_time) + st_map_sub.onset_time + n*isi_frames)
+                
+            peak_dots[sub_cond] = list(zip(times, positions))
+
+        return peak_dots
+
+    def get_subtraction_peaks(self, dict_sub):
+        path_session = self.path_session
+        dict_subtrs = utils.get_conds_for_sub(path_session)
+        
+        peak_dots = {}
+        timing_frame = (1/self.acquisition_frequency) * 1000
+
+        for c1, c2 in dict_subtrs.items():
+            name_cond_sub = f'{c1} - {c2}'
+            
+            if name_cond_sub not in dict_sub:
+                utils.stampa(f'Warning: {name_cond_sub} not found in subtraction maps', logger=self.logger)
+                continue
+                
+            st_map_sub = dict_sub[name_cond_sub]
+            
+            positions = [self.data_pos_frame[ss][0] for ss in self.retino_pos_am[c1]]
+            times = [
+                self.data_pos_frame[ss][1] - (self.timing_single_stroke[0] - self.timing_am_sequence[0]) 
+                for ss in self.retino_pos_am[c1]
+            ]
+
+            for n, _ in enumerate(self.retino_pos_am[c1]):
+                isi_frames = int(np.ceil(st_map_sub.interstimulus_delay/timing_frame))
+                times[n] = times[n] + n * isi_frames     
+                
+            peak_dots[name_cond_sub] = list(zip(times, positions))
+            
+        return peak_dots
+
+    def load_all_maps_and_peaks(self, time_single_pos_peak=None):
+        """Convenience method to load all maps and peaks at once"""
+        sub_maps = self.load_subtraction_maps()
+        pred_maps = self.load_nonlinear_prediction_maps()
+        
+        sub_peaks = self.get_subtraction_peaks(sub_maps)
+        
+        if time_single_pos_peak is None:
+            first_pos = list(self.data_pos_frame.keys())[0]
+            time_single_pos_peak = self.data_pos_frame[first_pos][1]
+            
+        pred_peaks = self.get_nonlinear_pred_peaks(pred_maps, time_single_pos_peak)
+        
+        self.data_dict_pos   = {**self.data_pos_frame, 
+                                **pred_peaks, 
+                                **sub_peaks}
+        
+        self.data_dict_frame = {**self.data_dict_frame, 
+                                **{k: v.map for k, v in sub_maps.items()}, 
+                                **{k: v.map for k, v in pred_maps.items()}}
+        
+        return {'sub_maps': sub_maps,
+                'pred_maps': pred_maps,
+                'sub_peaks': sub_peaks,
+                'pred_peaks': pred_peaks}
+
+    
+    def extract_last_dot_maps(self, dict_maps, peak_dots, list_dots=[2, 3], 
+                             list_space=[0.5, 1], list_direction=[-1, 1], update_direction_switch = False):
+        """
+        Extract portions of maps starting from the last coordinate (peak) for each condition.
+        """
+        utils.stampa(f'Starting map extraction...', logger=self.logger)
+        utils.stampa(f'Input dict_maps keys: {list(dict_maps.keys())}', logger=self.logger)
+        utils.stampa(f'Input peak_dots keys: {list(peak_dots.keys())}', logger=self.logger)
+        
+        directions = {}
+        for k in loader.retino_pos_am.keys():
+            _, sign = trj.get_direction(self.data_pos_frame, self.retino_pos_am[k])
+            directions[k] = sign 
+        utils.stampa(f'Directions: {directions}', logger=self.logger)
+        
+        # Initialize nested dictionaries
+        matrix_dict = {outer: {middle: {inner: [] for inner in list_direction}
+                      for middle in list_space} for outer in list_dots}
+        peaks_dict = {outer: {middle: {inner: [] for inner in list_direction}
+                     for middle in list_space} for outer in list_dots}
+        baseline_dict = {outer: {middle: {inner: [] for inner in list_direction}
+                        for middle in list_space} for outer in list_dots}
+        
+        metadata = {'conditions_processed': [],
+                    'conditions_skipped': [],
+                    'processing_params': {'list_dots': list_dots,
+                                          'list_space': list_space, 
+                                          'list_direction': list_direction}        }
+        
+        # Process each map
+        for k, v in dict_maps.items():
+            utils.stampa(f'Processing map: {k}', logger=self.logger)
+            
+            # Extract condition name (part before ' -')
+            condition_name = k.split(' -')[0].strip()
+            utils.stampa(f'Condition name: {condition_name}', logger=self.logger)
+            
+            try:
+                # Check if condition exists in metadata
+                if condition_name not in self.stimulus_metadata['pos metadata']:
+                    utils.stampa(f'Warning: {condition_name} not found in stimulus metadata', logger=self.logger)
+                    metadata['conditions_skipped'].append(k)
+                    continue
+                
+                # Get condition parameters
+                n_dots = len(self.stimulus_metadata['pos metadata'][condition_name]['conditions'])
+                spacing = self.stimulus_metadata['pos metadata'][condition_name]['inter stimulus space']
+                utils.stampa(f'n_dots: {n_dots}, spacing: {spacing}', logger=self.logger)
+                
+                # Skip if parameters not in our lists
+                if n_dots not in list_dots or spacing not in list_space:
+                    utils.stampa(f'Skipping {k}: n_dots={n_dots} or spacing={spacing} not in target lists', logger=self.logger)
+                    metadata['conditions_skipped'].append(k)
+                    continue
+                
+                # Get direction
+                direction = directions.get(condition_name, 0)
+                utils.stampa(f'Direction for {condition_name}: {direction}', logger=self.logger)
+                
+                if direction == 0 or direction not in list_direction:
+                    utils.stampa(f'Skipping {k}: direction={direction} not valid', logger=self.logger)
+                    metadata['conditions_skipped'].append(k)
+                    continue
+                
+                # Get peak coordinates
+                if k not in peak_dots:
+                    utils.stampa(f'Warning: {k} not found in peak_dots', logger=self.logger)
+                    metadata['conditions_skipped'].append(k)
+                    continue
+                
+                if not peak_dots[k]:  # Empty list
+                    utils.stampa(f'Warning: {k} has empty peak_dots', logger=self.logger)
+                    metadata['conditions_skipped'].append(k)
+                    continue
+                
+                tmp_coord = peak_dots[k][-1]  # Last coordinate (time, position)
+                utils.stampa(f'Last coordinate for {k}: {tmp_coord}', logger=self.logger)
+                
+                # Extract map portion from the last peak time onwards
+                if tmp_coord[0] >= v.map.shape[1]:
+                    utils.stampa(f'Warning: peak time {tmp_coord[0]} >= map width {v.map.shape[1]}', logger=self.logger)
+                    metadata['conditions_skipped'].append(k)
+                    continue
+                
+                tmp_map = v.map[:, tmp_coord[0]:]
+                
+                # Extract baseline (before stimulus onset)
+                base_frames = int(np.nanmin([self.timing_am_sequence[0], 
+                                             self.timing_single_stroke[0]]))
+                
+                if base_frames > v.map.shape[1]:
+                    base_frames = v.map.shape[1] // 4  # Fallback to first quarter
+                
+                tmp_baseline = v.map[:, :base_frames]
+                
+                # Handle resampling if attributes are available
+                utils.stampa('Spatial proportions normalized according pixel spacing and sampling frequency', logger=self.logger)
+                tmp_map, scale  = resample_spatiotemporal_map(tmp_map, self.time_bin, self.pixel_spacing)
+                tmp_baseline, _ = resample_spatiotemporal_map(tmp_baseline, self.time_bin, self.pixel_spacing)
+                scaled_peak_pos = tmp_coord[1] * scale[0]
+                print(tmp_coord)
+            
+                # Store results
+                matrix_dict[n_dots][spacing][direction].append(tmp_map)
+                peaks_dict[n_dots][spacing][direction].append(scaled_peak_pos)
+                baseline_dict[n_dots][spacing][direction].append(tmp_baseline)
+                metadata['conditions_processed'].append(k)
+                
+                utils.stampa(f'Successfully processed {k}', logger=self.logger)
+                
+            except Exception as e:
+                utils.stampa(f'Error processing condition {k}: {e}', logger=self.logger)
+                import traceback
+                utils.stampa(f'Traceback: {traceback.format_exc()}', logger=self.logger)
+                metadata['conditions_skipped'].append(k)
+        
+        utils.stampa(f'Processing complete. Processed: {len(metadata["conditions_processed"])}, Skipped: {len(metadata["conditions_skipped"])}', logger=self.logger)
+        
+        return MapExtractionResults(matrix_dict, peaks_dict, baseline_dict, metadata, update_direction_switch)
+    
+    def analyze_all_maps(self, list_dots=[2, 3], list_space=[0.5, 1], list_direction=[-1, 1], update_direction_switch = False):
+        """
+        Convenience method to analyze all loaded maps (both subtraction and prediction)
+        """
+        results = {}
+        
+        # Load all maps
+        utils.stampa('Loading all maps and peaks...', logger=self.logger)
+        map_data = self.load_all_maps_and_peaks()
+        
+        # Analyze subtraction maps
+        if 'sub_maps' in map_data and 'sub_peaks' in map_data:
+            utils.stampa('Analyzing subtraction maps...', logger=self.logger)
+            results['subtraction'] = self.extract_last_dot_maps(map_data['sub_maps'], map_data['sub_peaks'],
+                                                                list_dots, list_space, list_direction, update_direction_switch)
+        
+        # Analyze prediction maps  
+        if 'pred_maps' in map_data and 'pred_peaks' in map_data:
+            utils.stampa('Analyzing prediction maps...', logger=self.logger)
+            results['prediction'] = self.extract_last_dot_maps(map_data['pred_maps'], map_data['pred_peaks'],
+                                                               list_dots, list_space, list_direction, update_direction_switch)
+            
+        return results
+
+class MapExtractionResults:
+    """
+    Container class for map extraction results with convenient access methods
+    """
+    def __init__(self, matrix_dict, peaks_dict, baseline_dict, metadata=None, update_direction_switch=False):
+        self.update_direction_switch = update_direction_switch
+        self.matrices = {}
+        self.peaks = {}
+        self.baselines = {}
+        self.metadata = metadata or {}
+
+        self.pos_peaks = {}
+        self.neg_peaks = {}
+
+        for n_dots in matrix_dict:
+            self.matrices[n_dots] = {}
+            self.peaks[n_dots] = {}
+            self.baselines[n_dots] = {}
+            for spacing in matrix_dict[n_dots]:
+                self.matrices[n_dots][spacing] = {}
+                self.peaks[n_dots][spacing] = {}
+                self.baselines[n_dots][spacing] = {}
+                for direction in matrix_dict[n_dots][spacing]:
+                    self.matrices[n_dots][spacing][direction] = []
+                    self.peaks[n_dots][spacing][direction] = []
+                    self.baselines[n_dots][spacing][direction] = []
+
+                    maps = matrix_dict[n_dots][spacing][direction]
+                    peaks = peaks_dict[n_dots][spacing][direction]
+                    baselines = baseline_dict[n_dots][spacing][direction]
+
+                    for q, peak, baseline in zip(maps, peaks, baselines):
+                        if self.update_direction_switch and direction == -1:
+                            q_proc = q[::-1, :]
+                            baseline_proc = baseline[::-1, :]
+                            peak_proc = abs(q.shape[0] - peak)
+                        else:
+                            q_proc = q
+                            baseline_proc = baseline
+                            peak_proc = peak
+
+                        self.matrices[n_dots][spacing][direction].append(q_proc)
+                        self.baselines[n_dots][spacing][direction].append(baseline_proc)
+                        self.peaks[n_dots][spacing][direction].append(peak_proc)
+
+        
+    def get_condition_data(self, n_dots, spacing, direction):
+        """Get all data for a specific condition combination"""
+        try:
+            return {'maps': self.matrices[n_dots][spacing][direction],
+                    'peaks': self.peaks[n_dots][spacing][direction],
+                    'baselines': self.baselines[n_dots][spacing][direction]}
+        except KeyError:
+            return {'maps': [],
+                    'peaks': [],
+                    'baselines': []}
+    
+    def get_all_conditions(self):
+        """Iterator over all condition combinations with data"""
+        for n_dots in self.matrices:
+            for spacing in self.matrices[n_dots]:
+                for direction in self.matrices[n_dots][spacing]:
+                    if self.matrices[n_dots][spacing][direction]:  # Only yield if has data
+                        yield {'n_dots': n_dots,
+                               'spacing': spacing,
+                               'direction': direction,
+                               'data': self.get_condition_data(n_dots, spacing, direction)}
+    
+    def summary_stats(self):
+        """Generate summary statistics about the results"""
+        stats = {'total_conditions': 0,
+                 'total_maps': 0,
+                 'conditions_with_data': [],
+                 'maps_per_condition': {}}
+        
+        for condition in self.get_all_conditions():
+            stats['total_conditions'] += 1
+            n_maps = len(condition['data']['maps'])
+            stats['total_maps'] += n_maps
+            
+            cond_key = f"{condition['n_dots']}dots_{condition['spacing']}spacing_{condition['direction']}dir"
+            stats['conditions_with_data'].append(cond_key)
+            stats['maps_per_condition'][cond_key] = n_maps
+            
+        return stats
+    
+    def compute_peak_blobs(self, square_wind=5, end_col=15):
+        import process_vsdi as process  # Assuming this contains find_highest_sum_area()
+    
+        self.pos_peaks = {}
+        self.neg_peaks = {}
+    
+        for condition in self.get_all_conditions():
+            n_dots = condition['n_dots']
+            spacing = condition['spacing']
+            direction = condition['direction']
+            maps = condition['data']['maps']
+            baselines = condition['data']['baselines']
+    
+            if n_dots not in self.pos_peaks:
+                self.pos_peaks[n_dots] = {}
+                self.neg_peaks[n_dots] = {}
+    
+            if spacing not in self.pos_peaks[n_dots]:
+                self.pos_peaks[n_dots][spacing] = {}
+                self.neg_peaks[n_dots][spacing] = {}
+    
+            self.pos_peaks[n_dots][spacing][direction] = []
+            self.neg_peaks[n_dots][spacing][direction] = []
+    
+            for q, baseline in zip(maps, baselines):
+                if not self.update_direction_switch and direction == -1:
+                    q = q[::-1, :]
+                    baseline = baseline[::-1, :]
+    
+                # Threshold masks
+                thr_up = np.nanpercentile(baseline, 75)
+                thr_low = np.nanpercentile(baseline, 25)
+    
+                mask_up = q >= thr_up
+                mask_low = q <= thr_low
+    
+                # Peak detection
+                pos_peak, pos_val = process.find_highest_sum_area(q * mask_up, square_wind, end_col=end_col)
+                neg_peak, neg_val = process.find_highest_sum_area(-q * mask_low, square_wind, end_col=end_col)
+    
+                self.pos_peaks[n_dots][spacing][direction].append((pos_peak, pos_val))
+                self.neg_peaks[n_dots][spacing][direction].append((neg_peak, neg_val))            
 
 def derivative_filter(arr, threshold):
     # Compute the derivative of the array
@@ -951,8 +1424,6 @@ def get_linear_expectation(array_of_sequences, stepping, nonlinear_zeroframe = 5
     # Return the linear expectation
     return tmp
 
-import numpy as np
-
 def maximi_inda_blob(st_matrix, blob, activity_mask = None):
     """
     Find the indices of the maximum values in a given matrix multiplied by a binary blob.
@@ -1061,10 +1532,13 @@ def plot_st(profilemap,
             threshold_contour, 
             traj_mask,
             pixel_spacing,
+            color_contour = 'k',
+            color_contour_low = 'aliceblue',
             retinotopic_pos = None,
             retinotopic_time = None, 
             map_type = utils.PARULA_MAP,
             st_title = None,
+            blob_to_add = None,
             onset_time = 4,
             colors_retinotopy = ['crimson', 'tomato', 'magenta'],
             draw_peak_traj = True,
@@ -1073,6 +1547,8 @@ def plot_st(profilemap,
             high_level = 5,
             color_peak = 'teal',
             low_level = -1,
+            ext = 'png',
+            threshold_contour_low = None,
             visualize_figure = False,
             store_path = None):
     
@@ -1091,9 +1567,21 @@ def plot_st(profilemap,
     
     # Plot intensity contour
     blobs = np.zeros(profilemap.shape, dtype = bool)
-#     blobs[np.where(median_filter(profilemap, size=(5,5))>=threshold_contour)] = 1
     blobs[np.where(profilemap>=threshold_contour)] = 1
-    ax.contour(blobs, 4, colors='k', alpha = .5, levels=[1])
+    ax.contour(blobs, colors=color_contour, alpha=1, levels=[0.5])
+
+    if threshold_contour_low is not None:
+        # Plot intensity contour
+        blobs_low = np.zeros(profilemap.shape, dtype = bool)
+        blobs_low[np.where(profilemap<=threshold_contour_low)] = 1
+        ax.contour(blobs_low, colors=color_contour_low, alpha=1, levels=[0.5])      
+        (a, b), _ = process.find_highest_sum_area((-1)*profilemap*blobs_low, 5, None, None, onset_time, 45)
+        ax.scatter(b,a, marker = 'o', color = 'w', s= 100)  
+
+    if blob_to_add:
+        for b in blob_to_add:
+            ax.contourf(b[0], levels=[0.5, 1], colors=[b[1]], alpha=0.15)
+            ax.contour(b[0], colors=b[1], alpha=.15, levels=[0.5])
     
     blobs_ = np.copy(blobs)
     blobs_[np.where(median_filter(profilemap, size=(5,5))>=threshold_contour)] = 1
@@ -1119,13 +1607,14 @@ def plot_st(profilemap,
         plt.vlines(onset_time+n*isi_frames, 
                    np.where(traj_mask != 0)[1].min(), 
                    np.where(traj_mask != 0)[1].max(), 
-                   color = colors_retinotopy[n], ls ='--', lw=2)
+                   color = colors_retinotopy[n], 
+                   alpha = 1, 
+                   ls ='--', lw=2)
     
     # Plot highest spot
     if len(retinotopic_pos)>1:
         (a, b), _ = process.find_highest_sum_area(profilemap*blobs_, 5, None, None, onset_time, 45)
         ax.scatter(b,a, marker = 'o', color = color_peak, s= 100)
-        print(a, b)
     else:
         a = retinotopic_pos 
         b = retinotopic_time             
@@ -1133,11 +1622,9 @@ def plot_st(profilemap,
     # Custom axis
     strokes_onset_times = [onset_time+i*isi_frames for i in range(number_strokes)]
     strokes_onset_times.sort()
-    print(strokes_onset_times)
     start_time_instants = [0] + strokes_onset_times
     tmp = start_time_instants + list(np.linspace(start_time_instants[-1], time, (2+(time-start_time_instants[-1])//10)))
 
-    print(tmp)
     ax.set_xticks(tmp)
     labels_ = [item.get_text() for item in ax.get_xticklabels()]
     # x_tmp = np.arange((zero_of_cond-12), (zero_of_cond+30+12), len(tmp))
@@ -1147,12 +1634,14 @@ def plot_st(profilemap,
     ax.set_xticklabels(list_x, fontsize = 12)
     ax.set_xlabel('Time - ms', fontsize = 15)
 
-    tmp_y = np.linspace(0, space-10, 9) 
+    tmp_y = np.linspace(0, space, 6) 
     ax.set_yticks(tmp_y)
     labels_ = [item.get_text() for item in ax.get_yticklabels()]
     list_y  = list()
-    for y in np.linspace(0, (pixel_spacing*space) , 9):
-        list_y.append(f'{y:.1f}')
+    print(tmp_y)
+    for y in tmp_y:
+        list_y.append(f'{(y*pixel_spacing):.1f}')
+    print(list_y)
     ax.set_yticklabels(list_y, fontsize = 12)
     ax.set_ylabel('Space - mm', fontsize = 15)
     ax.set_ylim((np.where(traj_mask != 0)[1].min(), np.where(traj_mask != 0)[1].max()))
@@ -1162,12 +1651,13 @@ def plot_st(profilemap,
         plt.title(st_title, fontsize = 15)
         if store_path is not None:
             # plt.savefig(os.path.join(store_path+ '.pdf'), format = 'pdf', dpi =500)
-            plt.savefig(os.path.join(store_path+ '.png'), format = 'png', dpi =500)
+            plt.savefig(os.path.join(store_path+ f'.{ext}'), format = ext, dpi =500)
 
     if visualize_figure:
+        fig.canvas.draw()  # Force rendering of all artists        
         plt.show()
     plt.close('all')
-    return (a,b)
+    return (a,b), blobs
 
 # Example for script launching sbatch Desktop/runpy_giancani.sh st_builder.py --path /envau/work/neopto/DATA_AnDO/exp-AM3_BEHAV+VSDI/sub-Hip/sess-20210108-001/derivatives/spcbin3_timebin1_zerofrms6_strategymae_n_chunk1_movFalse_dtrendFalse_deblankTrue/ --store --vis --denoised --zmaps
 
