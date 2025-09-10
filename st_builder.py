@@ -378,6 +378,9 @@ class SpatioTemporalSession:
         line_traj_x, line_traj_y = trj.get_trajectory(xs_real, ys_real, (0, self.nx -1))
         _, _, self.orient_traj   = trj.rotate_distribution(line_traj_x, line_traj_y)#in rad
 
+        self.blank_signal_average = self.retino_session.mean_blank
+        self.std_blank            = np.nanstd(self.blank_signal_average, axis=0)/np.sqrt(np.shape(self.blank_signal_average)[0])
+
         self.data_dictionary     = {}
         self.data_pos_frame      = {}
 
@@ -444,6 +447,8 @@ class SpatioTemporalSession:
             cd          = self.retino_session.get_data_to_process(name_cond)
             signal      = cd.df_fz
             avrg_signal = cd.averaged_df
+            signal      = process.zeta_score(signal, np.nanmean(self.blank_signal_average, axis = 0), self.std_blank, full_seq=True)
+
 
         st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(signal, name_cond, synaptic_latency = synaptic_latency)
         min_level = np.nanpercentile(st_map_cd.maps, 15)
