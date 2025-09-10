@@ -474,8 +474,8 @@ class RetinoSession(md.Session):
         if (time_limits is not None):
             r.time_limits = time_limits     
 
-        # Inject a synaptic delay (60ms)
-        delay      = int(np.ceil(0.06 / (1 / self.acquisition_frequency)))
+        # Inject an arbitrary delay (60ms) for maximum signal-to-noise ratio
+        delay      = int(np.ceil(0.06 / (1 / self.acquisition_frequency))) # This delay is added to an already present 60ms synaptic delay
         begin_time = r.time_limits[0] + delay
         end_time   = r.time_limits[1] + delay
         foi        = None
@@ -559,7 +559,7 @@ class RetinoSession(md.Session):
         Parameters:
             - name_cond (str): name of condition
             - time_limits (tuple): (start_frame, end_frame)
-            - cd (obj): calcium data object
+            - cd (obj): vsdi data object
             - stroke_number (int): which stroke within the sequence
             - stroke_name (str): key for previous retinotopy results
             - time_step (int): manually defined time step between strokes (in frames)
@@ -1181,7 +1181,13 @@ class Retinotopy:
     
 
 class RetinoLoaderManager:
-    def __init__(self, path_session, flag_denoise=True, storage_path=dv.STORAGE_PATH, peak_stability = False, only_single_pos = False):
+    def __init__(self, path_session, 
+                 flag_denoise=True, 
+                 storage_path=dv.STORAGE_PATH, 
+                 peak_stability = False, 
+                 only_single_pos = False,
+                 pretrigger_flag = False):
+
         self.path_session        = path_session
         self.flag_denoise        = flag_denoise
         self.storage_path        = storage_path
@@ -1189,6 +1195,8 @@ class RetinoLoaderManager:
         self.id_name = utils.get_session_id_name(path_session)
         if self.flag_denoise:
             self.id_name += "_Denoise"
+        if pretrigger_flag:
+            self.id_name += "_zpretrig"
         self.retino_pos_am = utils.get_conditions_correspondance(path_session)
         self.cond_am   = list(self.retino_pos_am.keys())
         self.cond_pos  = list({pos for v in self.retino_pos_am.values() for pos in v})
@@ -1225,7 +1233,8 @@ class RetinoLoaderManager:
         for cond, strokes in self.retino_pos_am.items():
             retinos = []
             for idx in range(len(strokes) - 1):
-                folder_name = f"{cond}-{strokes[idx]}_{idx + 1}"
+                folder_name = f"{cond}-{strokes[idx+1]}_{idx + 2}"
+                print(folder_name)
                 folder_path = os.path.join(base_path, cond, folder_name, "retino", f"retinotopy_{cond}")
                 # print(f'Path for loading AM standard: {folder_path}')
                 r = Retinotopy(self.path_session)
@@ -1279,7 +1288,13 @@ class RetinoLoaderManager:
         return data
 
 class PeakSet:
-    def __init__(self, session_path, cond_dict, stim_meta, flag_denoise=False, peak_stability=False, cond_to_discard = None):
+    def __init__(self, 
+                 session_path, cond_dict, stim_meta, 
+                 flag_denoise=False, 
+                 peak_stability=False, 
+                 pretrigger_zero = False,
+                 cond_to_discard = None, 
+                 storage_path = dv.STORAGE_PATH):
         self.session_path   = session_path
         self.cond_dict      = cond_dict  # e.g., {'AM123': ['AM1', 'AM2', 'AM3'], ...}
         if cond_to_discard is not None:
@@ -1296,7 +1311,7 @@ class PeakSet:
         self.flag_denoise   = flag_denoise
         self.peak_stability = peak_stability
 
-        self.data_loader     = RetinoLoaderManager(self.session_path, peak_stability=peak_stability, flag_denoise=flag_denoise)
+        self.data_loader     = RetinoLoaderManager(self.session_path, peak_stability=peak_stability, flag_denoise=flag_denoise, storage_path=storage_path, pretrigger_flag = pretrigger_zero)
         self.session_id_name = self.data_loader.id_name 
         self.data = self.data_loader.data  # dict of condition -> RetinotopicObject(s)
         
@@ -1310,16 +1325,6 @@ class PeakSet:
         self.normalize()
         self.meta_data_am      = self.normalize_cond_name()
 
-    def get_direction(self, list_pos):
-        tmp  = [self.single_pos_coords[j] for j in list_pos]
-        tmp  = list(list(zip(*tmp))[0])
-        sign = trj.get_sign(tmp, 0, -1)
-        if sign > 0:
-            tmp_dir = 'up'
-        else:
-            tmp_dir = 'dw'
-        return tmp_dir, sign
-
     def normalize_cond_name(self):
         dict_meta_data_am = {}
 
@@ -1328,7 +1333,7 @@ class PeakSet:
 
         for k,v in self.cond_dict.items():  
             dict_meta_data_am[k] = {}
-            tmp_dir, _ = self.get_direction(v)
+            tmp_dir, _ = trj.get_direction(self.single_pos_coords, v)
             n_strokes = len(v)
             isi       = self.stim_meta['pos metadata'][k]['inter stimulus space']
 
@@ -1337,13 +1342,14 @@ class PeakSet:
 
         if not self.peak_stability:
             for k,v in self.sub_conds.items():
-                tmp_dir, _ = self.get_direction(self.cond_dict[k])
-                isi  = self.stim_meta['pos metadata'][k]['inter stimulus space']
+                if k in list(self.cond_dict.keys()):
+                    tmp_dir, _ = trj.get_direction(self.single_pos_coords, self.cond_dict[k])
+                    isi  = self.stim_meta['pos metadata'][k]['inter stimulus space']
 
-                if v in self.cond_dict[k]:
-                    dict_meta_data_am[f'{k}-{v}'] = f'AM{len(self.cond_dict[k])}-pos_{tmp_dir}_isi{isi}'
-                else:
-                    dict_meta_data_am[f'{k}-{v}'] = f'AM{len(self.cond_dict[k])}-AM{len(self.cond_dict[v])}_{tmp_dir}_isi{isi}'
+                    if v in self.cond_dict[k]:
+                        dict_meta_data_am[f'{k}-{v}'] = f'AM{len(self.cond_dict[k])}-pos_{tmp_dir}_isi{isi}'
+                    else:
+                        dict_meta_data_am[f'{k}-{v}'] = f'AM{len(self.cond_dict[k])}-AM{len(self.cond_dict[v])}_{tmp_dir}_isi{isi}'
 
         return dict_meta_data_am
 
@@ -1354,12 +1360,18 @@ class PeakSet:
         self.single_pos_coords = {k:v for k, v in zip(self.list_pos, point_on_trajectory)} 
 
         xs_real = list(list(zip(*point_on_trajectory))[0])
-        theta, _, _ = trj.get_angle_distribution(point_on_trajectory, map_shape)
+        ys_real = list(list(zip(*point_on_trajectory))[1])
+        # Linear fitting on the retino coordinates: more accurate angle of rotation estimation
+        line_traj_x, line_traj_y = trj.get_trajectory(xs_real, ys_real, (0, map_shape[1]-1))
+        _, _, theta = trj.rotate_distribution(line_traj_x, line_traj_y)
+        print(theta)
+
         unit, center = trj.get_unit_n_center(distributions_pos, self.stim_meta, self.list_pos, theta)
 
         norm_distribution_pos = [trj.distribution_coords_normalize(i, unit, center, theta) for i in distributions_pos]
 
         for loc in self.list_pos:
+            print(f'Median for peak distribution for cond {loc}: ({np.nanmedian(distributions_pos[self.list_pos.index(loc)][0])}, {np.nanmedian(distributions_pos[self.list_pos.index(loc)][1])})')
             self.normalized_distributions[loc] = [trj.normalize_distribution(distributions_pos[self.list_pos.index(loc)], 
                                                                              unit, 
                                                                              center, 
@@ -1378,12 +1390,14 @@ class PeakSet:
             ref_dist  = norm_distribution_pos[id_last]
 
             if self.peak_stability:
+                print(f'Median for peak distribution for cond {cond}: ({np.nanmedian(self.data[cond][0].distribution_positions[0])}, {np.nanmedian(self.data[cond][0].distribution_positions[1])})')
                 norm_reps = [trj.normalize_distribution(rep.distribution_positions, unit, center, theta, ref_dist, flip_sign) for rep in self.data[cond]]
                 self.normalized_distributions[cond] = norm_reps
 
             else:
                 rep = self.data[cond][-1]
                 norm_reps = [trj.normalize_distribution(rep.distribution_positions, unit, center, theta, ref_dist, flip_sign)]
+                print(f'Median for peak distribution for cond {cond}: ({np.nanmedian(rep.distribution_positions[0])}, {np.nanmedian(rep.distribution_positions[1])})')
                 
                 self.normalized_distributions[cond] = norm_reps
 
@@ -1396,6 +1410,7 @@ class PeakSet:
 
                 except:
                     print(f'{cond} has no possible subtraction')
+            
 
     def summarize(self):
         """Compute median and width summaries per condition."""
@@ -1425,21 +1440,30 @@ class PeakSet:
                 if cond in self.list_am:
                     tmp_cd = self.cond_dict[cond]
                     role = 'inAM'
+                    last_pos = self.meta_data_am[tmp_cd[-1]]
+
                 else:
+                    n_pos = 0
                     for i in self.list_am:
                         if i in cond:
                             tmp_cd = self.cond_dict[i]
+                            if len(tmp_cd) > n_pos:
+                                last_pos = self.meta_data_am[tmp_cd[-1]]
+                            n_pos = np.nanmax([n_pos, len(tmp_cd)])
+
                     role = 'sub'
 
-                _, sign = self.get_direction(tmp_cd)
+                _, sign = trj.get_direction(self.single_pos_coords, tmp_cd)
 
             else:
                 isi_val = 0
                 n_pos = 0
                 sign = 0
                 role = 'pos'
+                last_pos = 0
 
             name_key = self.meta_data_am[cond]
+            print(cond, last_pos)
 
             for rep_index, (x, y) in enumerate(reps):
                 summary_rows.append({'session': self.session_id_name,
@@ -1448,11 +1472,14 @@ class PeakSet:
                                      'n_pos': n_pos,
                                      'dir': sign,
                                      'role': role,
+                                     'last_pos': last_pos,
                                      'repeatition': rep_index,
                                      'x_median': np.nanmedian(x),
                                      'y_median': np.nanmedian(y),
-                                     'x_width': np.nanpercentile(x, 97.5),
-                                     'y_width': np.nanpercentile(y, 97.5)})
+                                     'x_width': np.nanpercentile(x, 75),
+                                     'y_width': np.nanpercentile(y, 75),
+                                     'x': x,
+                                     'y': y})
 
         return summary_rows
     
@@ -1572,8 +1599,8 @@ def single_trial_detection(retino_object, dim_window, time_window_inference, df_
 
 def subtraction_among_conditions(path_session, 
                                  first, second, 
-                                 time_limits_first, 
-                                 time_limits_second, 
+                                 time_limits_first, # stimulus onset, stimulus onset + 200ms
+                                 time_limits_second, # stimulus onset, stimulus onset + 200ms
                                  id_name, 
                                  name,
                                  session_name, 
@@ -1581,7 +1608,7 @@ def subtraction_among_conditions(path_session,
                                  df_123, 
                                  params, 
                                  name_params, 
-                                 time_window_inference,
+                                 time_window_inference, # Last dot + 2*ISS
                                  fullframe = True, 
                                  single_trial_analysis = True, 
                                  stroke_centroid = None,
