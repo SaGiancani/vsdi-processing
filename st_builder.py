@@ -275,7 +275,7 @@ class SpatioTemporalSession:
         self.denoise_switch        = denoise_flag
         self.vis_switch            = vis_switch
         self.store_switch          = store_switch
-        self.zmaps_flag            = zmaps_flag
+        self.pretriggerz_flag      = zmaps_flag
         self.filter_flag           = spatial_filter # Does not work for zmaps_flag
         if retin_fold_path is None:
             self.retin_folder      = os.path.join(dv.STORAGE_PATH, utils.NAME_RETINO_ANALYSIS)
@@ -295,11 +295,6 @@ class SpatioTemporalSession:
         self.single_stroke_label   = single_stroke_label
         self.multiple_stroke_label = multiple_stroke_label
 
-        if self.zmaps_flag:
-            pretrig_flag = True
-        else:
-            pretrig_flag = False
-
         # Create an instance of RetinoSession instead of inheriting
         self.retino_session = retinotopy.RetinoSession(path_session=self.path_session,
                                                        logger=self.log,
@@ -311,7 +306,7 @@ class SpatioTemporalSession:
                                                        store_switch=self.store_switch,
                                                        data_vis_switch=self.vis_switch,
                                                        denoise_flag=self.denoise_switch,
-                                                       pretrigger_zero=pretrig_flag,
+                                                       pretrigger_zero=self.pretriggerz_flag,
                                                        **kwargs)
         
         self.id_name           = self.retino_session.id_name        
@@ -329,7 +324,7 @@ class SpatioTemporalSession:
         self.timing_am_sequence      = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
 
        
-        if self.zmaps_flag:
+        if self.pretriggerz_flag:
             if  load_data:
                 # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
                 cd_x       = Condition() 
@@ -431,7 +426,7 @@ class SpatioTemporalSession:
                      'pixel_spacing': self.pixel_spacing, 
                      'storing_folder': self.storing_folder,
                      'data_folder': self.path_to_derivatives,
-                     'zscore_flag': self.zmaps_flag, 
+                     'zscore_flag': self.pretriggerz_flag, 
                      'start_time_am': self.timing_am_sequence,
                      'start_time_ss': self.timing_single_stroke, 
                      'stimulus_speed': self.stimulus_speed}
@@ -444,21 +439,21 @@ class SpatioTemporalSession:
         utils.stampa(f'Get spatiotemporal profiles for condition {name_cond} \n', logger=self.log)
         start_time = datetime.datetime.now().replace(microsecond=0)
 
-        if self.zmaps_flag:
+        if self.pretriggerz_flag:
             signal      = self.dict_zeta[name_cond]
 
         else:
             cd          = self.retino_session.get_data_to_process(name_cond)
             signal      = cd.df_fz
 
-            if self.filter_flag: 
+            if self.filter_flag and (single_pos_cds is None): 
                 signal = median_filter(signal, size=(1, 1, 3, 3))
                 
             signal      = np.array([process.zeta_score(i, np.nanmean(self.blank_signal_average, axis = 0), self.std_blank, full_seq=True) for i in signal])
 
         avrg_signal = np.nanmean(signal, axis = 0)
 
-        print(signal.shape, np.nanmean(signal), self.blank_signal_average.shape, np.nanmean(self.blank_signal_average))
+        print(name_cond, np.nanmean(avrg_signal))
         st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(signal, name_cond, synaptic_latency = synaptic_latency)
         min_level = np.nanpercentile(st_map_cd.maps, 15)
         max_level = np.nanpercentile(st_map_cd.maps, 95)
@@ -1760,6 +1755,14 @@ if __name__=="__main__":
                         action='store_false')
     parser.set_defaults(zmaps_flag=False)  
 
+    parser.add_argument('--filt', 
+                        dest='spatial_filter', 
+                        action='store_true')
+    parser.add_argument('--no-filt', 
+                        dest='spatial_filter', 
+                        action='store_false')
+    parser.set_defaults(spatial_filter=True)  
+
     
     start_process_time = datetime.datetime.now().replace(microsecond=0)
     args = parser.parse_args()
@@ -1780,5 +1783,6 @@ if __name__=="__main__":
                                          green_name      = args.green_name,
                                          zmaps_flag      = args.zmaps_flag,                                         
                                          single_stroke_label   = args.single_stroke_label, 
-                                         multiple_stroke_label = args.apparent_motion_label) 
+                                         multiple_stroke_label = args.apparent_motion_label,
+                                         spatial_filter  = args.spatial_filter) 
     st_session.get_session()
