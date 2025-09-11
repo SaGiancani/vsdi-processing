@@ -376,6 +376,7 @@ class SpatioTemporalSession:
         xs_real = list(list(zip(*self.single_pos))[0])
         ys_real = list(list(zip(*self.single_pos))[1])
         line_traj_x, line_traj_y = trj.get_trajectory(xs_real, ys_real, (0, self.nx -1))
+        self.trajectory_mask     = trj.get_trajectory_mask(list(zip(line_traj_x, line_traj_y)), (self.ny, self.nx), extremities = (0,0))        
         _, _, self.orient_traj   = trj.rotate_distribution(line_traj_x, line_traj_y)#in rad
 
         self.blank_signal_average = self.retino_session.mean_blank
