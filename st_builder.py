@@ -381,7 +381,7 @@ class SpatioTemporalSession:
         self.blank_signal_average = self.retino_session.mean_blank
         if self.filter_flag:
             self.blank_signal_average = median_filter(self.blank_signal_average, size=(1, self.filter_kernel, self.filter_kernel))
-            self.blank_signal_average = gaussian_filter(self.blank_signal_average, sigma=(0.5, 1, 1))
+            self.blank_signal_average = gaussian_filter(self.blank_signal_average, sigma=(1, 1, 1))
 
         self.std_blank            = np.nanstd(self.blank_signal_average, axis=0)/np.sqrt(np.shape(self.blank_signal_average)[0])
 
@@ -454,7 +454,7 @@ class SpatioTemporalSession:
             if self.filter_flag and (single_pos_cds is None): 
                 signal = median_filter(signal, size=(1, 1, self.filter_kernel, self.filter_kernel))
                 # Slight smoothing in time, none across trials, stronger in space
-                signal = gaussian_filter(signal, sigma=(0, 0.5, 1, 1))
+                signal = gaussian_filter(signal, sigma=(0, 1, 1, 1))
 
             blnk_tmp = np.nanmean(self.blank_signal_average, axis = 0)
             signal   = np.array([process.zeta_score(i, blnk_tmp, self.std_blank, full_seq=True) for i in signal])
@@ -1063,7 +1063,7 @@ class STMapsLoaderManager:
         utils.stampa(f'Input peak_dots keys: {list(peak_dots.keys())}', logger=self.logger)
         
         directions = {}
-        for k in loader.retino_pos_am.keys():
+        for k in self.retino_pos_am.keys():
             _, sign = trj.get_direction(self.data_pos_frame, self.retino_pos_am[k])
             directions[k] = sign 
         utils.stampa(f'Directions: {directions}', logger=self.logger)
