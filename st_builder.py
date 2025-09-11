@@ -6,7 +6,7 @@ import process_vsdi as process
 from middle_process import get_classic_signal, Condition 
 import retinotopy 
 from scipy.ndimage.filters import median_filter
-from scipy.ndimage import rotate, zoom
+from scipy.ndimage import rotate, zoom, gaussian_filter
 import trajectory as trj 
 import utils
 
@@ -267,6 +267,7 @@ class SpatioTemporalSession:
                  zmaps_flag      = False,
                  load_data       = True,
                  spatial_filter  = True,
+                 filter_kernel   = 5,
                  **kwargs):
 
         self.acquisition_frequency = acquisition_fq #Hz
@@ -277,6 +278,7 @@ class SpatioTemporalSession:
         self.store_switch          = store_switch
         self.pretriggerz_flag      = zmaps_flag
         self.filter_flag           = spatial_filter # Does not work for zmaps_flag
+        self.filter_kernel         = filter_kernel # Does not work for zmaps_flag
         if retin_fold_path is None:
             self.retin_folder      = os.path.join(dv.STORAGE_PATH, utils.NAME_RETINO_ANALYSIS)
         else:
@@ -378,7 +380,9 @@ class SpatioTemporalSession:
 
         self.blank_signal_average = self.retino_session.mean_blank
         if self.filter_flag:
-            self.blank_signal_average = median_filter(self.blank_signal_average, size=(1, 3, 3))
+            self.blank_signal_average = median_filter(self.blank_signal_average, size=(1, self.filter_kernel, self.filter_kernel))
+            self.blank_signal_average = gaussian_filter(self.blank_signal_average, sigma=(0.5, 1, 1))
+
         self.std_blank            = np.nanstd(self.blank_signal_average, axis=0)/np.sqrt(np.shape(self.blank_signal_average)[0])
 
         self.data_dictionary     = {}
@@ -427,6 +431,7 @@ class SpatioTemporalSession:
                      'storing_folder': self.storing_folder,
                      'data_folder': self.path_to_derivatives,
                      'zscore_flag': self.pretriggerz_flag, 
+                     'spatial_filter': self.filter_flag, 
                      'start_time_am': self.timing_am_sequence,
                      'start_time_ss': self.timing_single_stroke, 
                      'stimulus_speed': self.stimulus_speed}
@@ -447,9 +452,12 @@ class SpatioTemporalSession:
             signal      = cd.df_fz
 
             if self.filter_flag and (single_pos_cds is None): 
-                signal = median_filter(signal, size=(1, 1, 3, 3))
-                
-            signal      = np.array([process.zeta_score(i, np.nanmean(self.blank_signal_average, axis = 0), self.std_blank, full_seq=True) for i in signal])
+                signal = median_filter(signal, size=(1, 1, self.filter_kernel, self.filter_kernel))
+                # Slight smoothing in time, none across trials, stronger in space
+                signal = gaussian_filter(signal, sigma=(0, 0.5, 1, 1))
+
+            blnk_tmp = np.nanmean(self.blank_signal_average, axis = 0)
+            signal   = np.array([process.zeta_score(i, blnk_tmp, self.std_blank, full_seq=True) for i in signal])
 
         avrg_signal = np.nanmean(signal, axis = 0)
 
