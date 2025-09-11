@@ -63,8 +63,8 @@ class SpatioTemporalMap:
             else:
                 utils.stampa('Something wrong with signal shape', logger=self.logger)
             
-            tmp_signal                          = np.array([median_filter(i, size=(5,5)) for i in tmp_signal])
-            self.avrg_signal                    = process.gaussian3d(tmp_signal, std = 1.5, size = 5)
+            tmp_signal                          = tmp_signal
+            self.avrg_signal                    = tmp_signal
             self.map, self.masked_data          = get_spatio_temporal_profile(tmp_signal, 
                                                                               self.trajectory_mask, 
                                                                               self.rotation_angle, 
