@@ -448,9 +448,9 @@ class SpatioTemporalSession:
             cd          = self.retino_session.get_data_to_process(name_cond)
             signal      = cd.df_fz
             avrg_signal = cd.averaged_df
-            signal      = process.zeta_score(signal, np.nanmean(self.blank_signal_average, axis = 0), self.std_blank, full_seq=True)
+            signal      = np.array([process.zeta_score(i, np.nanmean(self.blank_signal_average, axis = 0), self.std_blank, full_seq=True) for i in signal])
 
-        print(signal.shape, np.nanmean(signal), self.blank_signal_average, np.nanmean(self.blank_signal_average))
+        print(signal.shape, np.nanmean(signal), self.blank_signal_average.shape, np.nanmean(self.blank_signal_average))
         st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(signal, name_cond, synaptic_latency = synaptic_latency)
         min_level = np.nanpercentile(st_map_cd.maps, 15)
         max_level = np.nanpercentile(st_map_cd.maps, 95)
