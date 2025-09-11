@@ -450,7 +450,7 @@ class SpatioTemporalSession:
             avrg_signal = cd.averaged_df
             signal      = process.zeta_score(signal, np.nanmean(self.blank_signal_average, axis = 0), self.std_blank, full_seq=True)
 
-
+        print(signal.shape, np.nanmean(signal), self.blank_signal_average, np.nanmean(self.blank_signal_average))
         st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(signal, name_cond, synaptic_latency = synaptic_latency)
         min_level = np.nanpercentile(st_map_cd.maps, 15)
         max_level = np.nanpercentile(st_map_cd.maps, 95)
