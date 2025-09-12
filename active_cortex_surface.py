@@ -474,6 +474,13 @@ if __name__=="__main__":
                         required=False,
                         help='Spatial kernel (std) for gaussian filter')
     
+    parser.add_argument('--denoised', 
+                        dest='denoise_flag',
+                        type=bool,
+                        default= True, #zscore
+                        required=False,
+                        help='Switch for denoised data or regular dF/F0')
+    
 
     start_process_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -483,7 +490,7 @@ if __name__=="__main__":
 
     session_deriv   = args.path_md
 
-    session_acs     = ActiveCortexSession(session_deriv, denoise_flag = True, logger=log)
+    session_acs     = ActiveCortexSession(session_deriv, denoise_flag = args.denoise_flag, logger=log)
     mean_blank_forz = np.nanmean(session_acs.data['blank'], axis = (0, 1))
     std_blank       = np.nanstd(session_acs.data['blank'], axis = (0, 1))/np.sqrt(session_acs.data['blank'].shape[1])
     conds           = session_acs.build_conditions(mean_blank_forz, std_blank,
