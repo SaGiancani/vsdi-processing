@@ -275,7 +275,7 @@ class ActiveCortex:
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
         # md.get_zscore is expected to handle the full array shape and return z-scored data
-        self.zscored_data = md.get_zscore(self.filtered_data, self.mean_blank_forz, self.std_blank, logger=self.logger)
+        self.zscored_data = md.get_zscore({self.cond_name: self.filtered_data}, self.mean_blank_forz, self.std_blank, logger=self.logger)
         return self.zscored_data
 
     # --- map computation ---
@@ -493,11 +493,17 @@ if __name__=="__main__":
     session_acs     = ActiveCortexSession(session_deriv, denoise_flag = args.denoise_flag, logger=log)
     mean_blank_forz = np.nanmean(session_acs.data['blank'], axis = (0, 1))
     std_blank       = np.nanstd(session_acs.data['blank'], axis = (0, 1))/np.sqrt(session_acs.data['blank'].shape[1])
+    utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
+
+    start_process_time_cds = datetime.datetime.now().replace(microsecond=0)
+
     conds           = session_acs.build_conditions(mean_blank_forz, std_blank,
                                                    threshold=args.threshold,
                                                    median_kernel=args.median_kernel,
                                                    gaussian_sigma=args.gaussian_kernel)
+    utils.stampa(f'Conditions for active cortex analysis processed in {datetime.datetime.now().replace(microsecond=0)-start_process_time_cds}!\n', logger=log)                                
+
     tmp_name_cd = list(conds.keys())
     ac = conds[tmp_name_cd[0]]
     print(ac.map.shape, ac.blob_binary.sum(), ac.behavior['intersection'].sum())
-    utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
+    utils.stampa(f'Analysis elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
