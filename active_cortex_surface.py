@@ -76,12 +76,10 @@ class ActiveCortexSession:
         self.peaks_distribution  = self.get_peaks_distribution()
         utils.stampa(f'{self.time_window_per_cd}', logger=self.log)
 
-        cond_am = list(self.data_loader.cond_am)   # triggers the heavy load once
+        cond_am = list(self.data_loader.cond_am)   
         cond_pos = list(self.data_loader.cond_pos)
         self.list_conds = cond_am + cond_pos + [blank_name]
         utils.stampa(f'{self.list_conds}', logger=self.log)
-        utils.stampa(f"type(list_conds): {type(self.list_conds)}", logger=self.log)
-        utils.stampa(f"first elem type: {type(self.list_conds[0])}", logger=self.log)
 
         self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = not self.denoise_switch)
         
@@ -512,9 +510,8 @@ class ActiveCortex:
         peaks_incorrect = (peaks_x[~mask], peaks_y[~mask])
 
         # Compute blobs for each map
-        blob_all, _ = self.compute_blob_from_map(map_all, keep_blob_nan)
-        blob_correct, _ = self.compute_blob_from_map(map_correct, keep_blob_nan) if not np.all(np.isnan(map_correct)) else None
-        blob_incorrect, _ = self.compute_blob_from_map(map_incorrect, keep_blob_nan) if not np.all(np.isnan(map_incorrect)) else None
+        blob_correct, _ = self.compute_blob(map_correct, keep_blob_nan) if not np.all(np.isnan(map_correct)) else None
+        blob_incorrect, _ = self.compute_blob(map_incorrect, keep_blob_nan) if not np.all(np.isnan(map_incorrect)) else None
 
         results = {
             'map': {
@@ -528,7 +525,7 @@ class ActiveCortex:
                 'incorrect': peaks_incorrect,
             },
             'blob': {
-                'all': blob_all,
+                'all': self.blob_binary,
                 'correct': blob_correct,
                 'incorrect': blob_incorrect,
             }
@@ -564,19 +561,14 @@ class ActiveCortex:
         return f"<ActiveCortex cond={self.cond_name} map_shape={None if self.map is None else self.map.shape}>"
 
 
-def get_md_files(path_to_derivatives, list_conds, behavior_flag = True, get_trial_mask = True, get_md_data = True, logger = None):
-
+def get_md_files(path_to_derivatives, list_conds, behavior_flag = True, get_trial_mask = True, get_md_data = True):
     dict_data = {}
     dict_autoselection = {}
-    utils.stampa(f"entering get_md_files with {len(list_conds)} conditions", logger=logger)
 
     for name_cond in list_conds:
-        utils.stampa(f" -> starting {name_cond}", logger=logger)
         cd = md.Condition()
         cd.cond_name = name_cond
-        utils.stampa(f" -> loading {name_cond}", logger=logger)
         cd.load_cond(os.path.join(path_to_derivatives, 'md_data','md_data_'+name_cond))
-        utils.stampa(f" -> finished loading {name_cond}", logger=logger)
 
         if get_trial_mask:
             autoselection  = cd.autoselection
