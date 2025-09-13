@@ -75,8 +75,12 @@ class ActiveCortexSession:
         self.time_window_per_cd  = self.get_time_window()
         self.peaks_distribution  = self.get_peaks_distribution()
         utils.stampa(f'{self.time_window_per_cd}', logger=self.log)
-        self.list_conds          = list(self.data_loader.cond_am) + list(self.data_loader.cond_pos) + [blank_name] 
 
+        utils.stampa("about to build list_conds", logger=self.log)
+        self.list_conds = list(self.data_loader.cond_am) + list(self.data_loader.cond_pos) + [blank_name]
+        utils.stampa("list_conds built", logger=self.log)
+
+        utils.stampa("about to call get_md_files", logger=self.log)
         self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = (not self.denoise_switch))
         
         if self.denoise_switch:
@@ -559,13 +563,18 @@ class ActiveCortex:
 
 
 def get_md_files(path_to_derivatives, list_conds, behavior_flag = True, get_trial_mask = True, get_md_data = True, logger = None):
+
     dict_data = {}
     dict_autoselection = {}
-    for name_cond in list_conds:    
-        utils.stampa(f'{name_cond} cd process starts...', logger=logger)
-        cd           = md.Condition()
+    utils.stampa(f"entering get_md_files with {len(list_conds)} conditions", logger=logger)
+
+    for name_cond in list_conds:
+        utils.stampa(f" -> starting {name_cond}", logger=logger)
+        cd = md.Condition()
         cd.cond_name = name_cond
+        utils.stampa(f" -> loading {name_cond}", logger=logger)
         cd.load_cond(os.path.join(path_to_derivatives, 'md_data','md_data_'+name_cond))
+        utils.stampa(f" -> finished loading {name_cond}", logger=logger)
 
         if get_trial_mask:
             autoselection  = cd.autoselection
