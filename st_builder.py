@@ -378,10 +378,11 @@ class SpatioTemporalSession:
         self.trajectory_mask     = trj.get_trajectory_mask(list(zip(line_traj_x, line_traj_y)), (self.ny, self.nx), extremities = (0,0))        
         _, _, self.orient_traj   = trj.rotate_distribution(line_traj_x, line_traj_y)#in rad
 
-        self.blank_signal_average = self.retino_session.mean_blank
+        # Check this deblanking
+        self.blank_signal_average = self.retino_session.blank_condition.df_fz
         if self.filter_flag:
-            self.blank_signal_average = median_filter(self.blank_signal_average, size=(1, self.filter_kernel, self.filter_kernel))
-            self.blank_signal_average = gaussian_filter(self.blank_signal_average, sigma=(1, 1, 1))
+            self.blank_signal_average = median_filter(self.blank_signal_average, size=(0, 1, self.filter_kernel, self.filter_kernel))
+            self.blank_signal_average = gaussian_filter(self.blank_signal_average, sigma=(0, 1, 1, 1))
 
         self.std_blank            = np.nanstd(self.blank_signal_average, axis=0)/np.sqrt(np.shape(self.blank_signal_average)[0])
 
