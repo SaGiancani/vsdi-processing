@@ -358,9 +358,10 @@ class ActiveCortex:
             raise RuntimeError(f"[{self.cond_name}] mean_blank_forz and std_blank must be provided to compute zscore.")
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
-        # md.get_zscore is expected to handle the full array shape and return z-scored data
-        tmp_z = md.get_zscore({self.cond_name: self.filtered_data}, self.mean_blank_forz, self.std_blank, logger=self.logger)
-        self.zscored_data = tmp_z[self.cond_name]
+
+        z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in self.filtered_data])
+
+        self.zscored_data = z_cond
         return self.zscored_data
 
     # --- map computation ---
