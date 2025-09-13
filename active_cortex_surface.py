@@ -171,7 +171,24 @@ class ActiveCortexSession:
                                  compute_behavior=compute_behavior)
 
             if self.store_switch:
-                ac.store_activecortex(os.path.join(self.storing_folder, ac.cond_name))
+                ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
+            if self.vis_switch:
+                # Parameters for heatmap plotting
+                min_bord = np.nanpercentile(ac.map, 15)
+                max_bord = np.nanpercentile(ac.map, 98)
+                # Averaged hetmap plot
+                dv.plot_averaged_map(ac.cond_name, 
+                                     ac.blob_binary, 
+                                     None, 
+                                     ac.distribution_positions, 
+                                     ac.map, 
+                                     None, 
+                                     min_bord, max_bord, 
+                                     'k', 
+                                     self.id_name, 
+                                     'k', 
+                                     name_analysis_ = os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'), 
+                                     store_path = self.storing_folder)
                 
             conditions[cond_name] = ac
         return conditions
