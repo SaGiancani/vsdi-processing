@@ -68,13 +68,14 @@ class ActiveCortexSession:
         self.timing_am_sequence    = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
 
         self.data_loader         = retino.RetinoLoaderManager(self.path_session,  flag_denoise=self.denoise_switch, storage_path=self.retin_folder, pretrigger_flag = self.pretriggerz_flag)
+        utils.stampa(f'Retinotopy data loaded successfully!', logger=self.log)
 
         self.id_name             = self.data_loader.id_name 
         self.retino_data         = self.data_loader.data  # dict of condition -> RetinotopicObject(s)
         self.time_window_per_cd  = self.get_time_window()
         self.peaks_distribution  = self.get_peaks_distribution()
         utils.stampa(f'{self.time_window_per_cd}', logger=self.log)
-        self.list_conds      = list(self.data_loader.cond_am) + list(self.data_loader.cond_pos) + [blank_name] 
+        self.list_conds          = list(self.data_loader.cond_am) + list(self.data_loader.cond_pos) + [blank_name] 
 
         self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = (not self.denoise_switch))
         
@@ -94,6 +95,7 @@ class ActiveCortexSession:
                                                                  blank_sign = average_blank) for i in v])
                 dict_values[k] = p_dffz
             self.data = dict_values
+        utils.stampa(f'VSDI data loaded successfully!', logger=self.log)
 
         _, self.nt, self.ny, self.nx = self.data[blank_name].shape
         self.spatial_bin     = np.nanmax(self.original_frame_shape)/np.nanmax([self.ny, self.nx])  #Import green and import an md file and check the difference in frame shape
@@ -150,7 +152,7 @@ class ActiveCortexSession:
             tw = self.time_window_per_cd.get(cond_name, None)
             behavior_dict = self.dict_autoselection.get(cond_name, {})
             peaks = self.peaks_distribution.get(cond_name, None)
-            utils.stampa(f'Lenght behavior list: {len(behavior_dict)} and length peaks distribution {len(peaks)}', logger=self.log)
+            utils.stampa(f'Lenght behavior list: {len(behavior_dict['autoselection'])} and length peaks distribution {len(peaks[0])}', logger=self.log)
             ac = ActiveCortex(cond_name=cond_name,
                               data=data,
                               time_window=tw,
@@ -320,7 +322,8 @@ class ActiveCortex:
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
         # md.get_zscore is expected to handle the full array shape and return z-scored data
-        self.zscored_data = md.get_zscore({self.cond_name: self.filtered_data}, self.mean_blank_forz, self.std_blank, logger=self.logger)
+        tmp_z = md.get_zscore({self.cond_name: self.filtered_data}, self.mean_blank_forz, self.std_blank, logger=self.logger)
+        self.zscored_data = tmp_z[self.cond_name]
         return self.zscored_data
 
     # --- map computation ---
@@ -467,7 +470,7 @@ def get_md_files(path_to_derivatives, list_conds, behavior_flag = True, get_tria
     dict_data = {}
     dict_autoselection = {}
     for name_cond in list_conds:    
-        utils.stampa(f'{name_cond} cd process starts...')
+        utils.stampa(f'{name_cond} cd process starts...', logger=logger)
         cd           = md.Condition()
         cd.cond_name = name_cond
         cd.load_cond(os.path.join(path_to_derivatives, 'md_data','md_data_'+name_cond))
