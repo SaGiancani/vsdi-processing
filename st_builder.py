@@ -381,7 +381,7 @@ class SpatioTemporalSession:
         # Check this deblanking
         self.blank_signal_average = self.retino_session.blank_condition.df_fz
         if self.filter_flag:
-            self.blank_signal_average = median_filter(self.blank_signal_average, size=(0, 1, self.filter_kernel, self.filter_kernel))
+            self.blank_signal_average = median_filter(self.blank_signal_average, size=(1, 1, self.filter_kernel, self.filter_kernel))
             self.blank_signal_average = gaussian_filter(self.blank_signal_average, sigma=(0, 1, 1, 1))
 
         self.std_blank            = np.nanstd(self.blank_signal_average, axis=0)/np.sqrt(np.shape(self.blank_signal_average)[0])
@@ -452,7 +452,7 @@ class SpatioTemporalSession:
             cd          = self.retino_session.get_data_to_process(name_cond)
             signal      = cd.df_fz
 
-            if self.filter_flag and (single_pos_cds is None): 
+            if self.filter_flag: # and (single_pos_cds is None): 
                 signal = median_filter(signal, size=(1, 1, self.filter_kernel, self.filter_kernel))
                 # Slight smoothing in time, none across trials, stronger in space
                 signal = gaussian_filter(signal, sigma=(0, 1, 1, 1))
