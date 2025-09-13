@@ -12,7 +12,7 @@ class ActiveCortexSession:
     def __init__(self,
                  path_session,
                  logger          = None,  
-                 store_flag    = False,
+                 store_flag      = False,
                  vis_switch      = True, 
                  acquisition_fq  = 100, #Hz
                  optical_ratio   = 85/50, #Optical magnification
@@ -76,12 +76,10 @@ class ActiveCortexSession:
         self.peaks_distribution  = self.get_peaks_distribution()
         utils.stampa(f'{self.time_window_per_cd}', logger=self.log)
 
-        utils.stampa("about to build list_conds", logger=self.log)
         self.list_conds = list(self.data_loader.cond_am) + list(self.data_loader.cond_pos) + [blank_name]
         utils.stampa("list_conds built", logger=self.log)
-
-        utils.stampa("about to call get_md_files", logger=self.log)
-        self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = (not self.denoise_switch))
+        utils.stampa(f'{self.list_conds}', logger=self.log)
+        self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = not self.denoise_switch)
         
         if self.denoise_switch:
             # Get denoised selected trials
