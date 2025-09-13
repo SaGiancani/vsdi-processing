@@ -170,26 +170,38 @@ class ActiveCortexSession:
                                  keep_blob_nan=keep_blob_nan,
                                  compute_behavior=compute_behavior)
 
+            maps = ac.compute_behavior_maps()
+
             if self.store_switch:
                 ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
+
             if self.vis_switch:
-                # Parameters for heatmap plotting
-                min_bord = np.nanpercentile(ac.map, 15)
-                max_bord = np.nanpercentile(ac.map, 98)
-                # Averaged hetmap plot
-                dv.plot_averaged_map(ac.cond_name, 
-                                     ac.blob_binary, 
-                                     None, 
-                                     ac.distribution_positions, 
-                                     ac.map, 
-                                     None, 
-                                     min_bord, max_bord, 
-                                     'k', 
-                                     self.id_name, 
-                                     'k', 
-                                     name_analysis_ = os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'), 
-                                     store_path = self.storing_folder)
-                
+                cmaps = maps['map']
+                peaks = maps['peaks']
+                blobs = maps['blob']
+                for key in cmaps.keys():
+                    mappa = cmaps[key]
+                    picco = peaks[key]
+                    blob  = blobs[key]
+
+                    if mappa is None or np.all(np.isnan(mappa)):
+                        continue
+
+                    min_bord = np.nanpercentile(mappa, 15)
+                    max_bord = np.nanpercentile(mappa, 98)
+                    dv.plot_averaged_map(f"{ac.cond_name}_{key}",
+                                         blob,
+                                         None,
+                                         picco,
+                                         mappa,
+                                         None,
+                                         min_bord, max_bord,
+                                         'k',
+                                         self.id_name,
+                                         'k',
+                                         name_analysis_=os.path.join(self.id_name, ac.cond_name, f"SurfaceMap_{key}"),
+                                         store_path=self.storing_folder)
+
             conditions[cond_name] = ac
         return conditions
 
@@ -239,6 +251,9 @@ class ActiveCortex:
         self.blob_binary = None
         self.blob_values = None
         self.behavior = None
+        self.maps = None
+        self.peaks = None
+        self.blobs = None
 
     def store_activecortex(self, t):
         tp = [self.cond_name, 
@@ -375,31 +390,30 @@ class ActiveCortex:
         self._log(f"[{self.cond_name}] computed map over frames {t0}:{t1} (shape {self.map.shape})")
         return self.map
 
-    # --- blob (threshold mask) ---
-    def compute_blob(self, threshold: float = None, keep_values_nan: bool = True):
+    # --- blob (threshold mask) ---    
+    def compute_blob(self, map_, threshold = None, keep_values_nan=True):
         """
-        Compute blob masks from self.map:
+        Compute blob masks from maps:
           - blob_binary: boolean mask (map > threshold)
           - blob_values: map values where mask True; NaN (or 0) elsewhere
         If threshold is None uses self.statistical_threshold.
         """
-        if self.map is None:
-            raise RuntimeError(f"[{self.cond_name}] map is None — run compute_map first.")
         thr = self.statistical_threshold if threshold is None else float(threshold)
         self.statistical_threshold = thr
 
         # mask: ignore NaNs
-        mask = np.isfinite(self.map) & (self.map > thr)
-        self.blob_binary = mask
+        mask = np.isfinite(map_) & (map_ > thr)
+        blob_binary = mask
         if keep_values_nan:
-            vals = np.where(mask, self.map, np.nan)
+            vals = np.where(mask, map_, np.nan)
         else:
-            vals = np.where(mask, self.map, 0.0)
-        self.blob_values = vals
+            vals = np.where(mask, map_, 0.0)
+        blob_values = vals
 
         n_pixels = np.sum(mask)
         self._log(f"[{self.cond_name}] blob computed with threshold={thr} -> {int(n_pixels)} pixels selected")
-        return self.blob_binary, self.blob_values
+        return blob_binary, blob_values
+
 
     # --- behavior extraction ---
     def extract_behavior(self):
@@ -457,6 +471,66 @@ class ActiveCortex:
         self._log(f"[{self.cond_name}] behavior extracted ({int(intersection.sum())} selected trials)")
         return self.behavior
 
+    def compute_behavior_maps(self, keep_blob_nan=True):
+        """
+        Compute three maps (all/correct/incorrect), their peaks distributions,
+        and blobs (binary masks above statistical threshold).
+        """
+        if self.zscored_data is None:
+            raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
+        if self.behavior is None or 'intersection' not in self.behavior:
+            raise RuntimeError(f"[{self.cond_name}] behavior info missing — run extract_behavior first.")
+        if self.peaks_distribution is None:
+            raise RuntimeError(f"[{self.cond_name}] peaks_distribution missing — pass it at init.")
+
+        nt = self.zscored_data.shape[1]
+        t0, t1 = self.time_window_used if self.time_window_used else (0, nt)
+
+        sel_all = self.zscored_data[:, t0:t1, :, :]
+        map_all = np.nanmean(sel_all, axis=(0, 1))
+
+        mask = self.behavior['intersection']
+        if mask is None or len(mask) != self.zscored_data.shape[0]:
+            raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
+
+        sel_correct = sel_all[mask]
+        sel_incorrect = sel_all[~mask]
+
+        map_correct = np.nanmean(sel_correct, axis=(0, 1)) if sel_correct.size > 0 else np.full_like(map_all, np.nan)
+        map_incorrect = np.nanmean(sel_incorrect, axis=(0, 1)) if sel_incorrect.size > 0 else np.full_like(map_all, np.nan)
+
+        # Subset peaks distributions
+        peaks_x, peaks_y = map(np.asarray, self.peaks_distribution)
+        peaks_all = (peaks_x, peaks_y)
+        peaks_correct = (peaks_x[mask], peaks_y[mask])
+        peaks_incorrect = (peaks_x[~mask], peaks_y[~mask])
+
+        # Compute blobs for each map
+        blob_all, _ = self.compute_blob_from_map(map_all, keep_blob_nan)
+        blob_correct, _ = self.compute_blob_from_map(map_correct, keep_blob_nan) if not np.all(np.isnan(map_correct)) else None
+        blob_incorrect, _ = self.compute_blob_from_map(map_incorrect, keep_blob_nan) if not np.all(np.isnan(map_incorrect)) else None
+
+        results = {
+            'map': {
+                'all': map_all,
+                'correct': map_correct,
+                'incorrect': map_incorrect,
+            },
+            'peaks': {
+                'all': peaks_all,
+                'correct': peaks_correct,
+                'incorrect': peaks_incorrect,
+            },
+            'blob': {
+                'all': blob_all,
+                'correct': blob_correct,
+                'incorrect': blob_incorrect,
+            }
+        }
+
+        self._log(f"[{self.cond_name}] behavior maps, peaks, and blobs computed")
+        return results
+
     # --- convenience: run the whole pipeline for this condition ---
     def run_full_pipeline(self,
                           median_kernel: int = 3,
@@ -475,7 +549,7 @@ class ActiveCortex:
         self.apply_spatial_filter(median_kernel=median_kernel, gaussian_sigma=gaussian_sigma)
         self.compute_zscore()
         self.compute_map()
-        self.compute_blob(threshold=threshold, keep_values_nan=keep_blob_nan)
+        self.blob_binary, self.blob_values = self.compute_blob(self.map, threshold=threshold, keep_values_nan=keep_blob_nan)
         if compute_behavior:
             self.extract_behavior()
         return self
@@ -554,6 +628,12 @@ if __name__=="__main__":
                         required=False,
                         help='Switch for storing output data')
     
+    parser.add_argument('--visualize', 
+                        dest='vis_switch',
+                        type=bool,
+                        default= True,
+                        required=False,
+                        help='Switch for visualizing output data')
 
     start_process_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -566,6 +646,7 @@ if __name__=="__main__":
     session_acs     = ActiveCortexSession(session_deriv, 
                                           store_flag=args.store_flag, 
                                           denoise_flag = args.denoise_flag, 
+                                          vis_switch = args.vis_switch,
                                           logger=log)
     mean_blank_forz = np.nanmean(session_acs.data['blank'], axis = (0, 1))
     std_blank       = np.nanstd(session_acs.data['blank'], axis = (0, 1))/np.sqrt(session_acs.data['blank'].shape[1])
