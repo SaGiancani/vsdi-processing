@@ -79,8 +79,10 @@ class ActiveCortexSession:
         cond_am = list(self.data_loader.cond_am)   # triggers the heavy load once
         cond_pos = list(self.data_loader.cond_pos)
         self.list_conds = cond_am + cond_pos + [blank_name]
-        utils.stampa("list_conds built", logger=self.log)
         utils.stampa(f'{self.list_conds}', logger=self.log)
+        utils.stampa(f"type(list_conds): {type(self.list_conds)}", logger=self.log)
+        utils.stampa(f"first elem type: {type(self.list_conds[0])}", logger=self.log)
+
         self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = not self.denoise_switch)
         
         if self.denoise_switch:
