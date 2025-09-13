@@ -152,7 +152,8 @@ class ActiveCortexSession:
             tw = self.time_window_per_cd.get(cond_name, None)
             behavior_dict = self.dict_autoselection.get(cond_name, {})
             peaks = self.peaks_distribution.get(cond_name, None)
-            utils.stampa(f'Lenght behavior list: {len(behavior_dict['autoselection'])} and length peaks distribution {len(peaks[0])}', logger=self.log)
+            tmp_print = len(behavior_dict['autoselection'])
+            utils.stampa(f'Lenght behavior list: {tmp_print} and length peaks distribution {len(peaks[0])}', logger=self.log)
             ac = ActiveCortex(cond_name=cond_name,
                               data=data,
                               time_window=tw,
