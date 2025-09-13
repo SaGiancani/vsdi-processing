@@ -12,7 +12,7 @@ class ActiveCortexSession:
     def __init__(self,
                  path_session,
                  logger          = None,  
-                 store_switch    = False,
+                 store_flag    = False,
                  vis_switch      = True, 
                  acquisition_fq  = 100, #Hz
                  optical_ratio   = 85/50, #Optical magnification
@@ -48,7 +48,7 @@ class ActiveCortexSession:
 
         self.denoise_switch        = denoise_flag
         self.vis_switch            = vis_switch
-        self.store_switch          = store_switch
+        self.store_switch          = store_flag
         self.pretriggerz_flag      = pretrigger_zero
         self.filter_flag           = spatial_filter # Does not work for zmaps_flag
         self.filter_kernel         = filter_kernel # Does not work for zmaps_flag
@@ -67,13 +67,13 @@ class ActiveCortexSession:
         self.timing_single_stroke  = (self.stimulus_metadata['single stroke']['bottom limit'], self.stimulus_metadata['single stroke']['upper limit'])
         self.timing_am_sequence    = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
 
-        self.data_loader        = retino.RetinoLoaderManager(self.path_session,  flag_denoise=self.denoise_switch, storage_path=self.retin_folder, pretrigger_flag = self.pretriggerz_flag)
+        self.data_loader         = retino.RetinoLoaderManager(self.path_session,  flag_denoise=self.denoise_switch, storage_path=self.retin_folder, pretrigger_flag = self.pretriggerz_flag)
 
-        self.session_id_name    = self.data_loader.id_name 
-        self.retino_data        = self.data_loader.data  # dict of condition -> RetinotopicObject(s)
-        self.time_window_per_cd = self.get_time_window()
+        self.id_name             = self.data_loader.id_name 
+        self.retino_data         = self.data_loader.data  # dict of condition -> RetinotopicObject(s)
+        self.time_window_per_cd  = self.get_time_window()
+        self.peaks_distribution  = self.get_peaks_distribution()
         utils.stampa(f'{self.time_window_per_cd}', logger=self.log)
-
         self.list_conds      = list(self.data_loader.cond_am) + list(self.data_loader.cond_pos) + [blank_name] 
 
         self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = (not self.denoise_switch))
@@ -99,7 +99,12 @@ class ActiveCortexSession:
         self.spatial_bin     = np.nanmax(self.original_frame_shape)/np.nanmax([self.ny, self.nx])  #Import green and import an md file and check the difference in frame shape
         self.pixel_spacing   = self.spatial_bin*(cortical_dim*(optical_ratio))/np.nanmax(self.original_frame_shape)     
 
-        
+    def get_peaks_distribution(self):
+        peaks_dict = {}
+        for k, v in self.retino_data.items():
+            peaks_dict[k] = v[-1].distribution_positions
+        return peaks_dict
+
     def get_time_window(self):
         time_dict = {}
         for cd_am in self.data_loader.cond_am:
@@ -144,10 +149,12 @@ class ActiveCortexSession:
             data = self.data[cond_name]
             tw = self.time_window_per_cd.get(cond_name, None)
             behavior_dict = self.dict_autoselection.get(cond_name, {})
-
+            peaks = self.peaks_distribution.get(cond_name, None)
+            utils.stampa(f'Lenght behavior list: {len(behavior_dict)} and length peaks distribution {len(peaks)}', logger=self.log)
             ac = ActiveCortex(cond_name=cond_name,
                               data=data,
                               time_window=tw,
+                              peaks_distribution=peaks,
                               mean_blank_forz=mean_blank_forz,
                               std_blank=std_blank,
                               statistical_threshold=threshold,
@@ -160,8 +167,10 @@ class ActiveCortexSession:
                                  keep_blob_nan=keep_blob_nan,
                                  compute_behavior=compute_behavior)
 
+            if self.store_switch:
+                ac.store_activecortex(os.path.join(self.storing_folder, ac.cond_name))
+                
             conditions[cond_name] = ac
-
         return conditions
 
 
@@ -186,6 +195,7 @@ class ActiveCortex:
                  cond_name,
                  data,
                  time_window,
+                 peaks_distribution = None,
                  mean_blank_forz=None,
                  std_blank=None,
                  statistical_threshold = 2.5,
@@ -194,6 +204,7 @@ class ActiveCortex:
         self.cond_name = cond_name
         self.raw_data = np.asarray(data, dtype=np.float32)  # keep original copy
         self.time_window = time_window  # expected (begin_frame, end_frame)
+        self.peaks_distribution = peaks_distribution
         self.mean_blank_forz = mean_blank_forz
         self.std_blank = std_blank
         self.statistical_threshold = statistical_threshold
@@ -208,6 +219,40 @@ class ActiveCortex:
         self.blob_binary = None
         self.blob_values = None
         self.behavior = None
+
+    def store_activecortex(self, t):
+        tp = [self.cond_name, 
+              self.time_window, 
+              self.peaks_distribution, 
+              self.statistical_threshold, 
+              self.behavior_dict, 
+              self.map, 
+              self.time_window_used, 
+              self.blob_binary, 
+              self.blob_values, 
+              self.behavior]
+        storage_path = os.path.join(t, 'activecortex')
+        tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
+        utils.inputs_save(tp, os.path.join(tmp,'ac_'+self.cond_name))
+        return
+    
+
+    def load_activecortex(self, path):
+        normalized_path = utils.normalize_path_os(path)
+        tp = utils.inputs_load(normalized_path)
+
+        self.cond_name = tp[0]
+        self.time_window = tp[1]
+        self.peaks_distribution = tp[2] 
+        self.statistical_threshold = tp[3]
+        self.behavior_dict = tp[4]
+        self.map = tp[5]
+        self.time_window_used = tp[6] 
+        self.blob_binary = tp[7]
+        self.blob_values = tp[8]
+        self.behavior = tp[9]
+
+        return
 
     # --- logging helper ---
     def _log(self, msg):
@@ -463,23 +508,30 @@ if __name__=="__main__":
     parser.add_argument('--med_kernel', 
                         dest='median_kernel',
                         type=int,
-                        default=5, #zscore
+                        default=5, #pixels
                         required=False,
                         help='Spatial kernel for median filter')
     
     parser.add_argument('--gaus_kernel', 
                         dest='gaussian_kernel',
                         type=float,
-                        default=1.5, #zscore
+                        default=1.5, #std in pixels
                         required=False,
                         help='Spatial kernel (std) for gaussian filter')
     
     parser.add_argument('--denoised', 
                         dest='denoise_flag',
                         type=bool,
-                        default= True, #zscore
+                        default= True,
                         required=False,
                         help='Switch for denoised data or regular dF/F0')
+    
+    parser.add_argument('--store', 
+                        dest='store_flag',
+                        type=bool,
+                        default= True,
+                        required=False,
+                        help='Switch for storing output data')
     
 
     start_process_time = datetime.datetime.now().replace(microsecond=0)
@@ -490,7 +542,10 @@ if __name__=="__main__":
 
     session_deriv   = args.path_md
 
-    session_acs     = ActiveCortexSession(session_deriv, denoise_flag = args.denoise_flag, logger=log)
+    session_acs     = ActiveCortexSession(session_deriv, 
+                                          store_flag=args.store_flag, 
+                                          denoise_flag = args.denoise_flag, 
+                                          logger=log)
     mean_blank_forz = np.nanmean(session_acs.data['blank'], axis = (0, 1))
     std_blank       = np.nanstd(session_acs.data['blank'], axis = (0, 1))/np.sqrt(session_acs.data['blank'].shape[1])
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
