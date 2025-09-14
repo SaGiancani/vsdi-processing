@@ -137,8 +137,8 @@ class ActiveCortexSession:
                          mean_blank_forz,
                          std_blank,
                          threshold = 2.5,
-                         median_kernel = 3,
-                         gaussian_sigma = 1.0,
+                         median_kernel = 5,
+                         gaussian_sigma = 2.0,
                          keep_blob_nan = True,
                          compute_behavior = True):
         """
@@ -151,7 +151,7 @@ class ActiveCortexSession:
             if cond_name not in self.data:
                 utils.stampa(f"[build_conditions] skipping {cond_name}: no data in self.data", logger=self.log)
                 continue
-
+            # MODIFY: DISCARD SINGLE POS
             data = self.data[cond_name]
             tw = self.time_window_per_cd.get(cond_name, None)
             behavior_dict = self.dict_autoselection.get(cond_name, {})
@@ -175,9 +175,6 @@ class ActiveCortexSession:
                                  compute_behavior=compute_behavior)
 
             maps = ac.compute_behavior_maps()
-
-            if self.store_switch:
-                ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
 
             if self.vis_switch:
                 cmaps = maps['map']
@@ -205,6 +202,12 @@ class ActiveCortexSession:
                                          'k',
                                          name_analysis_=os.path.join(self.id_name, ac.cond_name, f"SurfaceMap_{key}"),
                                          store_path=self.storing_folder)
+                ac.maps  = cmaps
+                ac.peaks = peaks
+                ac.blobs = blobs
+
+            if self.store_switch:
+                ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
 
             conditions[cond_name] = ac
         return conditions
@@ -358,7 +361,7 @@ class ActiveCortex:
             raise RuntimeError(f"[{self.cond_name}] mean_blank_forz and std_blank must be provided to compute zscore.")
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
-
+        # z_cond    = process.zeta_score(np.nanmean(self.filtered_data, axis = 0), self.mean_blank_forz, self.std_blank, full_seq=True)
         z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in self.filtered_data])
 
         self.zscored_data = z_cond
@@ -390,6 +393,7 @@ class ActiveCortex:
         sel = self.zscored_data[:, t0:t1, :, :]
         # mean across trials and time (axis 0 and 1)
         with np.errstate(invalid='ignore'):
+            self._log(f"Map over frames {t0}:{t1} (shape of selected data {self.sel.shape})")
             self.map = np.nanmean(sel, axis=(0, 1))
         self.time_window_used = (t0, t1)
         self._log(f"[{self.cond_name}] computed map over frames {t0}:{t1} (shape {self.map.shape})")
@@ -614,7 +618,7 @@ if __name__=="__main__":
     parser.add_argument('--gaus_kernel', 
                         dest='gaussian_kernel',
                         type=float,
-                        default=1.5, #std in pixels
+                        default=2, #std in pixels
                         required=False,
                         help='Spatial kernel (std) for gaussian filter')
     
@@ -652,8 +656,9 @@ if __name__=="__main__":
                                           denoise_flag = args.denoise_flag, 
                                           vis_switch = args.vis_switch,
                                           logger=log)
-    mean_blank_forz = np.nanmean(session_acs.data['blank'], axis = (0, 1))
-    std_blank       = np.nanstd(session_acs.data['blank'], axis = (0, 1))/np.sqrt(session_acs.data['blank'].shape[1])
+    tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)
+    mean_blank_forz = np.nanmean(tmp_blnk, axis = 0)
+    std_blank       = np.nanstd(tmp_blnk, axis = 0)/np.sqrt(tmp_blnk.shape[0])
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
 
     start_process_time_cds = datetime.datetime.now().replace(microsecond=0)
