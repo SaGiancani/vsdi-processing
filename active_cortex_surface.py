@@ -419,7 +419,7 @@ class ActiveCortex:
         # mean across trials and time (axis 0 and 1)
         with np.errstate(invalid='ignore'):
             self._log(f"Map over frames {t0}:{t1} (shape of selected data {sel.shape})")
-            self.map = np.nanmean(sel, axis=(0, 1))
+            self.map = np.nanmean(sel, axis=0)
         self.time_window_used = (t0, t1)
         self._log(f"[{self.cond_name}] computed map over frames {t0}:{t1} (shape {self.map.shape})")
         return self.map
