@@ -596,17 +596,19 @@ class ActiveCortex:
             if z_data.size == 0:
                 return np.array([])
             
+            mask = self.blob_binary  # shape (180, 218)
+            
             timecourses = []
-            tmp_ravel = self.blob_binary.ravel()
-            for trial in z_data:
-                # Extract mean signal from blob pixels for this trial
-                blob_timecourse = np.nanmean(trial[:, tmp_ravel], axis=1)
+            for trial in z_data:  # trial shape = (65, 180, 218)
+                # Apply mask to spatial dims, keep time
+                masked_pixels = trial[:, mask]  # shape (65, n_masked_pixels)
+                blob_timecourse = np.nanmean(masked_pixels, axis=1)  # mean over pixels
                 timecourses.append(blob_timecourse)
             
             return np.array(timecourses)
-        
+
         # Extract time courses for each condition        
-        self._log(f'{z_all.shape} {z_correct.shape} {z_incorrect.shape}')
+        self._log(f'{z_all.shape} {z_correct.shape} {z_incorrect.shape} {self.blob_binary.shape}')
 
         tc_all       = extract_blob_timecourse(z_all)
         tc_correct   = extract_blob_timecourse(z_correct)
