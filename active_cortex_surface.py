@@ -361,7 +361,6 @@ class ActiveCortex:
         if median_kernel > 1:
             self._log(f"[{self.cond_name}] applying median filter (kernel={median_kernel})")
             arr = median_filter(arr, size=size, mode='reflect')
-            arr = median_filter(arr, size=size, mode='reflect')
         else:
             self._log(f"[{self.cond_name}] skipping median filter (kernel={median_kernel})")
 
