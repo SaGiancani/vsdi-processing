@@ -211,7 +211,7 @@ class ActiveCortexSession:
                                          'k',
                                          self.id_name,
                                          'k',
-                                         name_analysis_=os.path.join(self.id_name, ac.cond_name, f"SurfaceMap_{key}"),
+                                         name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
                                          store_path=self.storing_folder)
                 ac.maps  = cmaps
                 ac.peaks = peaks
@@ -770,7 +770,6 @@ def plot_blob_timecourse(timecourse_results, time_series_info, y_lim = None, nam
     if store_pic:
         # Storing picture
         tmp = dv.set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
-        print(tmp)
         plt.savefig(os.path.join(tmp, f'blob_tc_analysis_{name_cond}{ext}'))
         plt.close('all')
     else:
