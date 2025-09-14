@@ -361,6 +361,7 @@ class ActiveCortex:
         if median_kernel > 1:
             self._log(f"[{self.cond_name}] applying median filter (kernel={median_kernel})")
             arr = median_filter(arr, size=size, mode='reflect')
+            arr = median_filter(arr, size=size, mode='reflect')
         else:
             self._log(f"[{self.cond_name}] skipping median filter (kernel={median_kernel})")
 
@@ -810,7 +811,7 @@ if __name__=="__main__":
     parser.add_argument('--gaus_kernel', 
                         dest='gaussian_kernel',
                         type=float,
-                        default=2, #std in pixels
+                        default=3.5, #std in pixels
                         required=False,
                         help='Spatial kernel (std) for gaussian filter')
     
