@@ -274,6 +274,7 @@ class ActiveCortex:
         # placeholders
         self.filtered_data = None
         self.zscored_data = None
+        self.zscore_cd = None
         self.map = None
         self.time_window_used = None
         self.blob_binary = None
@@ -292,6 +293,9 @@ class ActiveCortex:
               self.onset_time,
               self.behavior_dict, 
               self.map, 
+              self.zscore_cd,
+              self.maps,
+              self.blobs,
               self.time_window_used, 
               self.blob_binary, 
               self.blob_values, 
@@ -314,11 +318,14 @@ class ActiveCortex:
         self.onset_time = tp[4]
         self.behavior_dict = tp[5]
         self.map = tp[6]
-        self.time_window_used = tp[7] 
-        self.blob_binary = tp[8]
-        self.blob_values = tp[9]
-        self.time_courses = tp[10]
-        self.behavior = tp[11]
+        self.zscore_cd = tp[7]
+        self.maps = tp[8]
+        self.blobs = tp[9]
+        self.time_window_used = tp[10] 
+        self.blob_binary = tp[11]
+        self.blob_values = tp[12]
+        self.time_courses = tp[13]
+        self.behavior = tp[14]
 
         return
 
@@ -335,15 +342,14 @@ class ActiveCortex:
                 print(msg)
 
     # --- filtering ---
-    def apply_spatial_filter(self, median_kernel: int = 3, gaussian_sigma: float = 1.0):
+    def apply_spatial_filter(self, raw_data, median_kernel: int = 3, gaussian_sigma: float = 1.0):
         """
         Apply median filter (spatial) then gaussian filter (spatial) on last two dims.
         median_kernel: integer kernel size (will be forced odd if even).
         gaussian_sigma: sigma in pixels for gaussian filter (if <=0 gaussian is skipped).
         """
         if median_kernel is None:
-            median_kernel = 1
-        median_kernel = int(median_kernel)
+            median_kernel = 3
         if median_kernel < 1:
             raise ValueError("median_kernel must be >= 1")
 
@@ -353,61 +359,57 @@ class ActiveCortex:
             self._log(f"[{self.cond_name}] median_kernel even -> bumped to odd: {median_kernel}")
 
         # convert to float32 for filtering
-        arr = np.asarray(self.raw_data, dtype=np.float32)
+        arr = np.asarray(raw_data, dtype=np.float32)
 
         # apply median filter only on last two axes (ny, nx) without mixing trials/time:
         # median_filter accepts a tuple 'size' that matches array ndim
-        size = (1, 1, median_kernel, median_kernel)
-        if median_kernel > 1:
-            self._log(f"[{self.cond_name}] applying median filter (kernel={median_kernel})")
-            arr = median_filter(arr, size=size, mode='reflect')
-        else:
-            self._log(f"[{self.cond_name}] skipping median filter (kernel={median_kernel})")
-
-        # gaussian filter: use sigma per-axis so we don't blur across trials/time axes
-        if gaussian_sigma is not None and gaussian_sigma > 0:
+        if len(arr.shape) == 3:
+            size  = (1, median_kernel, median_kernel)
+            sigma = (float(gaussian_sigma), float(gaussian_sigma), float(gaussian_sigma))
+        elif len(arr.shape) == 4:
+            size  = (1, 1, median_kernel, median_kernel)
             sigma = (0, float(gaussian_sigma), float(gaussian_sigma), float(gaussian_sigma))
-            self._log(f"[{self.cond_name}] applying gaussian filter on nt, ny and nx (sigma={gaussian_sigma})")
-            arr = gaussian_filter(arr, sigma=sigma, mode='reflect')
-        else:
-            self._log(f"[{self.cond_name}] skipping gaussian filter (sigma={gaussian_sigma})")
 
-        self.filtered_data = arr
-        return self.filtered_data
+        arr = median_filter(arr, size=size, mode='reflect')
+        arr = gaussian_filter(arr, sigma=sigma, mode='reflect')
 
+        return arr
+    
     # --- zscore using your existing md.get_zscore ---
-    def compute_zscore(self, filtered_data = None, on_average = True):
+    def compute_zscore(self, raw_data = None):
         """
         Calls md.get_zscore(filtered_data, mean_blank_forz, std_blank, logger)
         Requires mean_blank_forz and std_blank to be provided at init (precomputed).
         """
-        if filtered_data is None:
-            filtered_data = self.filtered_data
+
+        if raw_data is None:
+            raw_data = self.raw_data
         if self.mean_blank_forz is None or self.std_blank is None:
             raise RuntimeError(f"[{self.cond_name}] mean_blank_forz and std_blank must be provided to compute zscore.")
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
-        if on_average:
-            z_cond = process.zeta_score(np.nanmean(filtered_data, axis = 0), self.mean_blank_forz, self.std_blank, full_seq=True)
+        if len(raw_data.shape) == 3:
+            tmp_data = np.nanmean(raw_data, axis = 0)
+            z_cond = process.zeta_score(tmp_data, self.mean_blank_forz, self.std_blank, full_seq=True)
             z_cond = z_cond -  np.nanmean(z_cond, axis = (0, 1, 2))
 
-        else:
-            z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in self.filtered_data])
+        elif len(raw_data.shape) == 4:
+            z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in raw_data])
             tmp_mean = np.nanmean(z_cond, axis = (-3, -2, -1))
             z_cond = z_cond - tmp_mean[:, np.newaxis, np.newaxis, np.newaxis]
         return z_cond
 
     # --- map computation ---
-    def compute_map(self, time_window = None):
+    def compute_map(self, zscored_data, time_window = None):
         """
         Average z-scored data across (trials, frames in time window) to form a 2D map.
         If time_window is None, uses self.time_window, if that is None uses entire time axis.
         Sets self.time_window_used to the actual slice (t0, t1).
         """
-        if self.zscored_data is None:
+        if zscored_data is None:
             raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
 
-        nt = self.zscored_data.shape[0]
+        nt = zscored_data.shape[0]
         tw = time_window if time_window is not None else self.time_window
         if tw is None:
             t0, t1 = 0, nt
@@ -420,14 +422,14 @@ class ActiveCortex:
         if t1 <= t0:
             raise ValueError(f"[{self.cond_name}] invalid time window after clipping: {(t0, t1)}")
 
-        sel = self.zscored_data[t0:t1, :, :]
+        sel = zscored_data[t0:t1, :, :]
         # mean across trials and time (axis 0 and 1)
         with np.errstate(invalid='ignore'):
             self._log(f"Map over frames {t0}:{t1} (shape of selected data {sel.shape})")
-            self.map = np.nanmean(sel, axis=0)
+            map = np.nanmean(sel, axis=0)
         self.time_window_used = (t0, t1)
         self._log(f"[{self.cond_name}] computed map over frames {t0}:{t1} (shape {self.map.shape})")
-        return self.map
+        return map
 
     # --- blob (threshold mask) ---    
     def compute_blob(self, map_, threshold = None, keep_values_nan=True):
@@ -525,18 +527,17 @@ class ActiveCortex:
         nt     = self.zscored_data.shape[0]
         t0, t1 = self.time_window_used if self.time_window_used else (0, nt)
 
-        sel_all = self.zscored_data[t0:t1, :, :]
-        map_all = np.nanmean(sel_all, axis=0)
+        map_all = self.map
 
         mask = self.behavior['corrects']
         if mask is None or len(mask) != self.filtered_data.shape[0]:
             raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
 
-        sel_correct   = self.compute_zscore(filtered_data=self.filtered_data[mask])
+        sel_correct   = self.compute_zscore(np.nanmean(self.filtered_data[mask], axis = 0))
         sel_correct   = sel_correct[t0:t1, :, :]
         map_correct   = np.nanmean(sel_correct, axis=0) if sel_correct.size > 0 else np.full_like(map_all, np.nan)
 
-        sel_incorrect = self.compute_zscore(filtered_data=self.filtered_data[~mask])
+        sel_incorrect = self.compute_zscore(np.nanmean(self.filtered_data[~mask], axis = 0))
         sel_incorrect = sel_incorrect[t0:t1, :, :]
         map_incorrect = np.nanmean(sel_incorrect, axis=0) if sel_incorrect.size > 0 else np.full_like(map_all, np.nan)
 
@@ -594,7 +595,7 @@ class ActiveCortex:
             raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
         
         # Compute z-scores for each trial (not averaged)
-        z_all = self.compute_zscore(on_average=False)
+        z_all = self.zscored_data
         
         # Separate correct and incorrect trials
         z_correct   = z_all[mask] if np.any(mask) else np.array([])
@@ -659,9 +660,10 @@ class ActiveCortex:
           4) blob (threshold)
           5) behavior extraction (if behavior_dict provided)
         """
-        self.apply_spatial_filter(median_kernel = median_kernel, gaussian_sigma = gaussian_sigma)
-        self.zscored_data = self.compute_zscore(on_average = True)
-        self.compute_map()
+        self.filtered_data = self.apply_spatial_filter(self.raw_data, median_kernel = median_kernel, gaussian_sigma = gaussian_sigma)
+        self.zscored_data  = self.compute_zscore(self.filtered_data)
+        self.zscore_cd     = self.compute_zscore(np.nanmean(self.filtered_data, axis = 0))
+        self.map           = self.compute_map(self.zscore_cd)
         self.blob_binary, self.blob_values = self.compute_blob(self.map, threshold=threshold, keep_values_nan=keep_blob_nan)
         if compute_behavior:
             self.extract_behavior()
@@ -834,6 +836,13 @@ if __name__=="__main__":
                         default= True,
                         required=False,
                         help='Switch for visualizing output data')
+    
+    parser.add_argument('--spatial_filter', 
+                        dest='spatial_filter_switch',
+                        type=bool,
+                        default= True,
+                        required=False,
+                        help='Switch for filtering data (gaussian and median)')
 
     start_process_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -851,6 +860,13 @@ if __name__=="__main__":
     tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)
     mean_blank_forz = np.nanmean(tmp_blnk, axis = 0)
     std_blank       = np.nanstd(tmp_blnk, axis = 0)/np.sqrt(tmp_blnk.shape[0])
+    if args.spatial_filter_switch:
+        mean_blank_forz = median_filter(mean_blank_forz, size = (args.median_kernel, args.median_kernel))
+        mean_blank_forz = gaussian_filter(mean_blank_forz, sigma = args.gaussian_kernel)
+
+        std_blank = median_filter(std_blank, size = (args.median_kernel, args.median_kernel))
+        std_blank = gaussian_filter(std_blank, sigma = args.gaussian_kernel)
+        
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
 
     start_process_time_cds = datetime.datetime.now().replace(microsecond=0)
