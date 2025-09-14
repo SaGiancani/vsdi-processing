@@ -139,6 +139,7 @@ class ActiveCortexSession:
                          threshold = 2.5,
                          median_kernel = 5,
                          gaussian_sigma = 2.0,
+                         synaptic_latency = 60, #in ms
                          keep_blob_nan = True,
                          compute_behavior = True):
         """
@@ -152,6 +153,10 @@ class ActiveCortexSession:
             if cond_name not in self.data:
                 utils.stampa(f"[build_conditions] skipping {cond_name}: no data in self.data", logger=self.log)
                 continue
+            synaptic_latency = int(np.ceil(synaptic_latency/self.time_bin)) # In frames
+            start_time    = self.stimulus_metadata['pos metadata'][cond_name]['start'] 
+            onset_time = self.timing_am_sequence[0] - start_time - synaptic_latency
+
             data = self.data[cond_name]
             tw = self.time_window_per_cd.get(cond_name, None)
             behavior_dict = self.dict_autoselection.get(cond_name, {})
@@ -161,6 +166,7 @@ class ActiveCortexSession:
             ac = ActiveCortex(cond_name=cond_name,
                               data=data,
                               time_window=tw,
+                              onset_time=onset_time,
                               peaks_distribution=peaks,
                               mean_blank_forz=mean_blank_forz,
                               std_blank=std_blank,
@@ -175,6 +181,9 @@ class ActiveCortexSession:
                                  compute_behavior=compute_behavior)
 
             maps = ac.compute_behavior_maps()
+
+            # Compute the time courses
+            tc_results = ac.compute_blob_timecourse()
 
             if self.vis_switch:
                 cmaps    = maps['map']
@@ -206,7 +215,13 @@ class ActiveCortexSession:
                 ac.maps  = cmaps
                 ac.peaks = peaks
                 ac.blobs = blobs
-
+                
+                time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
+                plot_blob_timecourse(tc_results, time_series_info,
+                                     name_cond = ac.cond_name, title_plot = f'Blob time course {ac.cond_name}', 
+                                     name_analysis_ = os.path.join(self.id_name, ac.cond_name, f"SurfaceMap_{key}"),
+                                     store_path = self.storing_folder)
+            
             if self.store_switch:
                 ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
 
@@ -238,6 +253,7 @@ class ActiveCortex:
                  peaks_distribution = None,
                  mean_blank_forz=None,
                  std_blank=None,
+                 onset_time = 20, # In frames
                  statistical_threshold = 2.5,
                  behavior_dict = None,
                  logger = None):
@@ -248,6 +264,7 @@ class ActiveCortex:
         self.mean_blank_forz = mean_blank_forz
         self.std_blank = std_blank
         self.statistical_threshold = statistical_threshold
+        self.onset_time = onset_time
         self.behavior_dict = behavior_dict or {}
         self.logger = logger
 
@@ -288,12 +305,13 @@ class ActiveCortex:
         self.time_window = tp[1]
         self.peaks_distribution = tp[2] 
         self.statistical_threshold = tp[3]
-        self.behavior_dict = tp[4]
-        self.map = tp[5]
-        self.time_window_used = tp[6] 
-        self.blob_binary = tp[7]
-        self.blob_values = tp[8]
-        self.behavior = tp[9]
+        self.onset_time = tp[4]
+        self.behavior_dict = tp[5]
+        self.map = tp[6]
+        self.time_window_used = tp[7] 
+        self.blob_binary = tp[8]
+        self.blob_values = tp[9]
+        self.behavior = tp[10]
 
         return
 
@@ -501,7 +519,7 @@ class ActiveCortex:
         map_all = np.nanmean(sel_all, axis=0)
 
         mask = self.behavior['intersection']
-        if mask is None or len(mask) != self.zscored_data.shape[0]:
+        if mask is None or len(mask) != self.filtered_data.shape[0]:
             raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
 
         sel_correct   = self.compute_zscore(filtered_data=self.filtered_data[mask])
@@ -541,6 +559,69 @@ class ActiveCortex:
         }
 
         self._log(f"[{self.cond_name}] behavior maps, peaks, and blobs computed")
+        return results
+
+    def compute_blob_timecourse(self):
+        """
+        Extract time courses from blob region for each behavioral condition.
+        Returns time series data for all trials, correct trials, and incorrect trials.
+        """
+        if self.zscored_data is None:
+            raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
+        if self.behavior is None or 'intersection' not in self.behavior:
+            raise RuntimeError(f"[{self.cond_name}] behavior info missing — run extract_behavior first.")
+        if self.blob_binary is None:
+            raise RuntimeError(f"[{self.cond_name}] blob_binary is None — compute blob first.")
+        
+        # Get behavioral mask
+        mask = self.behavior['intersection']
+        if mask is None or len(mask) != self.filtered_data.shape[0]:
+            raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
+        
+        # Compute z-scores for each trial (not averaged)
+        z_all = self.compute_zscore(on_average=False)
+        
+        # Separate correct and incorrect trials
+        z_correct = z_all[mask] if np.any(mask) else np.array([])
+        z_incorrect = z_all[~mask] if np.any(~mask) else np.array([])
+        
+        # Extract time courses from blob region
+        def extract_blob_timecourse(z_data):
+            """Extract mean signal from blob region across time for each trial"""
+            if z_data.size == 0:
+                return np.array([])
+            
+            timecourses = []
+            for trial in z_data:
+                # Extract mean signal from blob pixels for this trial
+                blob_timecourse = np.nanmean(trial[:, self.blob_binary], axis=1)
+                timecourses.append(blob_timecourse)
+            
+            return np.array(timecourses)
+        
+        # Extract time courses for each condition
+        tc_all       = extract_blob_timecourse(z_all)
+        tc_correct   = extract_blob_timecourse(z_correct)
+        tc_incorrect = extract_blob_timecourse(z_incorrect)
+        
+        results = {
+            'timecourse': {
+                'all': tc_all,
+                'correct': tc_correct,
+                'incorrect': tc_incorrect,
+            },
+            'n_trials': {
+                'all': len(z_all),
+                'correct': len(z_correct) if z_correct.size > 0 else 0,
+                'incorrect': len(z_incorrect) if z_incorrect.size > 0 else 0,
+            }
+        }
+        
+        self._log(f"[{self.cond_name}] blob timecourses computed - "
+                f"all: {results['n_trials']['all']}, "
+                f"correct: {results['n_trials']['correct']}, "
+                f"incorrect: {results['n_trials']['incorrect']} trials")
+        
         return results
 
     # --- convenience: run the whole pipeline for this condition ---
@@ -595,6 +676,97 @@ def get_md_files(path_to_derivatives, list_conds, behavior_flag = True, get_tria
         del cd
     return dict_data, dict_autoselection
 
+
+def plot_blob_timecourse(timecourse_results, time_series_info, name_cond = '', title_plot=None, fig_h=None,  name_analysis_ = 'RetinotopicPositions', store_path = dv.STORAGE_PATH, store_pic = True, ext = '.png'):
+    """
+    Plot time course data from blob region analysis.
+    
+    Parameters:
+    -----------
+    timecourse_results : dict
+        Output from compute_blob_timecourse method
+    time_series_info : tuple
+        (zero, time_interval, time_bins) for time axis
+    title_plot : str, optional
+        Title for the plot
+    fig : matplotlib.figure.Figure, optional
+        Figure to add axes to
+    fig_h : float, optional
+        Figure height for axes positioning
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    
+    fig = plt.figure(figsize=(10, 8))
+
+    if fig_h is None:
+        fig_h = fig.get_figheight() * 72  # Convert to points
+    
+    zero, time_interval, time_bins = time_series_info
+    ax_time = fig.add_axes([0.1, 0.15, 0.8, 0.35-(fig_h/150)])
+    ax_time.spines[['top', 'right']].set_visible(False)
+    
+    # Plot each condition
+    colors = {'all': 'black', 'correct': 'green', 'incorrect': 'red'}
+    alphas = {'all': 0.3, 'correct': 0.2, 'incorrect': 0.2}
+    
+    # Determine time axis
+    if (zero is not None) and (time_interval is not None) and (time_bins is not None):
+        x_tc = np.arange(-zero*time_interval, (time_bins*time_interval)-zero*time_interval, time_interval)
+    else:
+        # Use the length of the first available time series
+        for condition in ['all', 'correct', 'incorrect']:
+            if timecourse_results['timecourse'][condition].size > 0:
+                x_tc = np.arange(len(timecourse_results['timecourse'][condition][0]))
+                break
+    
+    # Collect all data for y-axis limits
+    all_data = []
+    
+    for condition, color in colors.items():
+        time_series_data = timecourse_results['timecourse'][condition]
+        
+        if time_series_data.size == 0:
+            continue
+            
+        all_data.extend(time_series_data.flatten())
+        
+        # Plot confidence band and mean
+        ax_time.fill_between(x_tc,
+                        np.nanpercentile(time_series_data, 95, axis=0),
+                        np.nanpercentile(time_series_data, 5, axis=0), 
+                        color=color, alpha=alphas[condition])
+        
+        ax_time.plot(x_tc, np.nanmean(time_series_data, axis=0), 
+                    label=f'{condition.capitalize()} (n={timecourse_results["n_trials"][condition]})', 
+                    color=color, lw=3)
+    
+    # Add vertical line at time zero
+    if all_data:
+        y_min, y_max = np.nanpercentile(all_data, 15), np.nanpercentile(all_data, 95)
+        ax_time.vlines(0, y_min, y_max, ls='--', lw=2, color='gold')
+        ax_time.set_ylim(y_min, y_max)
+    
+    # Formatting
+    if title_plot is not None:
+        ax_time.set_title(f'{title_plot}', fontsize=20)
+    ax_time.tick_params(axis='both', which='major', labelsize=16)
+    ax_time.set_xlabel('Time - ms', fontsize=18)
+    ax_time.set_ylabel('Z-score Signal', fontsize=18)
+    ax_time.legend()
+
+
+    if store_pic:
+        # Storing picture
+        tmp = dv.set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)#os.path.join(name_analysis_, ID_NAME, v))
+        # plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.svg'))
+        # print('averagedheatmap_' +name_cond+ '.svg'+ ' stored successfully!')
+        plt.savefig(os.path.join(tmp, 'blob_tc_analysis_'+name_cond+ ext))
+        plt.close('all')
+    else:
+        plt.show()
+    
+    return ax_time
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')
