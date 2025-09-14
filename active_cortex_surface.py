@@ -708,12 +708,9 @@ def plot_blob_timecourse(timecourse_results, time_series_info, name_cond = '', t
     import numpy as np
     
     fig = plt.figure(figsize=(10, 8))
-
-    if fig_h is None:
-        fig_h = fig.get_figheight() * 72  # Convert to points
     
     zero, time_interval, time_bins = time_series_info
-    ax_time = fig.add_axes([0.1, 0.15, 0.8, 0.35-(fig_h/150)])
+    ax_time = fig.add_axes([0.1, 0.15, 0.8, .85])
     ax_time.spines[['top', 'right']].set_visible(False)
     
     # Plot each condition
