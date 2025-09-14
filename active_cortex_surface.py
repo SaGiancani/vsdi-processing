@@ -512,7 +512,7 @@ class ActiveCortex:
         """
         if self.zscored_data is None:
             raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
-        if self.behavior is None or 'intersection' not in self.behavior:
+        if self.behavior is None or 'corrects' not in self.behavior:
             raise RuntimeError(f"[{self.cond_name}] behavior info missing — run extract_behavior first.")
         if self.peaks_distribution is None:
             raise RuntimeError(f"[{self.cond_name}] peaks_distribution missing — pass it at init.")
@@ -523,7 +523,7 @@ class ActiveCortex:
         sel_all = self.zscored_data[t0:t1, :, :]
         map_all = np.nanmean(sel_all, axis=0)
 
-        mask = self.behavior['intersection']
+        mask = self.behavior['corrects']
         if mask is None or len(mask) != self.filtered_data.shape[0]:
             raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
 
@@ -568,18 +568,18 @@ class ActiveCortex:
 
     def compute_blob_timecourse(self):
         """
-        Extract time courses from blob region for each behavioral condition.
+        Extract time courses from blob region for each behavioral conditioblob computed with thresholdn.
         Returns time series data for all trials, correct trials, and incorrect trials.
         """
         if self.zscored_data is None:
             raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
-        if self.behavior is None or 'intersection' not in self.behavior:
+        if self.behavior is None or 'corrects' not in self.behavior:
             raise RuntimeError(f"[{self.cond_name}] behavior info missing — run extract_behavior first.")
         if self.blob_binary is None:
             raise RuntimeError(f"[{self.cond_name}] blob_binary is None — compute blob first.")
         
         # Get behavioral mask
-        mask = self.behavior['intersection']
+        mask = self.behavior['corrects']
         if mask is None or len(mask) != self.filtered_data.shape[0]:
             raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
         
