@@ -389,9 +389,8 @@ class ActiveCortex:
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
         if len(raw_data.shape) == 3:
-            tmp_data = np.nanmean(raw_data, axis = 0)
-            z_cond = process.zeta_score(tmp_data, self.mean_blank_forz, self.std_blank, full_seq=True)
-            z_cond = z_cond -  np.nanmean(z_cond, axis = (0, 1, 2))
+            z_cond = process.zeta_score(raw_data, self.mean_blank_forz, self.std_blank, full_seq=True)
+            z_cond = z_cond -  np.nanmean(z_cond)
 
         elif len(raw_data.shape) == 4:
             z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in raw_data])
