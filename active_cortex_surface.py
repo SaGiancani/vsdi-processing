@@ -177,9 +177,12 @@ class ActiveCortexSession:
             maps = ac.compute_behavior_maps()
 
             if self.vis_switch:
-                cmaps = maps['map']
-                peaks = maps['peaks']
-                blobs = maps['blob']
+                cmaps    = maps['map']
+                peaks    = maps['peaks']
+                blobs    = maps['blob']
+                min_bord = np.nanpercentile(ac.zscored_data, 10)
+                max_bord = np.nanpercentile(ac.zscored_data, 98)
+
                 for key in cmaps.keys():
                     mappa = cmaps[key]
                     picco = peaks[key]
@@ -188,8 +191,6 @@ class ActiveCortexSession:
                     if mappa is None or np.all(np.isnan(mappa)):
                         continue
 
-                    min_bord = np.nanpercentile(mappa, 15)
-                    max_bord = np.nanpercentile(mappa, 98)
                     dv.plot_averaged_map(f"{ac.cond_name}_{key}",
                                          blob,
                                          None,
@@ -350,22 +351,23 @@ class ActiveCortex:
         return self.filtered_data
 
     # --- zscore using your existing md.get_zscore ---
-    def compute_zscore(self):
+    def compute_zscore(self, filtered_data = None, on_average = True):
         """
         Calls md.get_zscore(filtered_data, mean_blank_forz, std_blank, logger)
         Requires mean_blank_forz and std_blank to be provided at init (precomputed).
         """
-        if self.filtered_data is None:
-            raise RuntimeError(f"[{self.cond_name}] filtered_data is None — run apply_spatial_filter first.")
+        if filtered_data is None:
+            filtered_data = self.filtered_data
         if self.mean_blank_forz is None or self.std_blank is None:
             raise RuntimeError(f"[{self.cond_name}] mean_blank_forz and std_blank must be provided to compute zscore.")
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
-        # z_cond    = process.zeta_score(np.nanmean(self.filtered_data, axis = 0), self.mean_blank_forz, self.std_blank, full_seq=True)
-        z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in self.filtered_data])
+        if on_average:
+            z_cond    = process.zeta_score(np.nanmean(filtered_data, axis = 0), self.mean_blank_forz, self.std_blank, full_seq=True)
+        else:
+            z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in self.filtered_data])
 
-        self.zscored_data = z_cond
-        return self.zscored_data
+        return z_cond
 
     # --- map computation ---
     def compute_map(self, time_window = None):
@@ -377,7 +379,7 @@ class ActiveCortex:
         if self.zscored_data is None:
             raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
 
-        nt = self.zscored_data.shape[1]
+        nt = self.zscored_data.shape[0]
         tw = time_window if time_window is not None else self.time_window
         if tw is None:
             t0, t1 = 0, nt
@@ -390,7 +392,7 @@ class ActiveCortex:
         if t1 <= t0:
             raise ValueError(f"[{self.cond_name}] invalid time window after clipping: {(t0, t1)}")
 
-        sel = self.zscored_data[:, t0:t1, :, :]
+        sel = self.zscored_data[t0:t1, :, :]
         # mean across trials and time (axis 0 and 1)
         with np.errstate(invalid='ignore'):
             self._log(f"Map over frames {t0}:{t1} (shape of selected data {sel.shape})")
@@ -492,21 +494,23 @@ class ActiveCortex:
         if self.peaks_distribution is None:
             raise RuntimeError(f"[{self.cond_name}] peaks_distribution missing — pass it at init.")
 
-        nt = self.zscored_data.shape[1]
+        nt     = self.zscored_data.shape[0]
         t0, t1 = self.time_window_used if self.time_window_used else (0, nt)
 
-        sel_all = self.zscored_data[:, t0:t1, :, :]
-        map_all = np.nanmean(sel_all, axis=(0, 1))
+        sel_all = self.zscored_data[t0:t1, :, :]
+        map_all = np.nanmean(sel_all, axis=0)
 
         mask = self.behavior['intersection']
         if mask is None or len(mask) != self.zscored_data.shape[0]:
             raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
 
-        sel_correct = sel_all[mask]
-        sel_incorrect = sel_all[~mask]
+        sel_correct   = self.compute_zscore(filtered_data=self.filtered_data[mask])
+        sel_correct   = sel_correct[t0:t1, :, :]
+        map_correct   = np.nanmean(sel_correct, axis=0) if sel_correct.size > 0 else np.full_like(map_all, np.nan)
 
-        map_correct = np.nanmean(sel_correct, axis=(0, 1)) if sel_correct.size > 0 else np.full_like(map_all, np.nan)
-        map_incorrect = np.nanmean(sel_incorrect, axis=(0, 1)) if sel_incorrect.size > 0 else np.full_like(map_all, np.nan)
+        sel_incorrect = self.compute_zscore(filtered_data=self.filtered_data[~mask])
+        sel_incorrect = sel_incorrect[t0:t1, :, :]
+        map_incorrect = np.nanmean(sel_incorrect, axis=0) if sel_incorrect.size > 0 else np.full_like(map_all, np.nan)
 
         # Subset peaks distributions
         peaks_x, peaks_y = map(np.asarray, self.peaks_distribution)
@@ -554,8 +558,8 @@ class ActiveCortex:
           4) blob (threshold)
           5) behavior extraction (if behavior_dict provided)
         """
-        self.apply_spatial_filter(median_kernel=median_kernel, gaussian_sigma=gaussian_sigma)
-        self.compute_zscore()
+        self.apply_spatial_filter(median_kernel = median_kernel, gaussian_sigma = gaussian_sigma)
+        self.zscored_data = self.compute_zscore(on_average = True)
         self.compute_map()
         self.blob_binary, self.blob_values = self.compute_blob(self.map, threshold=threshold, keep_values_nan=keep_blob_nan)
         if compute_behavior:
