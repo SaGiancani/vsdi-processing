@@ -804,14 +804,14 @@ if __name__=="__main__":
     parser.add_argument('--med_kernel', 
                         dest='median_kernel',
                         type=int,
-                        default=5, #pixels
+                        default=3, #pixels
                         required=False,
                         help='Spatial kernel for median filter')
     
     parser.add_argument('--gaus_kernel', 
                         dest='gaussian_kernel',
                         type=float,
-                        default=3.5, #std in pixels
+                        default=1.5, #std in pixels
                         required=False,
                         help='Spatial kernel (std) for gaussian filter')
     
