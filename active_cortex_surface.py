@@ -542,8 +542,8 @@ class ActiveCortex:
         peaks_incorrect = (peaks_x[~mask], peaks_y[~mask])
 
         # Compute blobs for each map
-        blob_correct, _ = self.compute_blob(map_correct, keep_blob_nan) if not np.all(np.isnan(map_correct)) else None
-        blob_incorrect, _ = self.compute_blob(map_incorrect, keep_blob_nan) if not np.all(np.isnan(map_incorrect)) else None
+        blob_correct, _ = self.compute_blob(map_correct, keep_blob_nan, threshold=self.statistical_threshold) if not np.all(np.isnan(map_correct)) else None
+        blob_incorrect, _ = self.compute_blob(map_incorrect, keep_blob_nan, threshold=self.statistical_threshold) if not np.all(np.isnan(map_incorrect)) else None
 
         results = {
             'map': {
@@ -605,7 +605,9 @@ class ActiveCortex:
             
             return np.array(timecourses)
         
-        # Extract time courses for each condition
+        # Extract time courses for each condition        
+        self._log(f'{z_all.shape} {z_correct.shape} {z_incorrect.shape}')
+
         tc_all       = extract_blob_timecourse(z_all)
         tc_correct   = extract_blob_timecourse(z_correct)
         tc_incorrect = extract_blob_timecourse(z_incorrect)
