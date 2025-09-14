@@ -608,7 +608,7 @@ class ActiveCortex:
             
             
             center_activation = process.find_highest_sum_area(self.map, 20)
-            _, _, y_sh, x_sh  = self.map.shape
+            y_sh, x_sh  = self.map.shape
             tc_mask = utils.sector_mask((y_sh, x_sh), center_activation, 15, (0, 360))    
             timecourses = np.array([process.time_course_signal(i, abs(tc_mask - 1)) for i in z_data])
 
