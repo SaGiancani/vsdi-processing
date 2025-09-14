@@ -542,8 +542,8 @@ class ActiveCortex:
         peaks_incorrect = (peaks_x[~mask], peaks_y[~mask])
 
         # Compute blobs for each map
-        blob_correct, _ = self.compute_blob(map_correct, keep_blob_nan, threshold=self.statistical_threshold) if not np.all(np.isnan(map_correct)) else None
-        blob_incorrect, _ = self.compute_blob(map_incorrect, keep_blob_nan, threshold=self.statistical_threshold) if not np.all(np.isnan(map_incorrect)) else None
+        blob_correct, _   = self.compute_blob(map_correct, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) if not np.all(np.isnan(map_correct)) else None
+        blob_incorrect, _ = self.compute_blob(map_incorrect, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) if not np.all(np.isnan(map_incorrect)) else None
 
         results = {
             'map': {
