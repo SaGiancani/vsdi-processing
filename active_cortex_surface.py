@@ -76,9 +76,9 @@ class ActiveCortexSession:
         self.peaks_distribution  = self.get_peaks_distribution()
         utils.stampa(f'{self.time_window_per_cd}', logger=self.log)
 
-        cond_am = list(self.data_loader.cond_am)   
-        cond_pos = list(self.data_loader.cond_pos)
-        self.list_conds = cond_am + cond_pos + [blank_name]
+        self.cond_am = list(self.data_loader.cond_am)   
+        self.cond_pos = list(self.data_loader.cond_pos)
+        self.list_conds = self.cond_am + self.cond_pos + [blank_name]
         utils.stampa(f'{self.list_conds}', logger=self.log)
 
         self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = not self.denoise_switch)
@@ -146,12 +146,12 @@ class ActiveCortexSession:
         Returns a dict: cond_name -> ActiveCortex instance.
         """
         conditions = {}
-        for cond_name in self.list_conds:
+        # Only for AM conds
+        for cond_name in self.cond_am:
             # safety checks
             if cond_name not in self.data:
                 utils.stampa(f"[build_conditions] skipping {cond_name}: no data in self.data", logger=self.log)
                 continue
-            # MODIFY: DISCARD SINGLE POS
             data = self.data[cond_name]
             tw = self.time_window_per_cd.get(cond_name, None)
             behavior_dict = self.dict_autoselection.get(cond_name, {})
@@ -393,7 +393,7 @@ class ActiveCortex:
         sel = self.zscored_data[:, t0:t1, :, :]
         # mean across trials and time (axis 0 and 1)
         with np.errstate(invalid='ignore'):
-            self._log(f"Map over frames {t0}:{t1} (shape of selected data {self.sel.shape})")
+            self._log(f"Map over frames {t0}:{t1} (shape of selected data {sel.shape})")
             self.map = np.nanmean(sel, axis=(0, 1))
         self.time_window_used = (t0, t1)
         self._log(f"[{self.cond_name}] computed map over frames {t0}:{t1} (shape {self.map.shape})")
