@@ -184,7 +184,8 @@ class ActiveCortexSession:
 
             # Compute the time courses
             tc_results = ac.compute_blob_timecourse()
-
+            ac.time_courses = tc_results
+            
             if self.vis_switch:
                 cmaps    = maps['map']
                 peaks    = maps['peaks']
@@ -215,7 +216,7 @@ class ActiveCortexSession:
                 ac.maps  = cmaps
                 ac.peaks = peaks
                 ac.blobs = blobs
-                
+
                 time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
                 plot_blob_timecourse(tc_results, time_series_info,
                                      name_cond = ac.cond_name, title_plot = f'Blob time course {ac.cond_name}', 
@@ -279,17 +280,20 @@ class ActiveCortex:
         self.maps = None
         self.peaks = None
         self.blobs = None
+        self.time_courses = None
 
     def store_activecortex(self, t):
         tp = [self.cond_name, 
               self.time_window, 
               self.peaks_distribution, 
               self.statistical_threshold, 
+              self.onset_time,
               self.behavior_dict, 
               self.map, 
               self.time_window_used, 
               self.blob_binary, 
               self.blob_values, 
+              self.time_courses,
               self.behavior]
         storage_path = os.path.join(t, 'activecortex')
         tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
@@ -311,7 +315,8 @@ class ActiveCortex:
         self.time_window_used = tp[7] 
         self.blob_binary = tp[8]
         self.blob_values = tp[9]
-        self.behavior = tp[10]
+        self.time_courses = tp[10]
+        self.behavior = tp[11]
 
         return
 
