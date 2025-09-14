@@ -427,7 +427,7 @@ class ActiveCortex:
             self._log(f"Map over frames {t0}:{t1} (shape of selected data {sel.shape})")
             map = np.nanmean(sel, axis=0)
         self.time_window_used = (t0, t1)
-        self._log(f"[{self.cond_name}] computed map over frames {t0}:{t1} (shape {self.map.shape})")
+        self._log(f"[{self.cond_name}] computed map over frames {t0}:{t1} (shape {map.shape})")
         return map
 
     # --- blob (threshold mask) ---    
