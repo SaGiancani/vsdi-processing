@@ -217,10 +217,12 @@ class ActiveCortexSession:
                 ac.peaks = peaks
                 ac.blobs = blobs
 
+                min_bord = np.nanpercentile(ac.zscored_data, .5)
+                max_bord = np.nanpercentile(ac.zscored_data, 99.5)
                 time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
-                plot_blob_timecourse(ac.time_courses, time_series_info, store_pic=True,
+                plot_blob_timecourse(ac.time_courses, time_series_info, y_lim = (min_bord, max_bord), store_pic=True,
                                      name_cond = ac.cond_name, title_plot = f'Blob time course {ac.cond_name}', 
-                                     name_analysis_ = os.path.join(self.id_name, ac.cond_name, f"SurfaceMap_{key}"),
+                                     name_analysis_ = os.path.join(self.id_name, ac.cond_name),
                                      store_path = self.storing_folder)
             
             if self.store_switch:
@@ -687,7 +689,7 @@ def get_md_files(path_to_derivatives, list_conds, behavior_flag = True, get_tria
     return dict_data, dict_autoselection
 
 
-def plot_blob_timecourse(timecourse_results, time_series_info, name_cond = '', title_plot=None, name_analysis_ = 'RetinotopicPositions', store_path = dv.STORAGE_PATH, store_pic = True, ext = '.png'):
+def plot_blob_timecourse(timecourse_results, time_series_info, y_lim = None, name_cond = '', title_plot=None, name_analysis_ = 'RetinotopicPositions', store_path = dv.STORAGE_PATH, store_pic = True, ext = '.png'):
     """
     Plot time course data from blob region analysis.
     
@@ -750,7 +752,10 @@ def plot_blob_timecourse(timecourse_results, time_series_info, name_cond = '', t
     
     # Add vertical line at time zero
     if all_data:
-        y_min, y_max = np.nanpercentile(all_data, 15), np.nanpercentile(all_data, 95)
+        if y_lim is None:
+            y_min, y_max = np.nanpercentile(all_data, 15), np.nanpercentile(all_data, 95)
+        else:
+            y_min, y_max = y_lim
         ax_time.vlines(0, y_min, y_max, ls='--', lw=2, color='gold')
         ax_time.set_ylim(y_min, y_max)
     
