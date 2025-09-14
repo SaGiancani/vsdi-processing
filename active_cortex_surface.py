@@ -389,9 +389,12 @@ class ActiveCortex:
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
         if on_average:
             z_cond = process.zeta_score(np.nanmean(filtered_data, axis = 0), self.mean_blank_forz, self.std_blank, full_seq=True)
+            z_cond = z_cond -  np.nanmean(z_cond, axis = (0, 1, 2))
+
         else:
             z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in self.filtered_data])
-
+            tmp_mean = np.nanmean(z_cond, axis = (-3, -2, -1))
+            z_cond = z_cond - tmp_mean[:, np.newaxis, np.newaxis, np.newaxis]
         return z_cond
 
     # --- map computation ---
