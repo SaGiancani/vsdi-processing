@@ -218,7 +218,7 @@ class ActiveCortexSession:
                 ac.blobs = blobs
 
                 time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
-                plot_blob_timecourse(tc_results, time_series_info,
+                plot_blob_timecourse(ac.time_courses, time_series_info, store_pic=True,
                                      name_cond = ac.cond_name, title_plot = f'Blob time course {ac.cond_name}', 
                                      name_analysis_ = os.path.join(self.id_name, ac.cond_name, f"SurfaceMap_{key}"),
                                      store_path = self.storing_folder)
@@ -687,7 +687,7 @@ def get_md_files(path_to_derivatives, list_conds, behavior_flag = True, get_tria
     return dict_data, dict_autoselection
 
 
-def plot_blob_timecourse(timecourse_results, time_series_info, name_cond = '', title_plot=None, fig_h=None,  name_analysis_ = 'RetinotopicPositions', store_path = dv.STORAGE_PATH, store_pic = True, ext = '.png'):
+def plot_blob_timecourse(timecourse_results, time_series_info, name_cond = '', title_plot=None, name_analysis_ = 'RetinotopicPositions', store_path = dv.STORAGE_PATH, store_pic = True, ext = '.png'):
     """
     Plot time course data from blob region analysis.
     
@@ -762,18 +762,15 @@ def plot_blob_timecourse(timecourse_results, time_series_info, name_cond = '', t
     ax_time.set_ylabel('Z-score Signal', fontsize=18)
     ax_time.legend()
 
-
     if store_pic:
         # Storing picture
-        tmp = dv.set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)#os.path.join(name_analysis_, ID_NAME, v))
-        # plt.savefig(os.path.join(tmp, 'averagedheatmap_' +name_cond+ '.svg'))
-        # print('averagedheatmap_' +name_cond+ '.svg'+ ' stored successfully!')
-        plt.savefig(os.path.join(tmp, 'blob_tc_analysis_'+name_cond+ ext))
+        tmp = dv.set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
+        print(tmp)
+        plt.savefig(os.path.join(tmp, f'blob_tc_analysis_{name_cond}{ext}'))
         plt.close('all')
     else:
         plt.show()
-    
-    return ax_time
+    return 
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')
