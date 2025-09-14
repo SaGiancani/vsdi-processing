@@ -606,10 +606,9 @@ class ActiveCortex:
             if z_data.size == 0:
                 return np.array([])
             
-            
-            center_activation = process.find_highest_sum_area(self.map, 20)
+            center_activation, _ = process.find_highest_sum_area(self.map, 20)
             y_sh, x_sh  = self.map.shape
-            tc_mask = utils.sector_mask((y_sh, x_sh), center_activation, 15, (0, 360))    
+            tc_mask = utils.sector_mask((y_sh, x_sh), center_activation[::-1], 15, (0, 360))    
             timecourses = np.array([process.time_course_signal(i, abs(tc_mask - 1)) for i in z_data])
 
             # mask = self.blob_binary  # shape (180, 218)
@@ -862,16 +861,15 @@ if __name__=="__main__":
                                           denoise_flag = args.denoise_flag, 
                                           vis_switch = args.vis_switch,
                                           logger=log)
+
     tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)
+    if args.spatial_filter_switch:
+        tmp_blnk = median_filter(tmp_blnk, size = (1, args.median_kernel, args.median_kernel))
+        tmp_blnk = gaussian_filter(tmp_blnk, sigma = (args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel))
+
     mean_blank_forz = np.nanmean(tmp_blnk, axis = 0)
     std_blank       = np.nanstd(tmp_blnk, axis = 0)/np.sqrt(tmp_blnk.shape[0])
-    if args.spatial_filter_switch:
-        mean_blank_forz = median_filter(mean_blank_forz, size = (args.median_kernel, args.median_kernel))
-        mean_blank_forz = gaussian_filter(mean_blank_forz, sigma = args.gaussian_kernel)
-
-        std_blank = median_filter(std_blank, size = (args.median_kernel, args.median_kernel))
-        std_blank = gaussian_filter(std_blank, sigma = args.gaussian_kernel)
-        
+    
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
 
     start_process_time_cds = datetime.datetime.now().replace(microsecond=0)
