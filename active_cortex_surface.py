@@ -606,14 +606,20 @@ class ActiveCortex:
             if z_data.size == 0:
                 return np.array([])
             
-            mask = self.blob_binary  # shape (180, 218)
             
-            timecourses = []
-            for trial in z_data:  # trial shape = (65, 180, 218)
-                # Apply mask to spatial dims, keep time
-                masked_pixels = trial[:, mask]  # shape (65, n_masked_pixels)
-                blob_timecourse = np.nanmean(masked_pixels, axis=1)  # mean over pixels
-                timecourses.append(blob_timecourse)
+            center_activation = process.find_highest_sum_area(self.map, 20)
+            _, _, y_sh, x_sh  = self.map.shape
+            tc_mask = utils.sector_mask((y_sh, x_sh), center_activation, 15, (0, 360))    
+            timecourses = np.array([process.time_course_signal(i, abs(tc_mask - 1)) for i in z_data])
+
+            # mask = self.blob_binary  # shape (180, 218)
+
+            # timecourses = []
+            # for trial in z_data:  # trial shape = (65, 180, 218)
+            #     # Apply mask to spatial dims, keep time
+            #     masked_pixels = trial[:, mask]  # shape (65, n_masked_pixels)
+            #     blob_timecourse = np.nanmean(masked_pixels, axis=1)  # mean over pixels
+            #     timecourses.append(blob_timecourse)
             
             return np.array(timecourses)
 
