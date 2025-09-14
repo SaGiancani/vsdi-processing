@@ -550,6 +550,11 @@ class ActiveCortex:
         blob_correct, _   = self.compute_blob(map_correct, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) if not np.all(np.isnan(map_correct)) else None
         blob_incorrect, _ = self.compute_blob(map_incorrect, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) if not np.all(np.isnan(map_incorrect)) else None
 
+        # Further median filter on contours before plotting them
+        self.blob_binary   = median_filter(self.blob_binary, size=(5,5))
+        blob_correct       = median_filter(blob_correct, size=(5,5))
+        blob_incorrect     = median_filter(blob_incorrect, size=(5,5))
+
         results = {
             'map': {
                 'all': map_all,
