@@ -185,7 +185,7 @@ class ActiveCortexSession:
             # Compute the time courses
             tc_results = ac.compute_blob_timecourse()
             ac.time_courses = tc_results
-            
+
             if self.vis_switch:
                 cmaps    = maps['map']
                 peaks    = maps['peaks']
@@ -386,7 +386,7 @@ class ActiveCortex:
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
         if on_average:
-            z_cond    = process.zeta_score(np.nanmean(filtered_data, axis = 0), self.mean_blank_forz, self.std_blank, full_seq=True)
+            z_cond = process.zeta_score(np.nanmean(filtered_data, axis = 0), self.mean_blank_forz, self.std_blank, full_seq=True)
         else:
             z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in self.filtered_data])
 
@@ -587,7 +587,7 @@ class ActiveCortex:
         z_all = self.compute_zscore(on_average=False)
         
         # Separate correct and incorrect trials
-        z_correct = z_all[mask] if np.any(mask) else np.array([])
+        z_correct   = z_all[mask] if np.any(mask) else np.array([])
         z_incorrect = z_all[~mask] if np.any(~mask) else np.array([])
         
         # Extract time courses from blob region
@@ -597,9 +597,10 @@ class ActiveCortex:
                 return np.array([])
             
             timecourses = []
+            tmp_ravel = self.blob_binary.ravel()
             for trial in z_data:
                 # Extract mean signal from blob pixels for this trial
-                blob_timecourse = np.nanmean(trial[:, self.blob_binary], axis=1)
+                blob_timecourse = np.nanmean(trial[:, tmp_ravel], axis=1)
                 timecourses.append(blob_timecourse)
             
             return np.array(timecourses)
