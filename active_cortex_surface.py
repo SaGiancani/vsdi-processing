@@ -190,8 +190,8 @@ class ActiveCortexSession:
                 cmaps    = maps['map']
                 peaks    = maps['peaks']
                 blobs    = maps['blob']
-                min_bord = np.nanpercentile(ac.zscored_data, 10)
-                max_bord = np.nanpercentile(ac.zscored_data, 98)
+                min_bord = np.nanpercentile(ac.zscored_data, 15)
+                max_bord = np.nanpercentile(ac.zscored_data, 90)
 
                 for key in cmaps.keys():
                     mappa = cmaps[key]
@@ -217,8 +217,8 @@ class ActiveCortexSession:
                 ac.peaks = peaks
                 ac.blobs = blobs
 
-                min_bord = np.nanpercentile(ac.zscored_data, .5)
-                max_bord = np.nanpercentile(ac.zscored_data, 99.5)
+                # min_bord = np.nanpercentile(ac.zscored_data, 10)
+                # max_bord = np.nanpercentile(ac.zscored_data, 95)
                 time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
                 plot_blob_timecourse(ac.time_courses, time_series_info, y_lim = (min_bord, max_bord), store_pic=True,
                                      name_cond = ac.cond_name, title_plot = f'Blob time course {ac.cond_name}', 
@@ -608,6 +608,7 @@ class ActiveCortex:
             
             center_activation, _ = process.find_highest_sum_area(self.map, 20)
             y_sh, x_sh  = self.map.shape
+            print(f'Center for blob tc analysis: [{x_sh}, {y_sh}]')
             tc_mask = utils.sector_mask((y_sh, x_sh), center_activation[::-1], 15, (0, 360))    
             timecourses = np.array([process.time_course_signal(i, abs(tc_mask - 1)) for i in z_data])
 
@@ -816,7 +817,7 @@ if __name__=="__main__":
     parser.add_argument('--gaus_kernel', 
                         dest='gaussian_kernel',
                         type=float,
-                        default=1.5, #std in pixels
+                        default=1, #std in pixels
                         required=False,
                         help='Spatial kernel (std) for gaussian filter')
     
