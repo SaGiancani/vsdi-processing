@@ -39,7 +39,7 @@ class ActiveCortexSession:
         self.acquisition_frequency = acquisition_fq #Hz
         self.time_bin              = (1/self.acquisition_frequency)*1000 #ms
         self.green                 = utils.get_green(green_name, self.path_session, log=self.log)
-
+        self.blank_name            = blank_name 
         # Get original data shape 
         try:
             self.original_frame_shape = self.green.shape
@@ -149,6 +149,10 @@ class ActiveCortexSession:
         conditions = {}
         # Only for AM conds
         for cond_name in self.list_conds:
+            if cond_name == self.blank_name:
+                continue  
+            utils.stampa(f"[{cond_name}]: beginning of process...", logger=self.log)
+
             # safety checks
             if cond_name not in self.data:
                 utils.stampa(f"[build_conditions] skipping {cond_name}: no data in self.data", logger=self.log)
@@ -628,10 +632,10 @@ class ActiveCortex:
             if z_data.size == 0:
                 return np.array([])
             
-            center_activation, _ = process.find_highest_sum_area(self.map, 20)
+            center_activation, _ = process.find_highest_sum_area(self.map, 30)
             y_sh, x_sh  = self.map.shape
-            print(f'Center for blob tc analysis: [{x_sh}, {y_sh}]')
-            tc_mask = utils.sector_mask((y_sh, x_sh), center_activation[::-1], 15, (0, 360))    
+            print(f'Center for blob tc analysis: [{center_activation[0]}, {center_activation[1]}]')
+            tc_mask = utils.sector_mask((y_sh, x_sh), center_activation, 15, (0, 360))    
             timecourses = np.array([process.time_course_signal(i, abs(tc_mask - 1)) for i in z_data])
 
             # mask = self.blob_binary  # shape (180, 218)
