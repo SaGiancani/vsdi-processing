@@ -295,6 +295,8 @@ def get_signal_profile(averaged_zscore, min_thresh, max_thresh, std = 15, median
     # print(np.nanmin(blurred), np.nanmax(blurred))
     return blurred
 
+def get_active_surface(binary_blob, pixel_spacing):
+    return np.sqrt(np.nansum(binary_blob)*pixel_spacing)
 
 def linear_extrapolation(signal, stop, start = 0):
     """
@@ -327,7 +329,6 @@ def linear_extrapolation(signal, stop, start = 0):
         tmp = get_trajectory(np.arange(start, stop, 1), signal[start:stop], (0, data_bins))
 
     return fitted_cube
-
 
 def manual_thresholding(data, threshold, filter_kernel = 30):
     assert len(data.shape) == 2, 'The data matrix has to be 2D'
@@ -457,7 +458,6 @@ def sobel_filter(im, k, N):
     else: 
         sobel = np.sqrt(sobelx**2 + sobely**2)/N
     return sobel
-
 
 def zeta_score(sig_cond, sig_blank, std_blank, full_seq = False, zero_frames = 20):
     #eps = np.nanmin(sig_cond)
