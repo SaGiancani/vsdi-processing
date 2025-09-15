@@ -1167,7 +1167,7 @@ def get_selected(matrix, autoselection):
         df = matrix[indeces, :]
     return df
 
-def get_classic_signal(path_session, zero_frames, bin_value = 2, denoise_flag = False, log = None):
+def get_classic_signal(path_session, zero_frames, bin_value = 2, denoise_flag = False, log = None, z_flag = False):
     # PARAMETERS INSTANCE
     # LOAD RAW DATA    
     if denoise_flag:
@@ -1184,7 +1184,8 @@ def get_classic_signal(path_session, zero_frames, bin_value = 2, denoise_flag = 
     mean_zero               = np.nanmean(all_zeros, axis = 0)
     std_zero                = np.nanstd(all_zeros, axis = 0)/norm_factor
     utils.stampa(f'Sanity check: mean value in zero frames mean {np.nanmean(mean_zero)} and std {np.nanmean(std_zero)}', logger=log)
-    dict_z                  = get_zscore(dict_data, mean_zero, std_zero, logger = log)
+    dict_z                  = get_zscore(dict_data, mean_zero, std_zero, logger = log) if z_flag else dict_data
+
     return dict_z, mean_zero, std_zero
 
 def load_all_mds(path_session, zero_frames, bin_val = 2, log = None):

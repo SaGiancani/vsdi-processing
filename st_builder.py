@@ -15,6 +15,7 @@ AREA_MAXIMI_FOR_PEAK = 5
 class SpatioTemporalMap:
     def __init__(self, 
                  path_session,
+                 avrg_signal = None,
                  trajectory_mask = None,
                  rotation_theta = None,
                  onset_time = None,
@@ -35,7 +36,7 @@ class SpatioTemporalMap:
                  logger = None,
                  storing_path = None):
         self.signal                   = data                           #MODIFY THIS. It could get the full matrix, and then run the get_spatio_temporal_profile iteratively on single trials and on average across trials
-        self.avrg_signal              = None        
+        self.avrg_signal              = avrg_signal        
         self.path_session             = path_session
         self.storing_path             = storing_path
         self.session_name             = utils.get_session_id_name(self.path_session)
@@ -48,7 +49,7 @@ class SpatioTemporalMap:
         if self.signal is not None:
             # Filtering of average across trials
             if len(self.signal.shape) == 4:
-                tmp_signal                          = np.nanmean(self.signal, axis = 0)
+                tmp_signal                          = np.nanmean(self.signal, axis = 0) if self.avrg_signal is None else self.avrg_signal 
                 tmp                                 = np.array([get_spatio_temporal_profile(i,
                                                                                             self.trajectory_mask, 
                                                                                             self.rotation_angle, 
@@ -265,7 +266,6 @@ class SpatioTemporalSession:
                  denoise_flag    = False,
                  retin_fold_path = None,
                  zmaps_flag      = False,
-                 load_data       = True,
                  spatial_filter  = True,
                  filter_kernel   = 5,
                  **kwargs):
@@ -327,24 +327,33 @@ class SpatioTemporalSession:
 
        
         if self.pretriggerz_flag:
-            if  load_data:
-                # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
-                cd_x       = Condition() 
-                conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
-                conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
-                cd_x.load_cond(conds_list[0].split('.pickle')[0])  
-                _, _, y2check, _ = cd_x.df_fz.shape
+            # Safety check: load a md file for checking a coherent dimensionality between the retinotopic centroids loaded and the actual data for st maps
+            cd_x       = Condition() 
+            conds_list = os.listdir(os.path.join(self.path_to_derivatives, 'md_data'))
+            conds_list = [os.path.join(self.path_to_derivatives, 'md_data', i) for i in conds_list if 'md_data_' in i]     
+            cd_x.load_cond(conds_list[0].split('.pickle')[0])  
+            _, _, y2check, _ = cd_x.df_fz.shape
 
-                bin_tmp = int(np.ceil(y2check/self.ny))
-                utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
+            bin_tmp = int(np.ceil(y2check/self.ny))
+            utils.stampa(f'Relative bin to correct: {bin_tmp}', logger = self.log)
 
-                self.dict_zeta, _, _   = get_classic_signal(self.path_to_derivatives, 
-                                                            np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
-                                                            bin_value = bin_tmp, 
-                                                            denoise_flag = self.denoise_switch,
-                                                            log = self.log)
+            self.dict_data, self.mean_blank, self.std_blank   = get_classic_signal(self.path_to_derivatives, 
+                                                                                   np.nanmin([self.timing_single_stroke[0], self.timing_am_sequence[0]]), 
+                                                                                   bin_value = bin_tmp, 
+                                                                                   denoise_flag = self.denoise_switch,
+                                                                                   log = self.log)
+            
+            
         else:
-            self.dict_zeta         = None
+            self.dict_data         = None
+            # Check this deblanking
+            blank_signal_average = self.retino_session.blank_condition.df_fz
+            if self.filter_flag:
+                blank_signal_average = median_filter(blank_signal_average, size=(1, 1, self.filter_kernel, self.filter_kernel))
+                blank_signal_average = gaussian_filter(blank_signal_average, sigma=(0, 1, 1, 1))
+
+            self.mean_blank          = np.nanmean(blank_signal_average, axis = 0) 
+            self.std_blank           = np.nanstd(blank_signal_average, axis=0)/np.sqrt(np.shape(blank_signal_average)[0]) #3d
 
         self.time_sequence           = self.retino_session.header['n_frames']
         self.time_ss                 = np.linspace(-(self.timing_single_stroke[0]-1)*self.time_bin, 
@@ -377,14 +386,6 @@ class SpatioTemporalSession:
         line_traj_x, line_traj_y = trj.get_trajectory(xs_real, ys_real, (0, self.nx -1))
         self.trajectory_mask     = trj.get_trajectory_mask(list(zip(line_traj_x, line_traj_y)), (self.ny, self.nx), extremities = (0,0))        
         _, _, self.orient_traj   = trj.rotate_distribution(line_traj_x, line_traj_y)#in rad
-
-        # Check this deblanking
-        self.blank_signal_average = self.retino_session.blank_condition.df_fz
-        if self.filter_flag:
-            self.blank_signal_average = median_filter(self.blank_signal_average, size=(1, 1, self.filter_kernel, self.filter_kernel))
-            self.blank_signal_average = gaussian_filter(self.blank_signal_average, sigma=(0, 1, 1, 1))
-
-        self.std_blank            = np.nanstd(self.blank_signal_average, axis=0)/np.sqrt(np.shape(self.blank_signal_average)[0])
 
         self.data_dictionary     = {}
         self.data_pos_frame      = {}
@@ -446,23 +447,20 @@ class SpatioTemporalSession:
         start_time = datetime.datetime.now().replace(microsecond=0)
 
         if self.pretriggerz_flag:
-            signal      = self.dict_zeta[name_cond]
+            signal      = self.dict_data[name_cond]
 
         else:
             cd          = self.retino_session.get_data_to_process(name_cond)
             signal      = cd.df_fz
 
-            if self.filter_flag: # and (single_pos_cds is None): 
-                signal = median_filter(signal, size=(1, 1, self.filter_kernel, self.filter_kernel))
-                # Slight smoothing in time, none across trials, stronger in space
-                signal = gaussian_filter(signal, sigma=(0, 1, 1, 1))
-
-            blnk_tmp = np.nanmean(self.blank_signal_average, axis = 0)
-            signal   = np.array([process.zeta_score(i, blnk_tmp, self.std_blank, full_seq=True) for i in signal])
+        if self.filter_flag: # and (single_pos_cds is None): 
+            signal = median_filter(signal, size=(1, 1, self.filter_kernel, self.filter_kernel))
+            # Slight smoothing in time, none across trials, stronger in space
+            signal = gaussian_filter(signal, sigma=(0, 1, 1, 1))
 
         avrg_signal = np.nanmean(signal, axis = 0)
+        z_avrg_sign = process.zeta_score(avrg_signal, self.mean_blank, self.std_blank, full_seq=True)
 
-        print(name_cond, np.nanmean(avrg_signal))
         st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(signal, name_cond, synaptic_latency = synaptic_latency)
         min_level = np.nanpercentile(st_map_cd.maps, 15)
         max_level = np.nanpercentile(st_map_cd.maps, 95)
@@ -488,7 +486,7 @@ class SpatioTemporalSession:
         self.data_dictionary[name_cond] = st_map_cd               
         utils.stampa(f'End processing spatiotemporal profiles for condition {name_cond}', logger=self.log)
         utils.stampa(f'Condition {name_cond} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_time}!\n', logger=self.log)                     
-        return avrg_signal
+        return z_avrg_sign
     
     def get_subtraction_condition(self, map_linear_pred, map_cond, ISinterval, colors, positions, times, sanity_switch = True):
 
@@ -622,12 +620,18 @@ class SpatioTemporalSession:
             st_map_cd.load_stmap(tmp_name)    
         # If does not, it build it
         except:            
+            mean_sign   = np.nanmean(signal, axis = 0)
+            z_mean_sign = process.zeta_score(mean_sign, self.mean_blank, self.std_blank, full_seq=True)
+    
+            z_signal    = np.array([process.zeta_score(i, self.mean_blank, self.std_blank, full_seq=True) for i in signal])
+
             st_map_cd = SpatioTemporalMap(self.path_session, 
+                                          avrg_signal     = z_mean_sign,
                                           trajectory_mask = self.trajectory_mask,
                                           rotation_theta  = self.orient_traj,
                                           onset_time      = start_time_cd,
                                           condition_name  = name_cond,
-                                          data            = signal,
+                                          data            = z_signal,
                                           condition_type  = cd_type_flag,
                                           is_delay        = ISinterval,
                                           pixel_spacing   = self.pixel_spacing,#mm 
