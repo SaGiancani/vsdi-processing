@@ -211,7 +211,7 @@ class ActiveCortexSession:
                     if mappa is None or np.all(np.isnan(mappa)):
                         continue
                     len_cd = ac.time_courses['n_trials'][key]
-                    dv.plot_averaged_map(f"{ac.cond_name}",
+                    dv.plot_averaged_map(f"{ac.cond_name}_{key}",
                                          blob,
                                          None,
                                          picco,
@@ -219,7 +219,7 @@ class ActiveCortexSession:
                                          None,
                                          min_bord, max_bord,
                                          'k',
-                                         f'{self.id_name} - {key} trials: {len_cd}',
+                                         f'{self.id_name} - trials: {len_cd}',
                                          'k',
                                          name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
                                          store_path=self.storing_folder)
