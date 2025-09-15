@@ -148,14 +148,19 @@ class ActiveCortexSession:
         """
         conditions = {}
         # Only for AM conds
-        for cond_name in self.cond_am:
+        for cond_name in self.list_conds:
             # safety checks
             if cond_name not in self.data:
                 utils.stampa(f"[build_conditions] skipping {cond_name}: no data in self.data", logger=self.log)
                 continue
+            
             synaptic_latency = int(np.ceil(synaptic_latency/self.time_bin)) # In frames
-            start_time    = self.stimulus_metadata['pos metadata'][cond_name]['start'] 
-            onset_time = self.timing_am_sequence[0] - start_time - synaptic_latency
+            if cond_name in self.cond_am:
+                start_time    = self.stimulus_metadata['pos metadata'][cond_name]['start'] 
+                onset_time = self.timing_am_sequence[0] - start_time - synaptic_latency
+
+            if cond_name in self.cond_pos:
+                onset_time = self.timing_single_stroke[0] - synaptic_latency
 
             data = self.data[cond_name]
             tw = self.time_window_per_cd.get(cond_name, None)
@@ -165,6 +170,7 @@ class ActiveCortexSession:
             utils.stampa(f'Lenght behavior list: {tmp_print} and length peaks distribution {len(peaks[0])}', logger=self.log)
             ac = ActiveCortex(cond_name=cond_name,
                               data=data,
+                              pixel_spacing=self.pixel_spacing,
                               time_window=tw,
                               onset_time=onset_time,
                               peaks_distribution=peaks,
@@ -253,6 +259,7 @@ class ActiveCortex:
                  cond_name,
                  data,
                  time_window,
+                 pixel_spacing = .07,
                  peaks_distribution = None,
                  mean_blank_forz=None,
                  std_blank=None,
@@ -263,6 +270,7 @@ class ActiveCortex:
         self.cond_name = cond_name
         self.raw_data = np.asarray(data, dtype=np.float32)  # keep original copy
         self.time_window = time_window  # expected (begin_frame, end_frame)
+        self.pixel_spacing = pixel_spacing
         self.peaks_distribution = peaks_distribution
         self.mean_blank_forz = mean_blank_forz
         self.std_blank = std_blank
@@ -300,7 +308,8 @@ class ActiveCortex:
               self.blob_binary, 
               self.blob_values, 
               self.time_courses,
-              self.behavior]
+              self.behavior,
+              self.pixel_spacing]
         storage_path = os.path.join(t, 'activecortex')
         tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
         utils.inputs_save(tp, os.path.join(tmp,'ac_'+self.cond_name))
@@ -326,6 +335,7 @@ class ActiveCortex:
         self.blob_values = tp[12]
         self.time_courses = tp[13]
         self.behavior = tp[14]
+        self.pixel_spacing = tp[15]
 
         return
 
@@ -531,29 +541,41 @@ class ActiveCortex:
         mask = self.behavior['corrects']
         if mask is None or len(mask) != self.filtered_data.shape[0]:
             raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
-
-        sel_correct   = self.compute_zscore(np.nanmean(self.filtered_data[mask], axis = 0))
-        sel_correct   = sel_correct[t0:t1, :, :]
-        map_correct   = np.nanmean(sel_correct, axis=0) if sel_correct.size > 0 else np.full_like(map_all, np.nan)
-
-        sel_incorrect = self.compute_zscore(np.nanmean(self.filtered_data[~mask], axis = 0))
-        sel_incorrect = sel_incorrect[t0:t1, :, :]
-        map_incorrect = np.nanmean(sel_incorrect, axis=0) if sel_incorrect.size > 0 else np.full_like(map_all, np.nan)
+        
 
         # Subset peaks distributions
         peaks_x, peaks_y = map(np.asarray, self.peaks_distribution)
         peaks_all = (peaks_x, peaks_y)
-        peaks_correct = (peaks_x[mask], peaks_y[mask])
-        peaks_incorrect = (peaks_x[~mask], peaks_y[~mask])
-
-        # Compute blobs for each map
-        blob_correct, _   = self.compute_blob(map_correct, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) if not np.all(np.isnan(map_correct)) else None
-        blob_incorrect, _ = self.compute_blob(map_incorrect, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) if not np.all(np.isnan(map_incorrect)) else None
 
         # Further median filter on contours before plotting them
         self.blob_binary   = median_filter(self.blob_binary, size=(5,5))
-        blob_correct       = median_filter(blob_correct, size=(5,5))
-        blob_incorrect     = median_filter(blob_incorrect, size=(5,5))
+
+        if sum(mask) != len(self.filtered_data): 
+            sel_correct   = self.compute_zscore(np.nanmean(self.filtered_data[mask], axis = 0))
+            sel_correct   = sel_correct[t0:t1, :, :]
+            map_correct   = np.nanmean(sel_correct, axis=0) 
+            peaks_correct = (peaks_x[mask], peaks_y[mask])
+            blob_correct, _   = self.compute_blob(map_correct, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) 
+
+            sel_incorrect   = self.compute_zscore(np.nanmean(self.filtered_data[~mask], axis = 0))
+            sel_incorrect   = sel_incorrect[t0:t1, :, :]
+            map_incorrect   = np.nanmean(sel_incorrect, axis=0) 
+            peaks_incorrect = (peaks_x[~mask], peaks_y[~mask])
+            blob_incorrect, _  = self.compute_blob(map_incorrect, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) 
+
+            # Further median filter on contours before plotting them
+            blob_correct    = median_filter(blob_correct, size=(5,5))
+            blob_incorrect  = median_filter(blob_incorrect, size=(5,5))
+
+        else:
+            map_correct   = None
+            peaks_correct = None
+            blob_correct  = None
+
+            map_incorrect   = None
+            peaks_incorrect = None
+            blob_incorrect  = None
+
 
         results = {
             'map': {
@@ -627,8 +649,13 @@ class ActiveCortex:
         self._log(f'{z_all.shape} {z_correct.shape} {z_incorrect.shape} {self.blob_binary.shape}')
 
         tc_all       = extract_blob_timecourse(z_all)
-        tc_correct   = extract_blob_timecourse(z_correct)
-        tc_incorrect = extract_blob_timecourse(z_incorrect)
+
+        if (len(z_correct) != 0) and (len(z_incorrect) != 0):
+            tc_correct   = extract_blob_timecourse(z_correct)
+            tc_incorrect = extract_blob_timecourse(z_incorrect)
+        else:
+            tc_correct   = []
+            tc_incorrect = []
         
         results = {
             'timecourse': {
@@ -670,13 +697,13 @@ class ActiveCortex:
         self.zscore_cd     = self.compute_zscore(np.nanmean(self.filtered_data, axis = 0))
         self.map           = self.compute_map(self.zscore_cd)
         self.blob_binary, self.blob_values = self.compute_blob(self.map, threshold=threshold, keep_values_nan=keep_blob_nan)
+
         if compute_behavior:
             self.extract_behavior()
         return self
 
     def __repr__(self):
         return f"<ActiveCortex cond={self.cond_name} map_shape={None if self.map is None else self.map.shape}>"
-
 
 def get_md_files(path_to_derivatives, list_conds, behavior_flag = True, get_trial_mask = True, get_md_data = True):
     dict_data = {}
