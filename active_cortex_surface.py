@@ -301,7 +301,6 @@ class ActiveCortexSession:
 
         for first_cond, second_cond in dict_subs.items():
 
-            tw = self.time_window_per_cd.get(first_cond, None)
             behavior_dict = self.dict_autoselection.get(first_cond, {})
             peaks = self.peaks_distribution.get(first_cond, None)
 
@@ -333,7 +332,6 @@ class ActiveCortexSession:
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
 
             ac           = ActiveCortex(None, None, 
-                                        time_window = tw,
                                         blank_cd = self.blank_cd,
                                         pixel_spacing = self.pixel_spacing,
                                         peaks_distribution = peaks,
@@ -346,7 +344,7 @@ class ActiveCortexSession:
             zscored_first_data   = ac.compute_zscore(np.nanmean(first_filtered_data, axis = 0))
             zscored_second_data  = ac.compute_zscore(np.nanmean(second_filtered_data, axis = 0)) 
             sub_conds            = zscored_first_data[t10:t11, :, :] - zscored_second_data[t20:t21, :, :] 
-            ac.map               = ac.compute_map(sub_conds[frames_start:frames_end, :, : ], time_window = None)
+            ac.map               = ac.compute_map(sub_conds, time_window = (frames_start,frames_end))
             ac.blob_binary, ac.blob_values = ac.compute_blob(ac.map, threshold=self.threshold)
 
             dict_subtrs[f'{first_cond}-{second_cond}'] = ((ac, first_cd, second_cd))     
