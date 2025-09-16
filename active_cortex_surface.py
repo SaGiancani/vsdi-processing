@@ -12,6 +12,7 @@ import warnings, utils
 class ActiveCortexSession:
     def __init__(self,
                  path_session,
+                 threshold       = 2,
                  logger          = None,  
                  store_flag      = False,
                  vis_switch      = True, 
@@ -35,6 +36,7 @@ class ActiveCortexSession:
         else:
             self.log = logger     
 
+        self.threshold             = threshold
         self.path_to_derivatives   = path_session
         self.path_session          = path_session.split('derivatives')[0]
 
@@ -147,7 +149,6 @@ class ActiveCortexSession:
         return time_dict
 
     def build_conditions(self,
-                         threshold = 2.5,
                          median_kernel = 5,
                          gaussian_sigma = 2.0,
                          synaptic_latency = 60, #in ms
@@ -157,6 +158,7 @@ class ActiveCortexSession:
         Build an ActiveCortex object for each condition in self.list_conds.
         Returns a dict: cond_name -> ActiveCortex instance.
         """
+        threshold = self.threshold
         conditions = {}
         # Only for AM conds
         for cond_name in self.list_conds:
@@ -190,13 +192,13 @@ class ActiveCortexSession:
                               onset_time=onset_time,
                               peaks_distribution=peaks,
                               blank_cd = self.blank_cd,
-                              statistical_threshold=threshold,
+                              statistical_threshold=self.threshold,
                               behavior_dict=behavior_dict,
                               logger=self.log)
             # run pipeline
             ac.run_full_pipeline(median_kernel=median_kernel,
                                  gaussian_sigma=gaussian_sigma,
-                                 threshold=threshold,
+                                 threshold=self.threshold,
                                  keep_blob_nan=keep_blob_nan,
                                  compute_behavior=compute_behavior)
 
