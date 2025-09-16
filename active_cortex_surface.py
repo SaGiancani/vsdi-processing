@@ -398,6 +398,7 @@ class ActiveCortex:
         self.logger = logger
 
         # placeholders
+        self.active_surface = None
         self.filtered_data = None
         self.zscored_data = None
         self.zscore_cd = None
@@ -427,33 +428,34 @@ class ActiveCortex:
               self.blob_values, 
               self.time_courses,
               self.behavior,
-              self.pixel_spacing]
+              self.pixel_spacing,
+              self.active_surface]
         storage_path = os.path.join(t, 'activecortex')
         tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
         utils.inputs_save(tp, os.path.join(tmp,'ac_'+self.cond_name))
         return
-    
 
     def load_activecortex(self, path):
         normalized_path = utils.normalize_path_os(path)
         tp = utils.inputs_load(normalized_path)
 
-        self.cond_name = tp[0]
-        self.time_window = tp[1]
-        self.peaks_distribution = tp[2] 
+        self.cond_name             = tp[0]
+        self.time_window           = tp[1]
+        self.peaks_distribution    = tp[2] 
         self.statistical_threshold = tp[3]
-        self.onset_time = tp[4]
-        self.behavior_dict = tp[5]
-        self.map = tp[6]
-        self.zscore_cd = tp[7]
-        self.maps = tp[8]
-        self.blobs = tp[9]
+        self.onset_time       = tp[4]
+        self.behavior_dict    = tp[5]
+        self.map              = tp[6]
+        self.zscore_cd        = tp[7]
+        self.maps             = tp[8]
+        self.blobs            = tp[9]
         self.time_window_used = tp[10] 
-        self.blob_binary = tp[11]
-        self.blob_values = tp[12]
-        self.time_courses = tp[13]
-        self.behavior = tp[14]
-        self.pixel_spacing = tp[15]
+        self.blob_binary      = tp[11]
+        self.blob_values      = tp[12]
+        self.time_courses     = tp[13]
+        self.behavior         = tp[14]
+        self.pixel_spacing    = tp[15]
+        self.active_surface   = tp[16]
 
         return
 
@@ -589,7 +591,8 @@ class ActiveCortex:
 
         n_pixels = np.sum(mask)
         self._log(f"[{self.cond_name}] blob computed with threshold={thr} -> {int(n_pixels)} pixels selected")
-        self._log(f"[{self.cond_name}] surface in mm^2: {process.get_active_surface(mask, self.pixel_spacing)}")
+        self.active_surface = process.get_active_surface(mask, self.pixel_spacing)
+        self._log(f"[{self.cond_name}] surface in mm^2: {process.get_active_surface(mask, self.pixel_spacing):.3f}/{process.get_active_surface(np.ones((mask.shape)), self.pixel_spacing):.3f}")
         return blob_binary, blob_values
 
 
