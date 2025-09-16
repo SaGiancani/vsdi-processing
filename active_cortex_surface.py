@@ -282,7 +282,7 @@ class ActiveCortexSession:
                                         None,
                                         min_bord, max_bord,
                                         'k',
-                                        f'{self.id_name} - trials: {ac.zscored_data.shape[0]}',
+                                        f'{self.id_name}',
                                         'k',
                                         name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
                                         store_path=self.storing_folder)
