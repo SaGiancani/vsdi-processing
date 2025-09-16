@@ -1,4 +1,5 @@
 import argparse, datetime
+from collections import defaultdict
 import data_visualization as dv
 import middle_process as md
 import numpy as np
@@ -26,6 +27,7 @@ class ActiveCortexSession:
                  zero_frames     = 10,
                  green_name      = '',
                  filter_kernel   = 5,
+                 gaussian_kernel = 1,
                  **kwargs):
 
         if logger is None:
@@ -52,6 +54,7 @@ class ActiveCortexSession:
         self.pretriggerz_flag      = pretrigger_zero
         self.filter_flag           = spatial_filter # Does not work for zmaps_flag
         self.filter_kernel         = filter_kernel # Does not work for zmaps_flag
+        self.gaussian_kernel       = gaussian_kernel # Does not work for zmaps_flag
         
         if retino_path is None:
             self.retin_folder      = dv.STORAGE_PATH
@@ -79,6 +82,8 @@ class ActiveCortexSession:
         self.cond_am = list(self.data_loader.cond_am)   
         self.cond_pos = list(self.data_loader.cond_pos)
         self.list_conds = self.cond_am + self.cond_pos + [blank_name]
+        self.retino_pos_am = utils.get_conditions_correspondance(self.path_session)
+        utils.stampa(f'Dictionary of conditions: {self.retino_pos_am}', logger = self.log)    
         utils.stampa(f'{self.list_conds}', logger=self.log)
 
         self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = not self.denoise_switch)
@@ -104,6 +109,8 @@ class ActiveCortexSession:
         _, self.nt, self.ny, self.nx = self.data[blank_name].shape
         self.spatial_bin     = np.nanmax(self.original_frame_shape)/np.nanmax([self.ny, self.nx])  #Import green and import an md file and check the difference in frame shape
         self.pixel_spacing   = self.spatial_bin*(cortical_dim*(optical_ratio))/np.nanmax(self.original_frame_shape)     
+
+        self.subtraction_acs = self.get_subtractions()
 
     def get_peaks_distribution(self):
         peaks_dict = {}
@@ -134,8 +141,7 @@ class ActiveCortexSession:
         return time_dict
 
     def build_conditions(self,
-                         mean_blank_forz,
-                         std_blank,
+                         blank_cd,
                          threshold = 2.5,
                          median_kernel = 5,
                          gaussian_sigma = 2.0,
@@ -178,8 +184,7 @@ class ActiveCortexSession:
                               time_window=tw,
                               onset_time=onset_time,
                               peaks_distribution=peaks,
-                              mean_blank_forz=mean_blank_forz,
-                              std_blank=std_blank,
+                              blank_cd = blank_cd,
                               statistical_threshold=threshold,
                               behavior_dict=behavior_dict,
                               logger=self.log)
@@ -241,6 +246,106 @@ class ActiveCortexSession:
             conditions[cond_name] = ac
         return conditions
 
+    def build_sub_conditions(self):
+
+        if self.subtraction_acs is None:
+            self.subtraction_acs = self.get_subtractions()
+
+        if self.vis_switch:
+            for sub_cond_name, values in self.subtraction_acs.items():
+                ac = values[0]
+                mappa = ac.map
+                picco = ac.peaks
+                blob  = ac.blob_binary  
+                min_bord = np.nanpercentile(ac.zscore_cd, 10)
+                max_bord = np.nanpercentile(ac.zscore_cd, 97)
+
+                if mappa is None or np.all(np.isnan(mappa)):
+                    continue
+                dv.plot_averaged_map(f"{sub_cond_name}",
+                                        blob,
+                                        None,
+                                        picco,
+                                        mappa,
+                                        None,
+                                        min_bord, max_bord,
+                                        'k',
+                                        f'{self.id_name} - trials: {ac.zscored_data.shape[0]}',
+                                        'k',
+                                        name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
+                                        store_path=self.storing_folder)
+                
+            if self.store_switch:
+                ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
+        return
+
+    def get_subtractions(self):
+        
+        # All possible subtraction dictionary building
+        default_time_window = 20
+        single_pos          = list(set([i for v in self.retino_pos_am.values() for i in v]))
+        dict_components_    = self.retino_pos_am
+        for i in single_pos:
+            dict_components_[i] = [i]
+        
+        dict_subs   = utils.find_subsets(dict_components_)     
+
+        # METHOD BUILT ON THE LINES ABOVE. CHECK UTILS
+        utils.stampa(f'Dictionary of subtractions: {dict_subs}', logger = self.log)                                                               
+        dict_subtrs = dict()
+
+        for first_cond, second_cond in dict_subs.items():
+
+            tw = self.time_window_per_cd.get(first_cond, None)
+            behavior_dict = self.dict_autoselection.get(first_cond, {})
+            peaks = self.peaks_distribution.get(first_cond, None)
+
+            # Provide the control retinotopic position in case of glitch in peak detection
+
+            first_cd  = self.data[first_cond]  
+            second_cd = self.data[second_cond]  
+            
+            t10, t11  = ((self.stimulus_metadata['multiple stroke']['bottom limit'], 
+                          self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
+            
+            if second_cd in self.cond_pos.values():
+                t20, t21  = ((self.stimulus_metadata['single stroke']['bottom limit'], 
+                              self.stimulus_metadata['single stroke']['bottom limit'] + default_time_window))
+            else:
+                t20, t21  = ((self.stimulus_metadata['multiple stroke']['bottom limit'], 
+                              self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
+            
+            name_subtrcts = f'{first_cond}-{second_cond}'
+
+            a             = self.stimulus_metadata['pos metadata']
+            space_step    = a[first_cond]['inter stimulus space']
+            time_stepping = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency)) 
+            frames_start  = time_stepping + a[first_cond]['start']
+            utils.stampa(f'Name sub {name_subtrcts}, space stepping {space_step}', logger = self.log)   
+
+            # Time window twice the regular stroke stepping
+            frames_end            = frames_start + 2*time_stepping
+            utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
+
+            ac           = ActiveCortex(None, None, None, 
+                                        pixel_spacing = self.pixel_spacing,
+                                        time_window = tw,
+                                        peaks_distribution = peaks,
+                                        behavior_dict = behavior_dict, 
+                                        logger = self.log)
+            
+            ac.cond_name         = name_subtrcts
+            first_filtered_data  = ac.apply_spatial_filter(first_cd, median_kernel = self.filter_kernel, gaussian_sigma = self.gaussian_kernel)
+            second_filtered_data = ac.apply_spatial_filter(second_cd, median_kernel = self.filter_kernel, gaussian_sigma = self.gaussian_kernel)
+            zscored_first_data   = ac.compute_zscore(np.nanmean(first_filtered_data, axis = 0))
+            zscored_second_data  = ac.compute_zscore(np.nanmean(second_filtered_data, axis = 0)) 
+            sub_conds            = zscored_first_data[t10:t11, :, :] - zscored_second_data[t20:t21, :, :] 
+            ac.map               = ac.compute_map(sub_conds[frames_start:frames_end, :, : ], time_window = None)
+            ac.blob_binary, ac.blob_values = ac.compute_blob(ac.map, threshold=self.threshold)
+
+            dict_subtrs[f'{first_cond}-{second_cond}'] = ((ac, first_cd, second_cd))     
+        return dict_subtrs
+
 
 class ActiveCortex:
     """
@@ -265,19 +370,17 @@ class ActiveCortex:
                  time_window,
                  pixel_spacing = .07,
                  peaks_distribution = None,
-                 mean_blank_forz=None,
-                 std_blank=None,
+                 blank_cd = None,
                  onset_time = 20, # In frames
                  statistical_threshold = 2.5,
                  behavior_dict = None,
                  logger = None):
         self.cond_name = cond_name
-        self.raw_data = np.asarray(data, dtype=np.float32)  # keep original copy
+        self.raw_data = np.asarray(data, dtype=np.float32) if data is not None else None # keep original copy
         self.time_window = time_window  # expected (begin_frame, end_frame)
         self.pixel_spacing = pixel_spacing
         self.peaks_distribution = peaks_distribution
-        self.mean_blank_forz = mean_blank_forz
-        self.std_blank = std_blank
+        self.blank_cd = blank_cd
         self.statistical_threshold = statistical_threshold
         self.onset_time = onset_time
         self.behavior_dict = behavior_dict or {}
@@ -390,7 +493,7 @@ class ActiveCortex:
         return arr
     
     # --- zscore using your existing md.get_zscore ---
-    def compute_zscore(self, raw_data = None):
+    def compute_zscore(self, raw_data = None, blank_cd = None):
         """
         Calls md.get_zscore(filtered_data, mean_blank_forz, std_blank, logger)
         Requires mean_blank_forz and std_blank to be provided at init (precomputed).
@@ -400,14 +503,23 @@ class ActiveCortex:
             raw_data = self.raw_data
         if self.mean_blank_forz is None or self.std_blank is None:
             raise RuntimeError(f"[{self.cond_name}] mean_blank_forz and std_blank must be provided to compute zscore.")
+        
+        if blank_cd is None:
+            blank_cd = self.blank_cd
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
         if len(raw_data.shape) == 3:
-            z_cond = process.zeta_score(raw_data, self.mean_blank_forz, self.std_blank, full_seq=True)
-            z_cond = z_cond -  np.nanmean(z_cond)
+            tmp_blnk = np.nanmean(blank_cd, axis = 0)
+            z_cond   = process.zeta_score(raw_data, 
+                                          np.nanmean(tmp_blnk, axis = 0), 
+                                          np.nanstd(tmp_blnk, axis = 0)/np.sqrt(tmp_blnk.shape[0]), 
+                                          full_seq=True)
+            z_cond   = z_cond -  np.nanmean(z_cond)
 
         elif len(raw_data.shape) == 4:
-            z_cond = np.array([process.zeta_score(j, self.mean_blank_forz, self.std_blank, full_seq=True) for j in raw_data])
+            z_cond = np.array([process.zeta_score(j, 
+                                                  np.nanmean(blank_cd, axis = 0), 
+                                                  np.nanstd(blank_cd, axis = 0)/np.sqrt(blank_cd.shape[0]), full_seq=True) for j in raw_data])
             tmp_mean = np.nanmean(z_cond, axis = (-3, -2, -1))
             z_cond = z_cond - tmp_mean[:, np.newaxis, np.newaxis, np.newaxis]
         return z_cond
@@ -890,27 +1002,29 @@ if __name__=="__main__":
     session_deriv   = args.path_md
 
     session_acs     = ActiveCortexSession(session_deriv, 
+                                          threshold = args.threshold,
                                           store_flag=args.store_flag, 
                                           denoise_flag = args.denoise_flag, 
+                                          filter_kernel = args.median_kernel,
+                                          gaussian_kernel = args.gaussian_kernel,
                                           vis_switch = args.vis_switch,
                                           logger=log)
 
-    tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)
+    # tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)
+    tmp_blnk     = session_acs.data['blank']
     if args.spatial_filter_switch:
-        tmp_blnk = median_filter(tmp_blnk, size = (1, args.median_kernel, args.median_kernel))
-        tmp_blnk = gaussian_filter(tmp_blnk, sigma = (args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel))
-
-    mean_blank_forz = np.nanmean(tmp_blnk, axis = 0)
-    std_blank       = np.nanstd(tmp_blnk, axis = 0)/np.sqrt(tmp_blnk.shape[0])
+        tmp_blnk = median_filter(tmp_blnk, size = (1, 1, args.median_kernel, args.median_kernel))
+        tmp_blnk = gaussian_filter(tmp_blnk, sigma = (0, args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel))
     
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
 
     start_process_time_cds = datetime.datetime.now().replace(microsecond=0)
 
-    conds           = session_acs.build_conditions(mean_blank_forz, std_blank,
+    conds           = session_acs.build_conditions(tmp_blnk,
                                                    threshold=args.threshold,
                                                    median_kernel=args.median_kernel,
                                                    gaussian_sigma=args.gaussian_kernel)
+    session_acs.build_sub_conditions()
     utils.stampa(f'Conditions for active cortex analysis processed in {datetime.datetime.now().replace(microsecond=0)-start_process_time_cds}!\n', logger=log)                                
 
     tmp_name_cd = list(conds.keys())
