@@ -458,10 +458,11 @@ class SpatioTemporalSession:
             # Slight smoothing in time, none across trials, stronger in space
             signal = gaussian_filter(signal, sigma=(0, 1, 1, 1))
 
-        avrg_signal = np.nanmean(signal, axis = 0)
-        z_avrg_sign = process.zeta_score(avrg_signal, self.mean_blank, self.std_blank, full_seq=True)
+        z = np.array([process.zeta_score(i, self.mean_blank, self.std_blank, full_seq=True) for i in signal])
+        z_avrg_sign = np.nanmen(z, axis = 0)
+        
 
-        st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(signal, name_cond, synaptic_latency = synaptic_latency)
+        st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(z, name_cond, synaptic_latency = synaptic_latency)
         min_level = np.nanpercentile(st_map_cd.maps, 15)
         max_level = np.nanpercentile(st_map_cd.maps, 95)
         thresh    = np.nanpercentile(st_map_cd.maps, 60)
@@ -620,7 +621,7 @@ class SpatioTemporalSession:
             st_map_cd.load_stmap(tmp_name)    
         # If does not, it build it
         except:            
-            z_signal    = np.array([process.zeta_score(i, self.mean_blank, self.std_blank, full_seq=True) for i in signal])
+            z_signal    = signal
             z_mean_sign = np.nanmean(z_signal, axis = 0)
 
             st_map_cd = SpatioTemporalMap(self.path_session, 
