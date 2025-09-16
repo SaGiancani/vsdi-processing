@@ -118,7 +118,8 @@ class ActiveCortexSession:
             tmp_blnk = gaussian_filter(tmp_blnk, sigma = (0, args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel)) 
         
         self.blank_cd        = tmp_blnk
-        self.subtraction_acs = self.get_subtractions()
+        self.regular_conds_acs = self.get_conditions()
+        self.subtraction_acs   = self.get_subtractions()
 
     def get_peaks_distribution(self):
         peaks_dict = {}
@@ -148,14 +149,11 @@ class ActiveCortexSession:
             time_dict[cd_pos] = (begin_time, end_time)
         return time_dict
 
-    def build_conditions(self,
-                         synaptic_latency = 60, #in ms
-                         keep_blob_nan = True,
-                         compute_behavior = True):
-        """
-        Build an ActiveCortex object for each condition in self.list_conds.
-        Returns a dict: cond_name -> ActiveCortex instance.
-        """
+    def get_conditions(self, 
+                       synaptic_latency = 60, #in ms
+                       keep_blob_nan = True,
+                       compute_behavior = True):
+
         median_kernel  = self.filter_kernel
         gaussian_sigma = self.gaussian_kernel
         conditions = {}
@@ -201,12 +199,24 @@ class ActiveCortexSession:
                                  keep_blob_nan=keep_blob_nan,
                                  compute_behavior=compute_behavior)
 
-            maps = ac.compute_behavior_maps()
-
+            ac.maps         = ac.compute_behavior_maps()
             # Compute the time courses
-            tc_results = ac.compute_blob_timecourse()
-            ac.time_courses = tc_results
+            ac.time_courses = ac.compute_blob_timecourse()        
+            conditions[cond_name] = ac
+        return conditions
 
+    def build_conditions(self):
+        """
+        Build an ActiveCortex object for each condition in self.list_conds.
+        Returns a dict: cond_name -> ActiveCortex instance.
+        """
+        conditions = self.regular_conds_acs
+        # Only for AM conds
+        for cond_name in self.list_conds:
+            if cond_name == self.blank_name:
+                continue  
+            ac   = conditions[cond_name]
+            maps = ac.maps
             if self.vis_switch:
                 cmaps    = maps['map']
                 peaks    = maps['peaks']
@@ -248,9 +258,7 @@ class ActiveCortexSession:
             
             if self.store_switch:
                 ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
-
-            conditions[cond_name] = ac
-        return conditions
+        return 
 
     def build_sub_conditions(self):
 
@@ -1019,7 +1027,7 @@ if __name__=="__main__":
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
 
     start_process_time_cds = datetime.datetime.now().replace(microsecond=0)
-    conds           = session_acs.build_conditions()
+    session_acs.build_conditions()
     session_acs.build_sub_conditions()
     utils.stampa(f'Conditions for active cortex analysis processed in {datetime.datetime.now().replace(microsecond=0)-start_process_time_cds}!\n', logger=log)                                
 
