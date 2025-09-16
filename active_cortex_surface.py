@@ -115,7 +115,7 @@ class ActiveCortexSession:
             tmp_blnk = median_filter(tmp_blnk, size = (1, 1, args.median_kernel, args.median_kernel))
             tmp_blnk = gaussian_filter(tmp_blnk, sigma = (0, args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel)) 
         
-        self.blank_cd = tmp_blnk
+        self.blank_cd        = tmp_blnk
         self.subtraction_acs = self.get_subtractions()
 
     def get_peaks_distribution(self):
@@ -334,7 +334,7 @@ class ActiveCortexSession:
 
             ac           = ActiveCortex(None, None, 
                                         time_window = tw,
-                                        blank_cd= self.blank_cd,
+                                        blank_cd = self.blank_cd,
                                         pixel_spacing = self.pixel_spacing,
                                         peaks_distribution = peaks,
                                         behavior_dict = behavior_dict, 
@@ -507,7 +507,7 @@ class ActiveCortex:
 
         if raw_data is None:
             raw_data = self.raw_data
-        if self.blank_cd is None or blank_cd is None:
+        if self.blank_cd is None and blank_cd is None:
             raise RuntimeError(f"[{self.cond_name}] blank condition must be provided to compute zscore.")
         
         if blank_cd is None:
