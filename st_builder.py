@@ -459,7 +459,7 @@ class SpatioTemporalSession:
             signal = gaussian_filter(signal, sigma=(0, 1, 1, 1))
 
         z = np.array([process.zeta_score(i, self.mean_blank, self.std_blank, full_seq=True) for i in signal])
-        z_avrg_sign = np.nanmen(z, axis = 0)
+        z_avrg_sign = np.nanmean(z, axis = 0)
         
 
         st_map_cd, positions, times, colors, start_time_cd, ISinterval, cd_type_flag = self.get_condition_map(z, name_cond, synaptic_latency = synaptic_latency)
