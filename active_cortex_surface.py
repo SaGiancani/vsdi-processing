@@ -149,8 +149,6 @@ class ActiveCortexSession:
         return time_dict
 
     def build_conditions(self,
-                         median_kernel = 5,
-                         gaussian_sigma = 2.0,
                          synaptic_latency = 60, #in ms
                          keep_blob_nan = True,
                          compute_behavior = True):
@@ -158,7 +156,8 @@ class ActiveCortexSession:
         Build an ActiveCortex object for each condition in self.list_conds.
         Returns a dict: cond_name -> ActiveCortex instance.
         """
-        threshold = self.threshold
+        median_kernel  = self.filter_kernel
+        gaussian_sigma = self.gaussian_kernel
         conditions = {}
         # Only for AM conds
         for cond_name in self.list_conds:
@@ -1020,9 +1019,7 @@ if __name__=="__main__":
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
 
     start_process_time_cds = datetime.datetime.now().replace(microsecond=0)
-    conds           = session_acs.build_conditions(threshold=args.threshold,
-                                                   median_kernel=args.median_kernel,
-                                                   gaussian_sigma=args.gaussian_kernel)
+    conds           = session_acs.build_conditions()
     session_acs.build_sub_conditions()
     utils.stampa(f'Conditions for active cortex analysis processed in {datetime.datetime.now().replace(microsecond=0)-start_process_time_cds}!\n', logger=log)                                
 
