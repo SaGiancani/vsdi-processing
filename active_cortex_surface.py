@@ -308,7 +308,7 @@ class ActiveCortexSession:
             t10, t11  = ((self.stimulus_metadata['multiple stroke']['bottom limit'], 
                           self.stimulus_metadata['multiple stroke']['bottom limit'] + default_time_window))
             
-            if second_cd in self.cond_pos.values():
+            if second_cd in self.cond_pos:
                 t20, t21  = ((self.stimulus_metadata['single stroke']['bottom limit'], 
                               self.stimulus_metadata['single stroke']['bottom limit'] + default_time_window))
             else:
