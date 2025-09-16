@@ -212,6 +212,8 @@ class ActiveCortexSession:
         """
         conditions = self.regular_conds_acs
         # Only for AM conds
+        max_bord = np.nanmax([np.nanpercentile(v.map, 97) for v in conditions.values()])
+        min_bord = np.nanmin([np.nanpercentile(v.map, 10) for v in conditions.values()])
         for cond_name in self.list_conds:
             if cond_name == self.blank_name:
                 continue  
@@ -221,8 +223,9 @@ class ActiveCortexSession:
                 cmaps    = maps['map']
                 peaks    = maps['peaks']
                 blobs    = maps['blob']
-                min_bord = np.nanpercentile(ac.map, 10)
-                max_bord = np.nanpercentile(ac.map, 95)
+                ac.maps  = cmaps
+                ac.peaks = peaks
+                ac.blobs = blobs
 
                 for key in cmaps.keys():
                     mappa = cmaps[key]
@@ -244,9 +247,6 @@ class ActiveCortexSession:
                                          'k',
                                          name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
                                          store_path=self.storing_folder)
-                ac.maps  = cmaps
-                ac.peaks = peaks
-                ac.blobs = blobs
 
                 time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
                 plot_blob_timecourse(ac.time_courses, time_series_info, y_lim = (min_bord, max_bord), store_pic=True,
@@ -593,6 +593,7 @@ class ActiveCortex:
         self._log(f"[{self.cond_name}] blob computed with threshold={thr} -> {int(n_pixels)} pixels selected")
         self.active_surface = process.get_active_surface(mask, self.pixel_spacing)
         self._log(f"[{self.cond_name}] surface in mm^2: {process.get_active_surface(mask, self.pixel_spacing):.3f}/{process.get_active_surface(np.ones((mask.shape)), self.pixel_spacing):.3f}")
+        self._log(f"[{self.cond_name}] surface in %: {100*(process.get_active_surface(mask, self.pixel_spacing)/process.get_active_surface(np.ones((mask.shape)), self.pixel_spacing)):.1f}")
         return blob_binary, blob_values
 
 
