@@ -108,8 +108,14 @@ class ActiveCortexSession:
 
         _, self.nt, self.ny, self.nx = self.data[blank_name].shape
         self.spatial_bin     = np.nanmax(self.original_frame_shape)/np.nanmax([self.ny, self.nx])  #Import green and import an md file and check the difference in frame shape
-        self.pixel_spacing   = self.spatial_bin*(cortical_dim*(optical_ratio))/np.nanmax(self.original_frame_shape)     
+        self.pixel_spacing   = self.spatial_bin*(cortical_dim*(optical_ratio))/np.nanmax(self.original_frame_shape)    
 
+        tmp_blnk     = self.data[self.blank_name]
+        if self.filter_flag:
+            tmp_blnk = median_filter(tmp_blnk, size = (1, 1, args.median_kernel, args.median_kernel))
+            tmp_blnk = gaussian_filter(tmp_blnk, sigma = (0, args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel)) 
+        
+        self.blank_cd = tmp_blnk
         self.subtraction_acs = self.get_subtractions()
 
     def get_peaks_distribution(self):
@@ -141,7 +147,6 @@ class ActiveCortexSession:
         return time_dict
 
     def build_conditions(self,
-                         blank_cd,
                          threshold = 2.5,
                          median_kernel = 5,
                          gaussian_sigma = 2.0,
@@ -184,7 +189,7 @@ class ActiveCortexSession:
                               time_window=tw,
                               onset_time=onset_time,
                               peaks_distribution=peaks,
-                              blank_cd = blank_cd,
+                              blank_cd = self.blank_cd,
                               statistical_threshold=threshold,
                               behavior_dict=behavior_dict,
                               logger=self.log)
@@ -329,6 +334,7 @@ class ActiveCortexSession:
 
             ac           = ActiveCortex(None, None, 
                                         time_window = tw,
+                                        blank_cd= self.blank_cd,
                                         pixel_spacing = self.pixel_spacing,
                                         peaks_distribution = peaks,
                                         behavior_dict = behavior_dict, 
@@ -1000,9 +1006,9 @@ if __name__=="__main__":
     utils.stampa(f'{args}', logger = log)      
 
     session_deriv   = args.path_md
-
     session_acs     = ActiveCortexSession(session_deriv, 
                                           threshold = args.threshold,
+                                          spatial_filter= args.spatial_filter_switch,
                                           store_flag=args.store_flag, 
                                           denoise_flag = args.denoise_flag, 
                                           filter_kernel = args.median_kernel,
@@ -1010,18 +1016,11 @@ if __name__=="__main__":
                                           vis_switch = args.vis_switch,
                                           logger=log)
 
-    # tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)
-    tmp_blnk     = session_acs.data['blank']
-    if args.spatial_filter_switch:
-        tmp_blnk = median_filter(tmp_blnk, size = (1, 1, args.median_kernel, args.median_kernel))
-        tmp_blnk = gaussian_filter(tmp_blnk, sigma = (0, args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel))
-    
+    # tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)    
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
 
     start_process_time_cds = datetime.datetime.now().replace(microsecond=0)
-
-    conds           = session_acs.build_conditions(tmp_blnk,
-                                                   threshold=args.threshold,
+    conds           = session_acs.build_conditions(threshold=args.threshold,
                                                    median_kernel=args.median_kernel,
                                                    gaussian_sigma=args.gaussian_kernel)
     session_acs.build_sub_conditions()
