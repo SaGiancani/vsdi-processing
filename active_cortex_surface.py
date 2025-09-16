@@ -327,9 +327,9 @@ class ActiveCortexSession:
             frames_end            = frames_start + 2*time_stepping
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
 
-            ac           = ActiveCortex(None, None, None, 
-                                        pixel_spacing = self.pixel_spacing,
+            ac           = ActiveCortex(None, None, 
                                         time_window = tw,
+                                        pixel_spacing = self.pixel_spacing,
                                         peaks_distribution = peaks,
                                         behavior_dict = behavior_dict, 
                                         logger = self.log)
