@@ -117,7 +117,7 @@ class ActiveCortexSession:
             tmp_blnk = median_filter(tmp_blnk, size = (1, 1, args.median_kernel, args.median_kernel))
             tmp_blnk = gaussian_filter(tmp_blnk, sigma = (0, args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel)) 
         
-        self.blank_cd        = tmp_blnk
+        self.blank_cd          = tmp_blnk
         self.regular_conds_acs = self.get_conditions()
         self.subtraction_acs   = self.get_subtractions()
 
@@ -221,8 +221,8 @@ class ActiveCortexSession:
                 cmaps    = maps['map']
                 peaks    = maps['peaks']
                 blobs    = maps['blob']
-                min_bord = np.nanpercentile(ac.zscored_data, 3)
-                max_bord = np.nanpercentile(ac.zscored_data, 97)
+                min_bord = np.nanpercentile(ac.map, 10)
+                max_bord = np.nanpercentile(ac.map, 95)
 
                 for key in cmaps.keys():
                     mappa = cmaps[key]
