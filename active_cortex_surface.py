@@ -1032,7 +1032,7 @@ if __name__=="__main__":
     session_acs.build_sub_conditions()
     utils.stampa(f'Conditions for active cortex analysis processed in {datetime.datetime.now().replace(microsecond=0)-start_process_time_cds}!\n', logger=log)                                
 
-    tmp_name_cd = list(conds.keys())
-    ac = conds[tmp_name_cd[0]]
+    tmp_name_cd = list(session_acs.regular_conds_acs.keys())
+    ac = session_acs.regular_conds_acs[tmp_name_cd[0]]
     print(ac.map.shape, ac.blob_binary.sum(), ac.behavior['intersection'].sum())
     utils.stampa(f'Analysis elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
