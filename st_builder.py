@@ -378,7 +378,7 @@ class SpatioTemporalSession:
         utils.stampa(f'Pixel Spacing: {self.pixel_spacing}\n', logger = self.log)  
 
         retino_loading = retinotopy.RetinoLoaderManager(self.path_session, flag_denoise=self.denoise_switch, only_single_pos = True)       
-        self.single_pos, _, _   = retinotopy.get_retinotopic_single_pos(retino_loading.data, retino_loading.cond_pos)
+        self.single_pos, _, _    = retinotopy.get_retinotopic_single_pos(retino_loading.data, retino_loading.cond_pos)
  
         utils.stampa(f'{self.single_pos}', logger = self.log)  
         xs_real = list(list(zip(*self.single_pos))[0])
@@ -620,10 +620,8 @@ class SpatioTemporalSession:
             st_map_cd.load_stmap(tmp_name)    
         # If does not, it build it
         except:            
-            mean_sign   = np.nanmean(signal, axis = 0)
-            z_mean_sign = process.zeta_score(mean_sign, self.mean_blank, self.std_blank, full_seq=True)
-    
             z_signal    = np.array([process.zeta_score(i, self.mean_blank, self.std_blank, full_seq=True) for i in signal])
+            z_mean_sign = np.nanmean(z_signal, axis = 0)
 
             st_map_cd = SpatioTemporalMap(self.path_session, 
                                           avrg_signal     = z_mean_sign,
