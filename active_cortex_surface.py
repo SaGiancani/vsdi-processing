@@ -501,8 +501,8 @@ class ActiveCortex:
 
         if raw_data is None:
             raw_data = self.raw_data
-        if self.mean_blank_forz is None or self.std_blank is None:
-            raise RuntimeError(f"[{self.cond_name}] mean_blank_forz and std_blank must be provided to compute zscore.")
+        if self.blank_cd is None or blank_cd is None:
+            raise RuntimeError(f"[{self.cond_name}] blank condition must be provided to compute zscore.")
         
         if blank_cd is None:
             blank_cd = self.blank_cd
