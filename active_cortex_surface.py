@@ -221,8 +221,8 @@ class ActiveCortexSession:
                 cmaps    = maps['map']
                 peaks    = maps['peaks']
                 blobs    = maps['blob']
-                min_bord = np.nanpercentile(ac.zscored_data, 15)
-                max_bord = np.nanpercentile(ac.zscored_data, 90)
+                min_bord = np.nanpercentile(ac.zscored_data, 3)
+                max_bord = np.nanpercentile(ac.zscored_data, 97)
 
                 for key in cmaps.keys():
                     mappa = cmaps[key]
@@ -248,8 +248,6 @@ class ActiveCortexSession:
                 ac.peaks = peaks
                 ac.blobs = blobs
 
-                # min_bord = np.nanpercentile(ac.zscored_data, 10)
-                # max_bord = np.nanpercentile(ac.zscored_data, 95)
                 time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
                 plot_blob_timecourse(ac.time_courses, time_series_info, y_lim = (min_bord, max_bord), store_pic=True,
                                      name_cond = ac.cond_name, title_plot = f'Blob time course {ac.cond_name}', 
@@ -271,8 +269,8 @@ class ActiveCortexSession:
                 mappa = ac.map
                 picco = ac.peaks
                 blob  = ac.blob_binary  
-                min_bord = np.nanpercentile(ac.zscore_cd, 10)
-                max_bord = np.nanpercentile(ac.zscore_cd, 97)
+                min_bord = np.nanpercentile(mappa, 10)
+                max_bord = np.nanpercentile(mappa, 97)
 
                 if mappa is None or np.all(np.isnan(mappa)):
                     continue
@@ -656,14 +654,14 @@ class ActiveCortex:
         Compute three maps (all/correct/incorrect), their peaks distributions,
         and blobs (binary masks above statistical threshold).
         """
-        if self.zscored_data is None:
+        if self.filtered_data is None:
             raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
         if self.behavior is None or 'corrects' not in self.behavior:
             raise RuntimeError(f"[{self.cond_name}] behavior info missing — run extract_behavior first.")
         if self.peaks_distribution is None:
             raise RuntimeError(f"[{self.cond_name}] peaks_distribution missing — pass it at init.")
 
-        nt     = self.zscored_data.shape[0]
+        nt     = self.filtered_data.shape[1]
         t0, t1 = self.time_window_used if self.time_window_used else (0, nt)
 
         map_all = self.map
