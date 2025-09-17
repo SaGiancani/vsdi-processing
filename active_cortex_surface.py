@@ -256,7 +256,7 @@ class ActiveCortexSession:
                                         None,
                                         min_bord, max_bord,
                                         'k',
-                                        f'baseline activity - time bins: 0-{ac.onset_time - 5}',
+                                        f'baseline activity - time bins: 0-10',
                                         'k',
                                         name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
                                         store_path=self.storing_folder)
@@ -700,7 +700,7 @@ class ActiveCortex:
         peaks_all = (peaks_x, peaks_y)
 
         # Further median filter on contours before plotting them
-        self.blob_binary   = median_filter(self.blob_binary, size=(5,5))
+        # self.blob_binary   = median_filter(self.blob_binary, size=(5,5))
 
         if sum(mask) != len(self.filtered_data): 
             sel_correct   = self.compute_zscore(np.nanmean(self.filtered_data[mask], axis = 0))
@@ -716,8 +716,8 @@ class ActiveCortex:
             blob_incorrect, _  = self.compute_blob(map_incorrect, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) 
 
             # Further median filter on contours before plotting them
-            blob_correct    = median_filter(blob_correct, size=(5,5))
-            blob_incorrect  = median_filter(blob_incorrect, size=(5,5))
+            # blob_correct    = median_filter(blob_correct, size=(5,5))
+            # blob_incorrect  = median_filter(blob_incorrect, size=(5,5))
 
         else:
             map_correct   = None
@@ -848,7 +848,7 @@ class ActiveCortex:
         self.zscored_data  = self.compute_zscore(self.filtered_data)
         self.zscore_cd     = self.compute_zscore(np.nanmean(self.filtered_data, axis = 0))
         self.map           = self.compute_map(self.zscore_cd)
-        self.map_baseline  = self.compute_map(self.zscore_cd, time_window=(0, self.onset_time-5))
+        self.map_baseline  = self.compute_map(self.zscore_cd, time_window=(0, 15))
         self.blob_binary, self.blob_values = self.compute_blob(self.map, threshold=threshold, keep_values_nan=keep_blob_nan)
         self.blob_binary_baseline, self.blob_values_baseline = self.compute_blob(self.map_baseline, threshold=threshold, keep_values_nan=keep_blob_nan)
 
