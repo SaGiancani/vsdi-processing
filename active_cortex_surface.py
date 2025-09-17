@@ -247,12 +247,31 @@ class ActiveCortexSession:
                                          'k',
                                          name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
                                          store_path=self.storing_folder)
+                    
+                dv.plot_averaged_map(f"{ac.cond_name}_baseline",
+                                        ac.blob_binary_baseline,
+                                        None,
+                                        None,
+                                        ac.map_baseline,
+                                        None,
+                                        min_bord, max_bord,
+                                        'k',
+                                        f'baseline activity - time bins: 0-{ac.onset_time - 5}',
+                                        'k',
+                                        name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
+                                        store_path=self.storing_folder)
+                    
 
                 time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
                 plot_blob_timecourse(ac.time_courses, time_series_info, y_lim = (min_bord, max_bord), store_pic=True,
                                      name_cond = ac.cond_name, title_plot = f'Blob time course {ac.cond_name}', 
                                      name_analysis_ = os.path.join(self.id_name, ac.cond_name),
                                      store_path = self.storing_folder)
+                plot_blob_timecourse_individual(ac.time_courses, time_series_info, y_lim=(min_bord, max_bord), 
+                                                title_plot= f'Blob time course {ac.cond_name}',
+                                                name_analysis_=os.path.join(self.id_name, ac.cond_name), 
+                                                store_path=self.storing_folder,
+                                                store_pic=True)
             
             if self.store_switch:
                 ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
@@ -335,7 +354,7 @@ class ActiveCortexSession:
             utils.stampa(f'Name sub {name_subtrcts}, space stepping {space_step}', logger = self.log)   
 
             # Time window twice the regular stroke stepping
-            frames_end            = frames_start + 2*time_stepping
+            frames_end   = frames_start + 2*time_stepping
             utils.stampa(f'Frame start {frames_start} and end {frames_end}', logger = self.log)                                                               
 
             ac           = ActiveCortex(None, None, None,
@@ -403,6 +422,7 @@ class ActiveCortex:
         self.zscored_data = None
         self.zscore_cd = None
         self.map = None
+        self.map_baseline = None
         self.time_window_used = None
         self.blob_binary = None
         self.blob_values = None
@@ -411,6 +431,7 @@ class ActiveCortex:
         self.peaks = None
         self.blobs = None
         self.time_courses = None
+        self.blob_binary_baseline, self.blob_values_baseline = None, None
 
     def store_activecortex(self, t):
         tp = [self.cond_name, 
@@ -420,6 +441,7 @@ class ActiveCortex:
               self.onset_time,
               self.behavior_dict, 
               self.map, 
+              self.map_baseline,
               self.zscore_cd,
               self.maps,
               self.blobs,
@@ -446,16 +468,17 @@ class ActiveCortex:
         self.onset_time       = tp[4]
         self.behavior_dict    = tp[5]
         self.map              = tp[6]
-        self.zscore_cd        = tp[7]
-        self.maps             = tp[8]
-        self.blobs            = tp[9]
-        self.time_window_used = tp[10] 
-        self.blob_binary      = tp[11]
-        self.blob_values      = tp[12]
-        self.time_courses     = tp[13]
-        self.behavior         = tp[14]
-        self.pixel_spacing    = tp[15]
-        self.active_surface   = tp[16]
+        self.map_baseline     = tp[7]
+        self.zscore_cd        = tp[8]
+        self.maps             = tp[9]
+        self.blobs            = tp[10]
+        self.time_window_used = tp[11] 
+        self.blob_binary      = tp[12]
+        self.blob_values      = tp[13]
+        self.time_courses     = tp[14]
+        self.behavior         = tp[15]
+        self.pixel_spacing    = tp[16]
+        self.active_surface   = tp[17]
 
         return
 
@@ -506,7 +529,7 @@ class ActiveCortex:
         return arr
     
     # --- zscore using your existing md.get_zscore ---
-    def compute_zscore(self, raw_data = None, blank_cd = None):
+    def compute_zscore(self, raw_data = None):
         """
         Calls md.get_zscore(filtered_data, mean_blank_forz, std_blank, logger)
         Requires mean_blank_forz and std_blank to be provided at init (precomputed).
@@ -514,11 +537,8 @@ class ActiveCortex:
 
         if raw_data is None:
             raw_data = self.raw_data
-        if self.blank_cd is None and blank_cd is None:
-            raise RuntimeError(f"[{self.cond_name}] blank condition must be provided to compute zscore.")
-        
-        if blank_cd is None:
-            blank_cd = self.blank_cd
+
+        blank_cd = self.blank_cd
 
         self._log(f"[{self.cond_name}] computing z-score using provided blank mean/std")
         if len(raw_data.shape) == 3:
@@ -760,10 +780,10 @@ class ActiveCortex:
             if z_data.size == 0:
                 return np.array([])
             
-            center_activation, _ = process.find_highest_sum_area(self.map, 30)
-            y_sh, x_sh  = self.map.shape
+            center_activation, _ = process.find_highest_sum_area(self.blob_values, 30)
+            y_sh, x_sh           = self.map.shape
             print(f'Center for blob tc analysis: [{center_activation[0]}, {center_activation[1]}]')
-            tc_mask = utils.sector_mask((y_sh, x_sh), center_activation, 15, (0, 360))    
+            tc_mask     = utils.sector_mask((y_sh, x_sh), center_activation, 15, (0, 360))    
             timecourses = np.array([process.time_course_signal(i, abs(tc_mask - 1)) for i in z_data])
 
             # mask = self.blob_binary  # shape (180, 218)
@@ -828,7 +848,9 @@ class ActiveCortex:
         self.zscored_data  = self.compute_zscore(self.filtered_data)
         self.zscore_cd     = self.compute_zscore(np.nanmean(self.filtered_data, axis = 0))
         self.map           = self.compute_map(self.zscore_cd)
+        self.map_baseline  = self.compute_map(self.zscore_cd, time_window=(0, self.onset_time-5))
         self.blob_binary, self.blob_values = self.compute_blob(self.map, threshold=threshold, keep_values_nan=keep_blob_nan)
+        self.blob_binary_baseline, self.blob_values_baseline = self.compute_blob(self.map_baseline, threshold=threshold, keep_values_nan=keep_blob_nan)
 
         if compute_behavior:
             self.extract_behavior()
@@ -949,6 +971,87 @@ def plot_blob_timecourse(timecourse_results, time_series_info, y_lim = None, nam
     else:
         plt.show()
     return 
+
+def plot_blob_timecourse_individual(timecourse_results, time_series_info, y_lim=None, title_plot=None,
+                                    name_analysis_='RetinotopicPositions', store_path=dv.STORAGE_PATH,
+                                    store_pic=True, ext='.png'):
+    """
+    Plot separate timecourse figures for correct and incorrect trials.
+    Each figure shows all single-trial traces instead of confidence bands.
+
+    Parameters
+    ----------
+    timecourse_results : dict
+        Output from compute_blob_timecourse method
+    time_series_info : tuple
+        (zero, time_interval, time_bins) for time axis
+    title_plot : str, optional
+        Title prefix for the plots
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import os
+
+    zero, time_interval, time_bins = time_series_info
+
+    # Determine time axis
+    if (zero is not None) and (time_interval is not None) and (time_bins is not None):
+        x_tc = np.arange(-zero * time_interval, (time_bins * time_interval) - zero * time_interval, time_interval)
+    else:
+        # Use the length of the first available time series
+        for condition in ['correct', 'incorrect']:
+            if timecourse_results['timecourse'][condition].size > 0:
+                x_tc = np.arange(timecourse_results['timecourse'][condition].shape[1])
+                break
+
+    conditions_to_plot = {
+        'correct': 'green',
+        'incorrect': 'red'
+    }
+
+    for condition, color in conditions_to_plot.items():
+        time_series_data = timecourse_results['timecourse'][condition]
+        if time_series_data.size == 0:
+            continue
+
+        fig = plt.figure(figsize=(10, 8))
+        ax_time = fig.add_axes([0.1, 0.15, 0.8, .8])
+        ax_time.spines[['top', 'right']].set_visible(False)
+
+        # Plot each trial separately
+        for trial_idx in range(time_series_data.shape[0]):
+            ax_time.plot(x_tc, time_series_data[trial_idx, :], color=color, alpha=0.3, lw=1)
+
+        # Overplot mean trace
+        ax_time.plot(x_tc, np.nanmean(time_series_data, axis=0), color=color, lw=3)
+
+        # Axis limits
+        if y_lim is None:
+            y_min, y_max = np.nanpercentile(time_series_data, 10), np.nanpercentile(time_series_data, 95)
+        else:
+            y_min, y_max = y_lim
+        ax_time.vlines(0, y_min, y_max, ls='--', lw=1.5, color='k')
+        ax_time.set_ylim(y_min, y_max)
+
+        # Formatting
+        if title_plot is not None:
+            ax_time.set_title(f'{title_plot} - {condition.capitalize()}', fontsize=20)
+        else:
+            ax_time.set_title(f'{condition.capitalize()} trials', fontsize=20)
+        ax_time.tick_params(axis='both', which='major', labelsize=16)
+        ax_time.set_xlabel('Time - ms', fontsize=18)
+        ax_time.set_ylabel('Z-score Signal', fontsize=18)
+        ax_time.legend()
+
+        if store_pic:
+            tmp = dv.set_storage_folder(storage_path=store_path, name_analysis=name_analysis_)
+            plt.savefig(os.path.join(tmp, f'blob_tc_{condition}{ext}'))
+            plt.close('all')
+        else:
+            plt.show()
+
+    return
+
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching retinotopy analysis pipeline')
