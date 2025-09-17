@@ -371,6 +371,7 @@ class ActiveCortexSession:
             zscored_second_data  = ac.compute_zscore(np.nanmean(second_filtered_data, axis = 0)) 
             sub_conds            = zscored_first_data[t10:t11, :, :] - zscored_second_data[t20:t21, :, :] 
             ac.map               = ac.compute_map(sub_conds, time_window = (frames_start,frames_end))
+            ac.time_window_used  = (frames_start, frames_end)
             ac.blob_binary, ac.blob_values = ac.compute_blob(ac.map, threshold=self.threshold)
 
             dict_subtrs[f'{first_cond}-{second_cond}'] = ((ac, first_cd, second_cd))     
@@ -585,7 +586,6 @@ class ActiveCortex:
         with np.errstate(invalid='ignore'):
             self._log(f"Map over frames {t0}:{t1} (shape of selected data {sel.shape})")
             map = np.nanmean(sel, axis=0)
-        self.time_window_used = (t0, t1)
         self._log(f"[{self.cond_name}] computed map over frames {t0}:{t1} (shape {map.shape})")
         return map
 
@@ -704,14 +704,12 @@ class ActiveCortex:
 
         if sum(mask) != len(self.filtered_data): 
             sel_correct   = self.compute_zscore(np.nanmean(self.filtered_data[mask], axis = 0))
-            sel_correct   = sel_correct[t0:t1, :, :]
-            map_correct   = np.nanmean(sel_correct, axis=0) 
+            map_correct   = self.compute_map(sel_correct, time_window = (t0, t1))
             peaks_correct = (peaks_x[mask], peaks_y[mask])
             blob_correct, _   = self.compute_blob(map_correct, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) 
 
             sel_incorrect   = self.compute_zscore(np.nanmean(self.filtered_data[~mask], axis = 0))
-            sel_incorrect   = sel_incorrect[t0:t1, :, :]
-            map_incorrect   = np.nanmean(sel_incorrect, axis=0) 
+            map_incorrect   = self.compute_map(sel_incorrect, time_window = (t0, t1))
             peaks_incorrect = (peaks_x[~mask], peaks_y[~mask])
             blob_incorrect, _  = self.compute_blob(map_incorrect, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) 
 
