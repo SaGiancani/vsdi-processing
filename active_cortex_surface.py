@@ -371,7 +371,7 @@ class ActiveCortexSession:
             zscored_second_data  = ac.compute_zscore(np.nanmean(second_filtered_data, axis = 0)) 
             sub_conds            = zscored_first_data[t10:t11, :, :] - zscored_second_data[t20:t21, :, :] 
             ac.map               = ac.compute_map(sub_conds, time_window = (frames_start,frames_end))
-            ac.time_window_used  = (frames_start, frames_end)
+            ac.time_window       = (frames_start, frames_end)
             ac.blob_binary, ac.blob_values = ac.compute_blob(ac.map, threshold=self.threshold)
 
             dict_subtrs[f'{first_cond}-{second_cond}'] = ((ac, first_cd, second_cd))     
@@ -388,7 +388,6 @@ class ActiveCortex:
       - filtered_data: same shape as raw_data after median+gaussian spatial filtering
       - zscored_data: same shape after z-scoring (via md.get_zscore)
       - map: 2D map (ny, nx) averaging across trials and time-window
-      - time_window_used: (t0, t1) used for the map (python-style slice [t0:t1])
       - blob_binary: boolean mask of map > threshold
       - blob_values: map values where blob_binary True, NaN (or 0) elsewhere
       - behavior: dict with 'blk_names', 'autoselection' (bool array),
@@ -424,7 +423,6 @@ class ActiveCortex:
         self.zscore_cd = None
         self.map = None
         self.map_baseline = None
-        self.time_window_used = None
         self.blob_binary = None
         self.blob_values = None
         self.behavior = None
@@ -446,7 +444,6 @@ class ActiveCortex:
               self.zscore_cd,
               self.maps,
               self.blobs,
-              self.time_window_used, 
               self.blob_binary, 
               self.blob_values, 
               self.time_courses,
@@ -473,13 +470,12 @@ class ActiveCortex:
         self.zscore_cd        = tp[8]
         self.maps             = tp[9]
         self.blobs            = tp[10]
-        self.time_window_used = tp[11] 
-        self.blob_binary      = tp[12]
-        self.blob_values      = tp[13]
-        self.time_courses     = tp[14]
-        self.behavior         = tp[15]
-        self.pixel_spacing    = tp[16]
-        self.active_surface   = tp[17]
+        self.blob_binary      = tp[11]
+        self.blob_values      = tp[12]
+        self.time_courses     = tp[13]
+        self.behavior         = tp[14]
+        self.pixel_spacing    = tp[15]
+        self.active_surface   = tp[16]
 
         return
 
@@ -563,7 +559,6 @@ class ActiveCortex:
         """
         Average z-scored data across (trials, frames in time window) to form a 2D map.
         If time_window is None, uses self.time_window, if that is None uses entire time axis.
-        Sets self.time_window_used to the actual slice (t0, t1).
         """
         if zscored_data is None:
             raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
@@ -686,7 +681,7 @@ class ActiveCortex:
             raise RuntimeError(f"[{self.cond_name}] peaks_distribution missing — pass it at init.")
 
         nt     = self.filtered_data.shape[1]
-        t0, t1 = self.time_window_used if self.time_window_used else (0, nt)
+        t0, t1 = self.time_window if self.time_window else (0, nt)
 
         map_all = self.map
 
