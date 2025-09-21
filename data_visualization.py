@@ -869,7 +869,7 @@ def plot_averaged_map(name_cond, blob,
     if blob is not None:
         cs1 = ax.contour(blob,
                         levels=15, # specify levels first
-                        colors='k',
+                        colors='w',
                         linewidths=1, # use linewidths (plural)
                         alpha=0.5)
     if second_thresh is not None:

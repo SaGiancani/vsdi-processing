@@ -29,7 +29,7 @@ class ActiveCortexSession:
                  green_name       = '',
                  filter_kernel    = 5,
                  gaussian_kernel  = 1,
-                 second_threshold = 15,
+                 second_threshold = 20,
                  **kwargs):
 
         if logger is None:
