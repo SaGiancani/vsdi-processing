@@ -29,7 +29,7 @@ class ActiveCortexSession:
                  green_name       = '',
                  filter_kernel    = 5,
                  gaussian_kernel  = 1,
-                 second_threshold = 20,
+                 second_threshold = 15,
                  **kwargs):
 
         if logger is None:
@@ -1071,6 +1071,13 @@ if __name__=="__main__":
                         default=2, #zscore
                         required=False,
                         help='Statistically significant threshold for blobs')
+    
+    parser.add_argument('--second_threshold', 
+                        dest='second_threshold',
+                        type=float,
+                        default=15, #zscore
+                        required=False,
+                        help='Higher threshold for blob visualization')
 
     parser.add_argument('--med_kernel', 
                         dest='median_kernel',
@@ -1129,6 +1136,7 @@ if __name__=="__main__":
                                           filter_kernel = args.median_kernel,
                                           gaussian_kernel = args.gaussian_kernel,
                                           vis_switch = args.vis_switch,
+                                          second_threshold= args.second_threshold,
                                           logger=log)
 
     # tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)    
