@@ -12,23 +12,24 @@ import warnings, utils
 class ActiveCortexSession:
     def __init__(self,
                  path_session,
-                 threshold       = 2,
-                 logger          = None,  
-                 store_flag      = False,
-                 vis_switch      = True, 
-                 acquisition_fq  = 100, #Hz
-                 optical_ratio   = 85/50, #Optical magnification
-                 cortical_dim    = 14.5, #mm 
-                 denoise_flag    = False,
-                 pretrigger_zero = False,
-                 spatial_filter  = True,
-                 retino_path     = None,
-                 blank_name      = 'blank',
+                 threshold        = 2,
+                 logger           = None,  
+                 store_flag       = False,
+                 vis_switch       = True, 
+                 acquisition_fq   = 100, #Hz
+                 optical_ratio    = 85/50, #Optical magnification
+                 cortical_dim     = 14.5, #mm 
+                 denoise_flag     = False,
+                 pretrigger_zero  = False,
+                 spatial_filter   = True,
+                 retino_path      = None,
+                 blank_name       = 'blank',
                  trial_metadata_flag = True,
-                 zero_frames     = 10,
-                 green_name      = '',
-                 filter_kernel   = 5,
-                 gaussian_kernel = 1,
+                 zero_frames      = 10,
+                 green_name       = '',
+                 filter_kernel    = 5,
+                 gaussian_kernel  = 1,
+                 second_threshold = 15,
                  **kwargs):
 
         if logger is None:
@@ -37,6 +38,7 @@ class ActiveCortexSession:
             self.log = logger     
 
         self.threshold             = threshold
+        self.second_threshold      = second_threshold
         self.path_to_derivatives   = path_session
         self.path_session          = path_session.split('derivatives')[0]
 
@@ -191,6 +193,7 @@ class ActiveCortexSession:
                               blank_cd = self.blank_cd,
                               statistical_threshold=self.threshold,
                               behavior_dict=behavior_dict,
+                              second_threshold= self.second_threshold,
                               logger=self.log)
             # run pipeline
             ac.run_full_pipeline(median_kernel=median_kernel,
@@ -245,6 +248,7 @@ class ActiveCortexSession:
                                          'k',
                                          f'{self.id_name} - trials: {len_cd}',
                                          'k',
+                                         second_thresh = self.second_threshold,
                                          name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
                                          store_path=self.storing_folder)
                     
@@ -258,8 +262,9 @@ class ActiveCortexSession:
                                         'k',
                                         f'baseline activity - time bins: 0-10',
                                         'k',
-                                        name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
-                                        store_path=self.storing_folder)
+                                        second_thresh = self.second_threshold,
+                                        name_analysis_= os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
+                                        store_path = self.storing_folder)
                     
 
                 time_series_info = [ac.onset_time, self.time_bin, ac.filtered_data.shape[1]] #zero, time_interval, time_bins
@@ -362,6 +367,7 @@ class ActiveCortexSession:
                                         pixel_spacing = self.pixel_spacing,
                                         peaks_distribution = peaks,
                                         behavior_dict = behavior_dict, 
+                                        second_threshold= self.second_threshold,
                                         logger = self.log)
             
             ac.cond_name         = name_subtrcts
@@ -403,6 +409,7 @@ class ActiveCortex:
                  blank_cd = None,
                  onset_time = 20, # In frames
                  statistical_threshold = 2.5,
+                 second_threshold = 10,
                  behavior_dict = None,
                  logger = None):
         self.cond_name = cond_name
@@ -412,6 +419,7 @@ class ActiveCortex:
         self.peaks_distribution = peaks_distribution
         self.blank_cd = blank_cd
         self.statistical_threshold = statistical_threshold
+        self.second_threshold = second_threshold
         self.onset_time = onset_time
         self.behavior_dict = behavior_dict or {}
         self.logger = logger
@@ -449,7 +457,8 @@ class ActiveCortex:
               self.time_courses,
               self.behavior,
               self.pixel_spacing,
-              self.active_surface]
+              self.active_surface,
+              self.second_threshold]
         storage_path = os.path.join(t, 'activecortex')
         tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
         utils.inputs_save(tp, os.path.join(tmp,'ac_'+self.cond_name))
@@ -476,6 +485,7 @@ class ActiveCortex:
         self.behavior         = tp[14]
         self.pixel_spacing    = tp[15]
         self.active_surface   = tp[16]
+        self.second_threshold = tp[17]
 
         return
 
@@ -544,7 +554,7 @@ class ActiveCortex:
                                           np.nanmean(tmp_blnk, axis = 0), 
                                           np.nanstd(tmp_blnk, axis = 0)/np.sqrt(tmp_blnk.shape[0]), 
                                           full_seq=True)
-            z_cond   = z_cond -  np.nanmean(z_cond)
+            z_cond   = z_cond - np.nanmean(z_cond)
 
         elif len(raw_data.shape) == 4:
             z_cond = np.array([process.zeta_score(j, 
