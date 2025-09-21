@@ -1,10 +1,12 @@
 import datetime, utils
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
+from mpl_toolkits.axes_grid1 import ImageGrid
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 import matplotlib.font_manager as fm
+from matplotlib.patches import Patch
 
 import numpy as np
 import os
@@ -380,8 +382,8 @@ def whole_time_sequence(data,
                         global_cntrds = None, 
                         colors_centr = ['black', 'purple', 'aqua'], 
                         centroids_labeling = 'dotted circles',
-                        width_line = 1.5,
-                        width_contour = .3,
+                        width_line = 2.5,
+                        width_contour = 1,
                         cntrds = None, 
                         blbs = None, 
                         max=80, min=10, 
@@ -403,15 +405,19 @@ def whole_time_sequence(data,
                         titles = None,
                         titles_rows = None,
                         pixel_spacing = None,
-                        second_contour = None,
+                        fixed_contour = None,
                         kern_median = 5,
                         color_text = 'white',
                         manual_thresh = None,
+                        second_manual_thresh = None,
                         flag_simple_thres = False,
                         render_flag = False,
-                        padding_axes = .05,
+                        frame_w  = 1, 
+                        frame_h = 2.5,
+                        padding_axes = (0.2, 0.2), #height and width
                         y_title = 1,
                         x_title = 1,
+                        window_maximi = 20, 
                         coord_title_row = None,
                         font_size = 20,
                         color_contour = 'k',
@@ -420,31 +426,57 @@ def whole_time_sequence(data,
     if titles is None:
         titles = ['']*len(data)
 
-    total_subplots = np.shape(data)[0]# + 1  # Extra slot for time course
-    nrows = int(np.ceil(total_subplots / n_columns))
-    if time_series_data is not None:
-        add_height = 2
-    else:
-        add_height = 0
+    # total_subplots = np.shape(data)[0]# + 1  # Extra slot for time course
+    # nrows = int(np.ceil(total_subplots / n_columns))
+    # if time_series_data is not None:
+    #     add_height = 2
+    # else:
+    #     add_height = 0
         
-    fig_height = 5 + nrows * 2 + add_height  # Base height + extra height per row
-    fig = plt.figure(figsize=(15, fig_height), dpi=500)
-    # Adjust bottom spacing dynamically
-    bottom_padding = 0.1 + (add_height / fig_height)  # More rows → more bottom space
-    fig.subplots_adjust(bottom=bottom_padding)
+    # fig_height = 5 + nrows * 2 + add_height  # Base height + extra height per row
+    # fig = plt.figure(figsize=(15, fig_height), dpi=500)
+    # # Adjust bottom spacing dynamically
+    # bottom_padding = 0.1 + (add_height / fig_height)  # More rows → more bottom space
+    # fig.subplots_adjust(bottom=bottom_padding)
     
+    # if white_background:
+    #     fig.patch.set_facecolor('white')    
+
+    # grid = AxesGrid(fig, 111,
+    #                 nrows_ncols=(nrows, n_columns),
+    #                 axes_pad=padding_axes,
+    #                 share_all=True,
+    #                 label_mode="L",
+    #                 cbar_mode='single',
+    #                 cbar_location='right',
+    #                 cbar_pad=0.1
+    #                 )
+
+
+    # Fixed frame and padding sizes (in inches)
+    pad_h, pad_w = padding_axes       # horizontal & vertical padding between frames
+
+    total_subplots = np.shape(data)[0]
+    nrows = int(np.ceil(total_subplots / n_columns))
+
+    # Compute figure size from fixed frame & pad sizes
+    fig_w = n_columns * frame_w + (n_columns - 1) * pad_w
+    fig_h = nrows * frame_h + (nrows - 1) * pad_h
+
+    fig = plt.figure(figsize=(fig_w, fig_h), dpi=500)
+
     if white_background:
         fig.patch.set_facecolor('white')    
 
-    grid = AxesGrid(fig, 111,
-                    nrows_ncols=(nrows, n_columns),
-                    axes_pad=padding_axes,
-                    share_all=True,
-                    label_mode="L",
-                    cbar_mode='single',
-                    cbar_location='right',
-                    cbar_pad=0.1
-                    )
+    # Build grid with absolute inch-based padding
+    grid = ImageGrid(
+        fig, 111,
+        nrows_ncols=(nrows, n_columns),
+        axes_pad=(pad_w / frame_w, pad_h / frame_h),  # normalize pad relative to frame size
+        share_all=True,
+        cbar_mode='single',
+        cbar_location='right',
+        cbar_pad=0.05)
 
     
     # One max-min value for all the colormap. If True, each colormap the values are recomputed
@@ -517,17 +549,25 @@ def whole_time_sequence(data,
         
         p=ax.pcolor(blurred, vmin=min_bord,vmax=max_bord, cmap=mappa)
 
-        if second_contour is not None:
-            second_contour = second_contour*mask
-            ax.contour(second_contour, 15, colors='white', ls = 'dotted', lw = width_contour)
-        
+        if fixed_contour is not None:
+            fixed_contour = fixed_contour*mask
+            cs = ax.contour(fixed_contour, 15, colors='white', lw = width_contour)
+            for line in cs.collections:
+                line.set_alpha(0.3)
+
         ax.set_xticks([])
         ax.set_yticks([])
         ax.axis('off')
         # Title for each frame
-        ax.annotate(titles[i], xy=(0.5, 1), xytext=(x_title, y_title), 
-                    textcoords='offset points', ha='center', 
-                    fontsize=font_size, color=color_text)
+        # ax.annotate(titles[i], xy=(0.5, 1), xytext=(x_title, y_title), 
+        #             textcoords='offset points', ha='center', 
+        #             fontsize=font_size, color=color_text)
+        ax.text(0.5, 1.,  # normalized position: center x, slightly above top
+                titles[i],
+                ha='center', va='bottom',
+                transform=ax.transAxes,  # interpret coords relative to Axes
+                fontsize=font_size, color=color_text)
+
         ax.set_title("")  # Remove the default title
 
         if (titles_rows is not None) and ((i%n_columns)==0):
@@ -554,7 +594,7 @@ def whole_time_sequence(data,
             if (mask is not None) and (np.sum(blobs_) > 20).all():
                 blobs_ = blobs_*mask
             if np.nansum(blobs_)>0:
-                (x_, y_) = process.find_highest_sum_area(blurred*blobs_, 20)
+                (x_, y_), _ = process.find_highest_sum_area(blurred*blobs_, window_maximi)
                 centroids.append([(y_, x_)])
             else:
                 centroids.append([])
@@ -563,14 +603,30 @@ def whole_time_sequence(data,
             if mask is not None:
                 blobs_ = blobs[i]*mask
             else:
-                blobs_ = blobs[i]                    
-                
-        ax.contour(blobs_, width_contour, colors=color_contour, levels=[1])
+                blobs_ = blobs[i]  
+
+        if pixel_spacing  is not None:
+            print(f'Blob surface {np.sqrt(np.nansum(blobs_.ravel())*pixel_spacing):.3f} mm^2')
+        ax.contour(blobs_, linewidths=width_contour, colors=color_contour, levels=15)
+
+        if (second_manual_thresh is not None):
+            blobs_second = np.zeros(blurred.shape, dtype = bool)
+            blobs_second[np.where(blurred>second_manual_thresh)] = 1
+            blobs_second = median_filter(blobs_second, (kern_median*2,kern_median*2))
+            cs = ax.contour(blobs_second,
+                            levels=15, # specify levels first
+                            colors='w',
+                            linewidths=width_contour, # use linewidths (plural)
+                            alpha=0.5)
+            # for c in cs.collections:
+            #     c.set_alpha(0.5)  # manually set alpha
+
 
         if centroids is not None:
             if len(centroids[i])>0:
                 for j in centroids[i]:
-                    ax.scatter(j[0],j[1],color='r', marker = 'X')
+                    print(j)
+                    ax.scatter(j[0],j[1],color='r', marker = 'X', s = 50)
 
         if global_cntrds is not None:
             for k, cc in zip(global_cntrds, colors_centr):
@@ -583,10 +639,23 @@ def whole_time_sequence(data,
                     ax.contour(mask_single_dot, 10, colors=cc, linestyles = 'dotted', lw=width_line)
                 elif centroids_labeling == 'vlines':
                     ax.vlines(k[0], 0, blurred.shape[0], color = cc, lw= width_line)
+                elif centroids_labeling == 'hlines':
+                    ax.hlines(k[1], 0, blurred.shape[1], color = cc, lw= width_line)      
 
-    
+        if (pixel_spacing is not None) and (i == len(data)-1):
+            #fig, ax = plt.subplots()
+            fontprops = fm.FontProperties(size=14)
+            scalebar  = AnchoredSizeBar(ax.transData,
+                                        round(2/pixel_spacing), '2mm', 'lower right', #'upper right' 
+                                        pad=0.1,
+                                        color='k',
+                                        frameon=False,
+                                        size_vertical=5,
+                                        fontproperties=fontprops)
+
+            ax.add_artist(scalebar)                                  
+
     # print(centroids)
-
 
     cbar = ax.cax.colorbar(p)
     cbar = grid.cbar_axes[0].colorbar(p)
@@ -595,7 +664,7 @@ def whole_time_sequence(data,
     if time_series_data is not None:
         zero, time_interval, time_bins = time_series_info
 
-        ax_time = fig.add_axes([0.1, 0.15, 0.8, 0.35-(fig_height/150)])    #Left, bottom, width, height
+        ax_time = fig.add_axes([0.1, 0.15, 0.8, 0.35-(fig_h/150)])    #Left, bottom, width, height
         
         ax_time.spines[['top', 'right']].set_visible(False)
 
@@ -621,19 +690,6 @@ def whole_time_sequence(data,
         ax_time.set_ylabel('Signal', fontsize=18)
 
 
-    if pixel_spacing is not None:
-        #fig, ax = plt.subplots()
-        fontprops = fm.FontProperties(size=14)
-        scalebar  = AnchoredSizeBar(ax.transData,
-                                    round(2/pixel_spacing), '2mm', 'lower right', #'upper right' 
-                                    pad=0.1,
-                                    color='crimson',
-                                    frameon=False,
-                                    size_vertical=2,
-                                    fontproperties=fontprops)
-
-        ax.add_artist(scalebar)
-
     print(f'Limits values for heatmaps: {max_bord} - {min_bord}')   
     if name is not None:
         tmp = set_storage_folder(storage_path = store_path, name_analysis = name_analysis_)
@@ -650,7 +706,7 @@ def whole_time_sequence(data,
         plt.show()
         plt.pause(1)
     plt.close('all')
-    return centroids
+    return centroids, blobs_
 
 def plot_lines(*args, titles=None, num_cols=3, y_lim=None, fontsize=12, axis_labels=None, fig_title=None):
     num_lines = len(args)
@@ -800,11 +856,32 @@ def plot_retinotopic_positions(dictionar, titles = ['Inferred centroids', 'Singl
         plt.close('all')
     return
 
-def plot_averaged_map(name_cond, blob, retino_pos, distribution_positions, map, center, min_bord, max_bord, color, session_name, col_distr, name_analysis_ = 'RetinotopicPositions', store_path = STORAGE_PATH, store_pic = True):
+def plot_averaged_map(name_cond, blob, 
+                      retino_pos, distribution_positions, 
+                      map, center, 
+                      min_bord, max_bord,
+                      color, session_name, 
+                      col_distr, kern_median = 5,
+                      second_thresh = None, name_analysis_ = 'RetinotopicPositions', 
+                      store_path = STORAGE_PATH, store_pic = True):
     # Plotting retinotopic positions over averaged maps
     fig, ax = plt.subplots(1,1, figsize=(9,7), dpi=300)
     if blob is not None:
-        ax.contour(blob, 4, colors='k', linestyles = 'dotted')
+        cs1 = ax.contour(blob,
+                        levels=15, # specify levels first
+                        colors='k',
+                        linewidths=1, # use linewidths (plural)
+                        alpha=0.5)
+    if second_thresh is not None:
+        blobs_second = np.zeros(map.shape, dtype = bool)
+        blobs_second[np.where(map>second_thresh)] = 1
+        blobs_second = median_filter(blobs_second, (kern_median,kern_median))
+        cs2 = ax.contour(blobs_second,
+                         levels=15, # specify levels first
+                         colors='k',
+                         linewidths=1, # use linewidths (plural)
+                         alpha=0.5)
+
     pc = ax.pcolormesh(map, vmin=min_bord,vmax=max_bord, cmap=utils.PARULA_MAP)
     # ax.set_xticks([])
     # ax.set_yticks([])
@@ -869,3 +946,708 @@ def plot_zmask(Mask, U, cutoff, path_folder, filename = None):
     except:
         print('Unable to store histogram of pixels')
 
+def plot_x_medians(summary_df, conditions=None, figsize=(10, 6), output_path=None, multi_session=False):
+    """
+    Plot x_median values with shaded x_widths across repetitions.
+    Labels are written directly at the end of each line (or session dots if multi_session=True).
+
+    Parameters:
+    - summary_df: pandas DataFrame from summary_to_dataframe
+    - conditions: list of condition names to filter (optional)
+    - figsize: size of the plot
+    - output_path: if provided, saves the figure
+    - multi_session: if True, scatter points per session instead of averaging
+    """
+    df = summary_df.copy()
+
+    if conditions is not None:
+        df = df[df['condition'].isin(conditions)]
+
+    def get_color(cond):
+        if cond.startswith('AM2'):
+            return 'turquoise'
+        elif cond.startswith('AM3'):
+            return 'teal'
+        else:
+            return 'k'
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    grouped = df.groupby('condition')
+
+    for cond, cond_df in grouped:
+        print(cond)
+        color = get_color(cond)
+
+        if multi_session:
+            # Scatter each session’s repetitions
+            for session_id, sess_df in cond_df.groupby(['session']):
+                print(session_id)
+                sess_df = sess_df.sort_values('repeatition')
+                reps = sess_df['repeatition'].values
+                meds = sess_df['x_median'].values
+
+                ssub = session_id[0].split('AM')[0]
+                date = session_id[0].split('VSDI')[1][0:7]
+                
+                # Plot as dots, optionally with connecting line per session
+                ax.plot(reps, meds, marker='o', linestyle='-', linewidth=0.5, markersize=6, color=color, alpha=0.7)
+
+                # Optionally add session ID for debugging
+                ax.text(reps[-1] + 0.1, meds[-1], f"{ssub}_{date}_{cond}", fontsize=8, alpha=0.6)
+        else:
+            # Aggregate for single-session style
+            agg_df = cond_df.groupby('repeatition').agg({
+                'x_median': 'mean',
+                'x_width': 'mean'
+            }).reset_index().sort_values('repeatition')
+
+            reps = agg_df['repeatition'].values
+            meds = agg_df['x_median'].values
+            widths = agg_df['x_width'].values
+
+            # Median line
+            ax.plot(reps, meds, marker='o', color=color)
+
+            # Optional shaded area
+            # lower = meds - widths / 2
+            # upper = meds + widths / 2
+            # ax.fill_between(reps, lower, upper, alpha=0.2, color=color)
+
+            # Label only once at the last point
+            label_text = 'pos' if 'pos' in cond else cond
+            ax.text(reps[-1] + 0.1, meds[-1], label_text, color=color,
+                    fontsize=12, verticalalignment='center', horizontalalignment='left')
+
+    # Axis formatting
+    tmp = df['x_median'].abs().max() * 1.5
+    n_reps = df['repeatition'].nunique()
+    ax.set_ylim(-tmp, tmp)
+    ax.set_xlim(-0.5, n_reps - 0.5 + 1)
+    ax.set_xticks(np.arange(0, n_reps, 1))
+    ax.tick_params(axis='both', which='major', labelsize=14)
+    ax.hlines(0, 0, n_reps - 1, ls='--', color='k', alpha=0.8)
+
+    session_title = df['session'].iloc[0] if not multi_session else "MULTI-SESSION"
+    ax.set_title(f"X-Medians — Session {session_title}", fontsize=20)
+    ax.set_xlabel("Repetition", fontsize=18)
+    ax.set_ylabel("Space (dva)", fontsize=18)
+    plt.tight_layout()
+    plt.show()
+
+    if output_path is not None:
+        sess_id = df['session'].iloc[0] if not multi_session else "multi"
+        output_path = f'median_summary_AM_{sess_id}.png'
+        fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.pause(.1)
+
+def plot_normalized_distributions(dict_norm_dist, cond_dict, meta_data_cd):
+    for session, conds_dict in dict_norm_dist.items():
+        fig, ax = plt.subplots(1, 1, figsize=(20, 14))
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        
+        color_map = {
+            2: ('turquoise', 'gray'),
+            3: ('teal', 'black')
+        }
+        
+        for cond, vv in cond_dict[session].items():
+            if cond not in conds_dict:
+                continue  # Skip if AM condition is missing
+
+            x__am, y__am = list(), list()
+            for n, i in enumerate(conds_dict[cond]):
+                x_amlast, y_amlast = i
+    
+                num_trials = len(vv)
+                color, color_sub = color_map.get(num_trials, ('red', 'darkred'))  # fallback colors
+    
+                # Plot AM condition
+                ax.scatter(x_amlast, y_amlast, color=color, s=15, alpha=0.5)
+                ax.scatter(np.nanmedian(x_amlast), np.nanmedian(y_amlast), color=color, marker='+', s=150)
+                ax.text(np.nanmedian(x_amlast) + 0.02, np.nanmedian(y_amlast) + 0.02, f'{meta_data_cd[cond]}', fontsize=8 + (n+2))
+                x__am.append(np.nanmedian(x_amlast))
+                y__am.append(np.nanmedian(y_amlast))
+            ax.plot(x__am, y__am, ls = '--', color = 'k')    
+            # Plot corresponding SUB condition if available
+            sub_cond = next((k for k in conds_dict if k.startswith(f'{cond}-')), None)
+            if sub_cond:
+                x__, y__ = list(), list()
+                for i in conds_dict[sub_cond]:
+                    x_sub, y_sub = i
+                    ax.scatter(x_sub, y_sub, color=color_sub, s=15, alpha=0.5)
+                    ax.scatter(np.nanmedian(x_sub), np.nanmedian(y_sub), color=color_sub, marker='+', s=150)
+                    ax.text(np.nanmedian(x_sub) + 0.02, np.nanmedian(y_sub) + 0.02, f'{meta_data_cd[sub_cond]}', fontsize=8 + (n+2))
+                    x__.append(np.nanmedian(x_sub))
+                    y__.append(np.nanmedian(y_sub))
+            else:
+                print(f'{cond} has no possible subtraction')
+
+        # Plot origin and labels
+        ax.scatter(0, 0, color='gold', marker='o', s=150)
+        ax.set_xlabel('Space - dva', fontsize=22)
+        ax.set_ylabel('Space - dva', fontsize=22)
+
+        # Legend
+        legend_elements = [
+            Patch(facecolor='turquoise', edgecolor='turquoise', label='AM len=2'),
+            Patch(facecolor='gray', edgecolor='gray', label='SUB len=2'),
+            Patch(facecolor='teal', edgecolor='teal', label='AM len=3'),
+            Patch(facecolor='black', edgecolor='black', label='SUB len=3'),
+            Patch(facecolor='gold', edgecolor='gold', label='Center')
+        ]
+        ax.legend(handles=legend_elements, fontsize=16, loc='upper right')
+
+        plt.pause(0.1)
+
+from scipy.stats import norm, iqr
+
+def freedman_diaconis_bins(data):
+    """Compute optimal number of bins using Freedman–Diaconis rule."""
+    data = np.asarray(data)
+    h = 2 * iqr(data) / (len(data) ** (1/3))
+    if h == 0:  # Handle zero spread
+        return 10
+    bins = int(np.ceil((data.max() - data.min()) / h))
+    return max(bins, 5)
+
+def plot_two_distributions(
+    data1, data2,
+    bins='auto',
+    color1='skyblue', color2='salmon',
+    label1='Dist 1', label2='Dist 2',
+    xlim=None,  # <-- NEW
+    ylim=None,  # <-- NEW
+    save_figure = True):
+    """
+    Plots two histograms normalized to % of total per dataset,
+    with Gaussian fits scaled to match percentages.
+    """
+    combined = np.concatenate([data1, data2])
+    if bins == 'auto':
+        bins = freedman_diaconis_bins(combined)
+
+    edges = np.linspace(combined.min(), combined.max(), bins + 1)
+    bin_width = edges[1] - edges[0]
+    centers = (edges[:-1] + edges[1:]) / 2
+
+    counts1, _ = np.histogram(data1, bins=edges)
+    counts2, _ = np.histogram(data2, bins=edges)
+    counts1 = counts1 / len(data1) * 100
+    counts2 = counts2 / len(data2) * 100
+
+    mu1, std1 = norm.fit(data1)
+    mu2, std2 = norm.fit(data2)
+    x = np.linspace(combined.min(), combined.max(), 500)
+    pdf1 = norm.pdf(x, mu1, std1) * bin_width * 100
+    pdf2 = norm.pdf(x, mu2, std2) * bin_width * 100
+
+    plt.bar(centers, counts1, width=bin_width, alpha=0.5, color=color1, label=label1)
+    plt.bar(centers, counts2, width=bin_width, alpha=0.5, color=color2, label=label2)
+
+    plt.plot(x, pdf1, color=color1, lw=2)
+    plt.plot(x, pdf2, color=color2, lw=2)
+
+    plt.xlabel("Value")
+    plt.ylabel("Percentage per bin (%)")
+    plt.legend()
+    plt.title(f"Two Normalized Distributions with Gaussian Fits (bins={bins})")
+
+    if xlim is not None:   # <-- apply fixed limits
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
+
+    if save_figure:
+        plt.savefig(f'{label1}_{label2}.svg', dpi=300)
+        plt.savefig(f'{label1}_{label2}.png', dpi=300)
+    plt.show()
+
+
+from matplotlib.lines import Line2D
+from collections import defaultdict
+import math
+import scipy.stats as stats
+
+class PeakPlotter:
+    def __init__(self, results_dict):
+        """
+        Initialize the plotter with your results dictionary
+        
+        Parameters:
+        results_dict: dict containing session data with 'prediction' and 'subtraction' keys
+        """
+        self.results_dict = results_dict
+        
+        # Default marker styles for different conditions
+        self.default_marker_styles = {
+            ('nonlin', 2, 0.5): 'o',    # Circle
+            ('nonlin', 2, 1): 's',      # Square
+            ('nonlin', 3, 0.5): '^',    # Triangle up
+            ('nonlin', 3, 1): 'v',      # Triangle down
+            ('lin', 2, 0.5): 'p',       # Pentagon
+            ('lin', 2, 1): 'P',         # Plus (filled)
+            ('lin', 3, 0.5): '*',       # Star
+            ('lin', 3, 1): 'X',         # X (filled)
+        }
+        
+        # Default colors
+        self.pos_color = 'gold'
+        self.neg_color = 'royalblue'
+    
+    def extract_peaks_data(self, sessions=None, methods=None, n_pos_values=None, 
+                          isi_values=None, dir_values=None):
+        """
+        Extract peaks data from MapExtractionResults objects
+        
+        Parameters:
+        sessions: list of session keys to include (None = all sessions)
+        methods: list of methods to include ['prediction', 'subtraction'] (None = both)
+        n_pos_values: list of n_pos values to include (None = all available)
+        isi_values: list of isi values to include (None = all available)  
+        dir_values: list of direction keys to include (None = all available, e.g., [-1, 1])
+        
+        Returns:
+        tuple: (pos_peaks_data, neg_peaks_data, pos_values_data, neg_values_data)
+        """
+        if sessions is None:
+            sessions = list(self.results_dict.keys())
+        if methods is None:
+            methods = ['prediction', 'subtraction']
+        
+        # Initialize nested dictionaries
+        pos_peaks_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        neg_peaks_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        pos_values_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        neg_values_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        
+        for session in sessions:
+            if session not in self.results_dict:
+                print(f"Warning: Session {session} not found in results")
+                continue
+                
+            for method in methods:
+                if method not in self.results_dict[session]:
+                    print(f"Warning: Method {method} not found in session {session}")
+                    continue
+                
+                results = self.results_dict[session][method]
+                
+                # Map method names to plot categories
+                kind = 'nonlin' if method == 'prediction' else 'lin'
+                
+                      
+                # Iterate through available n_pos and isi values
+                if hasattr(results, 'pos_peaks'):
+                    for n_pos in results.pos_peaks.keys():
+                        if n_pos_values is None or n_pos in n_pos_values:
+                            for isi in results.pos_peaks[n_pos].keys():
+                                if isi_values is None or isi in isi_values:
+                                    # Extract positive peaks for each direction
+                                    for direction in results.pos_peaks[n_pos][isi].keys():
+                                        if dir_values is None or direction in dir_values:
+                                            try:
+                                                # Get coordinate pairs for this direction
+                                                coord_pairs = [i[0] for i in results.pos_peaks[n_pos][isi][direction]]
+                                                pos_value  =  [i[1] for i in results.pos_peaks[n_pos][isi][direction]]
+                                                pos_values_data[kind][n_pos][isi].extend(pos_value)
+                                                
+                                                # Get reference value from results.peaks and subtract from y-coordinates
+                                                if hasattr(results, 'peaks') and direction in results.peaks[n_pos][isi]:
+                                                    reference_value = results.peaks[n_pos][isi][direction]
+                                                    if isinstance(reference_value, (list, tuple)):
+                                                        reference_value = reference_value[0]  # Use first value if it's a list
+                                                    
+                                                    # Subtract reference from y-coordinate (first dimension) of each peak
+                                                    normalized_value = np.array(list(zip(*coord_pairs))[0]) - reference_value 
+                                                    pos_peaks_data[kind][n_pos][isi].extend(zip(normalized_value, list(zip(*coord_pairs))[1]))
+                                                else:
+                                                    # Use y-coordinates directly if no reference available
+                                                    y_coords = [coord_pair[0] for coord_pair in coord_pairs]
+                                                    x_coords = [coord_pair[1] for coord_pair in coord_pairs]
+                                                    
+                                                    pos_peaks_data[kind][n_pos][isi].extend((x_coords, y_coords))
+                                                        
+                                            except Exception as e:
+                                                print(f"Warning: Could not extract pos_peaks for {session}, {method}, n_pos={n_pos}, isi={isi}, dir={direction}: {e}")
+                                    
+                # Extract negative peaks for each direction
+                if hasattr(results, 'neg_peaks'):
+                    for n_pos in results.neg_peaks.keys():
+                        if n_pos_values is None or n_pos in n_pos_values:
+                            for isi in results.neg_peaks[n_pos].keys():
+                                if isi_values is None or isi in isi_values:
+                                    # Extract positive peaks for each direction
+                                    for direction in results.neg_peaks[n_pos][isi].keys():
+                                        if dir_values is None or direction in dir_values:
+                                            try:
+                                                # Get coordinate pairs for this direction
+                                                coord_pairs = [i[0] for i in results.neg_peaks[n_pos][isi][direction]]
+                                                neg_value  =  [i[1] for i in results.neg_peaks[n_pos][isi][direction]]
+                                                neg_values_data[kind][n_pos][isi].extend(neg_value)
+                    
+                                                # Get reference value from results.peaks and subtract from y-coordinates
+                                                if hasattr(results, 'peaks') and direction in results.peaks[n_pos][isi]:
+                                                    reference_value = results.peaks[n_pos][isi][direction]
+                                                    if isinstance(reference_value, (list, tuple)):
+                                                        reference_value = reference_value[0]  # Use first value if it's a list
+                                                    
+                                                    # Subtract reference from y-coordinate (first dimension) of each peak
+                                                    normalized_value = np.array(list(zip(*coord_pairs))[0]) - reference_value 
+                                                    neg_peaks_data[kind][n_pos][isi].extend(zip(normalized_value, list(zip(*coord_pairs))[1]))
+                                                else:
+                                                    # Use y-coordinates directly if no reference available
+                                                    y_coords = [coord_pair[0] for coord_pair in coord_pairs]
+                                                    x_coords = [coord_pair[1] for coord_pair in coord_pairs]
+                                                    neg_peaks_data[kind][n_pos][isi].extend((x_coords, y_coords))
+                                                        
+                                            except Exception as e:
+                                                print(f"Warning: Could not extract neg_peaks for {session}, {method}, n_pos={n_pos}, isi={isi}, dir={direction}: {e}")
+        
+        # IMPORTANT: Return statement moved outside all loops!
+        return pos_peaks_data, neg_peaks_data, pos_values_data, neg_values_data
+
+    def inspect_data(self, session_name=None, method='prediction', n_pos=3, isi=0.5):
+        """
+        Inspect the data structure for debugging
+        """
+        if session_name is None:
+            session_name = list(self.results_dict.keys())[0]
+        
+        results = self.results_dict[session_name][method]
+        
+        print(f"Inspecting {session_name}, {method}, n_pos={n_pos}, isi={isi}")
+        print(f"pos_peaks: {results.pos_peaks[n_pos][isi]}")
+        print(f"neg_peaks: {results.neg_peaks[n_pos][isi]}")
+        print(f"peaks: {results.peaks[n_pos][isi]}")
+        
+        # Show what gets extracted
+        pos_data, neg_data, pos_vals, neg_vals = self.extract_peaks_data(
+            sessions=[session_name], methods=[method], 
+            n_pos_values=[n_pos], isi_values=[isi]
+        )
+        
+        kind = 'nonlin' if method == 'prediction' else 'lin'
+        print(f"\nExtracted data:")
+        print(f"pos_peaks_data: {pos_data[kind][n_pos][isi]}")
+        print(f"pos_values_data: {pos_vals[kind][n_pos][isi]}")
+        print(f"neg_peaks_data: {neg_data[kind][n_pos][isi]}")  
+        print(f"neg_values_data: {neg_vals[kind][n_pos][isi]}")
+    
+    def plot_peaks(self, sessions=None, methods=None, n_pos_values=None, isi_values=None, 
+                   dir_values=None, marker_styles=None, threshold_alpha=2, dim_mod_scatter=50,
+                   scale_factor=0.1, figsize=(10, 8), xlim=(-1, 30), ylim=(-20, 20),
+                   title="Visualization of Point Coordinates by Condition"):
+        """
+        Plot peaks data with customizable parameters
+        
+        Parameters:
+        sessions: list of session keys to include (None = all sessions)
+        methods: list of methods to include ['prediction', 'subtraction'] (None = both)
+        n_pos_values: list of n_pos values to include (None = all available)
+        isi_values: list of isi values to include (None = all available)
+        dir_values: list of dir values to include (None = all available)
+        marker_styles: dict mapping (kind, n_pos, isi) to marker symbols
+        threshold_alpha: threshold for alpha transparency
+        dim_mod_scatter: size multiplier for scatter points
+        scale_factor: scaling factor for y coordinates
+        figsize: figure size tuple
+        xlim, ylim: axis limits
+        title: plot title
+        
+        Returns:
+        fig, ax: matplotlib figure and axis objects
+        """
+        
+        # Extract data
+        pos_peaks_data, neg_peaks_data, pos_values_data, neg_values_data = self.extract_peaks_data(sessions, methods, 
+                                                                                                   n_pos_values, isi_values, 
+                                                                                                   dir_values)
+
+        # Use default marker styles if none provided
+        if marker_styles is None:
+            marker_styles = self.default_marker_styles
+        
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=figsize)
+
+        poss = defaultdict(list)
+        negs = defaultdict(list)
+        # Plot positive peaks (Facilitation)
+        for kind in pos_peaks_data.keys():
+            for n_pos in pos_peaks_data[kind].keys():
+                for isi in pos_peaks_data[kind][n_pos].keys():
+                    points = pos_peaks_data[kind][n_pos][isi]
+                    values = pos_values_data[kind][n_pos][isi]
+
+                    if points:
+                        y, x = zip(*points)
+                        y_scaled = [yi * scale_factor for yi in y]
+                        
+                        # Get marker style
+                        marker_key = (kind, n_pos, isi)
+                        marker = marker_styles.get(marker_key, 'o')
+
+                        if isinstance(y_scaled, list):
+                            poss[kind].extend(y_scaled)
+                        else:
+                            poss[kind].append(y_scaled)
+                            
+                        # Set alpha based on threshold and handle negative values
+                        if values:
+                            alphas = [1 if abs(v) >= threshold_alpha else 0.3 for v in values]
+                            sizes = np.abs(np.array(values)) * dim_mod_scatter  # Use absolute value for size
+                        else:
+                            alphas = 1
+                            sizes = 20  # Default size if no values
+                        
+                        label = f'{kind} {n_pos} dots {isi} spacing (Facilitation)'
+                        ax.scatter(x, y_scaled, 
+                                   c=self.pos_color, 
+                                   marker=marker,
+                                   label=label, 
+                                   s=sizes, 
+                                   alpha=alphas)
+        
+        # Plot negative peaks (Suppression)
+        for kind in neg_peaks_data.keys():
+            for n_pos in neg_peaks_data[kind].keys():
+                for isi in neg_peaks_data[kind][n_pos].keys():
+                    points = neg_peaks_data[kind][n_pos][isi]
+                    values = neg_values_data[kind][n_pos][isi]
+                    
+                    if points:
+                        y, x = zip(*points)
+                        y_scaled = [yi * scale_factor for yi in y]
+                        # Get marker style
+                        marker_key = (kind, n_pos, isi)
+                        marker = marker_styles.get(marker_key, 's')
+            
+                        if isinstance(y_scaled, list):
+                            negs[kind].extend(y_scaled)
+                        else:
+                            negs[kind].append(y_scaled)
+                        
+                        # Set alpha based on threshold and handle negative values
+                        if values:
+                            alphas = [1 if abs(v) >= threshold_alpha else 0.3 for v in values]
+                            sizes = np.abs(np.array(values)) * dim_mod_scatter  # Use absolute value for size
+                        else:
+                            alphas = 1
+                            sizes = 20  # Default size if no values
+                        
+                        label = f'{kind} {n_pos} dots {isi} spacing (Suppression)'
+                        ax.scatter(x, y_scaled, c=self.neg_color, marker=marker,
+                                 label=label, s=sizes, alpha=alphas)
+        
+        # Customize plot
+        ax.set_xlabel('Time - ms', fontsize=15)
+        ax.set_ylabel('Space - mm', fontsize=15)
+        ax.set_title(title, fontsize=16, pad=20)
+        
+        # Add reference lines
+        ax.hlines(0, xlim[0], xlim[1], ls='--', color='k', linewidth=1, label='Last dot pos')
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        
+        # Add grid
+        ax.grid(True, linestyle=':', alpha=0.5)
+        
+        # Create custom legend
+        legend_elements = []
+        
+        # Add marker styles to legend
+        used_combinations = set()
+        for kind in list(pos_peaks_data.keys()) + list(neg_peaks_data.keys()):
+            for n_pos in list(pos_peaks_data.get(kind, {}).keys()) + list(neg_peaks_data.get(kind, {}).keys()):
+                for isi in list(pos_peaks_data.get(kind, {}).get(n_pos, {}).keys()) + list(neg_peaks_data.get(kind, {}).get(n_pos, {}).keys()):
+                    combination = (kind, n_pos, isi)
+                    if combination not in used_combinations:
+                        marker = marker_styles.get(combination, 'o')
+                        legend_elements.append(Line2D([0], [0], marker=marker, color='w', 
+                                                      label=f'{kind} {n_pos}d {isi}s',
+                                                      markerfacecolor='gray', markersize=10))
+                        used_combinations.add(combination)
+        
+        # Add color legend
+        legend_elements.append(Line2D([0], [0], marker='s', color='w', label='Facilitation',
+                                    markerfacecolor=self.pos_color, markersize=10))
+        legend_elements.append(Line2D([0], [0], marker='s', color='w', label='Suppression',
+                                    markerfacecolor=self.neg_color, markersize=10))
+       
+        ax.legend(handles=legend_elements, fontsize=10, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+        # --- Perform statistical tests ---
+        tmp_dim = np.nanmin([len(negs['lin']), len(negs['nonlin'])])
+        tmp_dim_ = np.nanmin([len(poss['lin']), len(poss['nonlin'])])
+        
+        t_stat_s, p_ttest_s = stats.ttest_rel(negs['lin'], poss['lin'])
+        t_stat_cross_n, p_ttest_cross_n = stats.ttest_rel(negs['lin'][:tmp_dim], negs['nonlin'][:tmp_dim])
+        t_stat_p, p_ttest_p = stats.ttest_rel(negs['nonlin'], poss['nonlin'])
+        t_stat_cross_p, p_ttest_cross_p = stats.ttest_rel(poss['lin'][:tmp_dim_], poss['nonlin'][:tmp_dim_])
+        
+        w_stat_s, p_wilcoxon_s = stats.wilcoxon(negs['lin'], poss['lin'])
+        w_stat_cross_n, p_wilcoxon_cross_n = stats.wilcoxon(negs['lin'][:tmp_dim], negs['nonlin'][:tmp_dim])
+        w_stat_p, p_wilcoxon_p = stats.wilcoxon(negs['nonlin'], poss['nonlin'])
+        w_stat_cross_p, p_wilcoxon_cross_p = stats.wilcoxon(poss['lin'][:tmp_dim_], poss['nonlin'][:tmp_dim_])
+    
+        print(f"Paired t-test lin-subtraction: t = {t_stat_s:.3f}, p = {p_ttest_s:.4f}")
+        print(f"Paired t-test nonlin-lin negs: t = {t_stat_cross_n:.3f}, p = {p_ttest_cross_n:.4f}")
+        print(f"Paired t-test nonlin-predictions: t = {t_stat_p:.3f}, p = {p_ttest_p:.4f}")
+        print(f"Paired t-test nonlin-lin poss: t = {t_stat_cross_p:.3f}, p = {p_ttest_cross_p:.4f}")
+        
+        print(f"Wilcoxon signed-rank test lin-subtraction: W = {w_stat_s:.3f}, p = {p_wilcoxon_s:.4f}")
+        print(f"Wilcoxon signed-rank test nonlin-lin negs:: W = {w_stat_cross_n:.3f}, p = {p_wilcoxon_cross_n:.4f}")
+        print(f"Wilcoxon signed-rank test nonlin-predictions: W = {w_stat_p:.3f}, p = {p_wilcoxon_p:.4f}")
+        print(f"Wilcoxon signed-rank test nonlin-lin poss: W = {w_stat_cross_p:.3f}, p = {p_wilcoxon_cross_p:.4f}")
+        
+        # Adjust layout
+        plt.tight_layout()
+        
+        return fig, ax
+
+    def visualize_map_with_peaks_fullportion_ax(self, q, baseline, peak, direction, pos_peak, neg_peak, ax, 
+                                                clims=0.1, cmap='viridis'):
+        """
+        Helper method for visualizing maps with peaks on a given axis
+        """
+        if clims is None:
+            clims = np.nanpercentile(q, 95)
+
+        q_proc = q[:, :]
+        baseline_proc = baseline[:, :]
+
+        pcm = ax.pcolormesh(q_proc, cmap=cmap, vmin=-clims, vmax=clims)
+        
+        thr_up = np.nanpercentile(baseline_proc, 75)
+        thr_low = np.nanpercentile(baseline_proc, 25)
+
+        mask_up = q_proc >= thr_up
+        mask_low = q_proc <= thr_low
+
+        ax.contour(mask_up, levels=[0.5], colors='black', linewidths=1, alpha=0.7)
+        ax.contour(mask_low, levels=[0.5], colors='red', linewidths=1, alpha=0.7)
+
+        ax.hlines(peak, 0, q.shape[1], color='magenta', linestyle='--')
+        ax.scatter(pos_peak[1], pos_peak[0], color='white', edgecolor='black', s=80)
+        ax.scatter(neg_peak[1], neg_peak[0], color='crimson', edgecolor='black', s=80)
+
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Spatial Pos')
+        
+        return pcm
+
+    def plot_maps_with_peaks(self, dirs=None, map_idxs=None, time_keys=None, trial_idx=0, 
+                           cols=3, figsize_per_plot=(5, 5), cmap='viridis', 
+                           save_path='peakcompute_OUT_class.png', dpi=150):
+        """
+        Plot maps with peaks for all sessions and conditions with a shared colorbar
+        
+        Parameters:
+        dirs: list of directions (default: [-1, 1])
+        map_idxs: list of map indices (default: [3, 2])
+        time_keys: list of time keys (default: [0.5, 1])
+        trial_idx: trial index to plot (default: 0)
+        cols: number of columns in subplot grid (default: 3)
+        figsize_per_plot: size of each subplot (default: (5, 5))
+        square_wind: square window size for peak finding (default: 5)
+        end_col: end column for peak finding (default: 15)
+        cmap: colormap to use (default: 'viridis')
+        save_path: path to save the figure (default: 'peakcompute_OUT_class.png')
+        dpi: DPI for saved figure (default: 150)
+        
+        Returns:
+        fig, axs: matplotlib figure and axes objects
+        """
+        if dirs is None:
+            dirs = [-1, 1]
+        if map_idxs is None:
+            map_idxs = [3, 2]
+        if time_keys is None:
+            time_keys = [0.5, 1]
+        
+        plot_idx = 0
+        sess_names = list(self.results_dict.keys())
+        total_plots = len(sess_names) * len(dirs) * len(map_idxs) * len(time_keys) * 2  # *2 for prediction and subtraction
+        rows = math.ceil(total_plots / cols)
+
+        # Create figure with space for colorbar
+        fig, axs = plt.subplots(rows, cols, figsize=(figsize_per_plot[0] * cols, figsize_per_plot[1] * rows))
+        axs = axs.flatten() if total_plots > 1 else [axs]
+        
+        # Collect all data to determine global color limits
+        all_matrices = []
+        valid_plots = []
+        
+        # First pass: collect all matrices and valid plot information
+        for sess_name in sess_names:
+            for map_type in ['prediction', 'subtraction']:
+                for dir_ in dirs:
+                    for map_idx in map_idxs:
+                        for time_key in time_keys:
+                            try:
+                                data = self.results_dict[sess_name][map_type]
+                                matrix = data.matrices[map_idx][time_key][dir_][trial_idx]
+                                baseline = data.baselines[map_idx][time_key][dir_][trial_idx]
+                                peak = self.results_dict[sess_name][map_type].peaks[map_idx][time_key][dir_][trial_idx]
+                                pos_peak =  self.results_dict[sess_name][map_type].pos_peaks[map_idx][time_key][dir_][trial_idx]
+                                neg_peak =  self.results_dict[sess_name][map_type].neg_peaks[map_idx][time_key][dir_][trial_idx]
+                                
+                                all_matrices.append(matrix)
+                                valid_plots.append({'sess_name': sess_name,
+                                                    'map_type': map_type,
+                                                    'dir_': dir_,
+                                                    'map_idx': map_idx,
+                                                    'time_key': time_key,
+                                                    'matrix': matrix,
+                                                    'baseline': baseline,
+                                                    'peak': peak,
+                                                    'pos_peak': pos_peak[0],
+                                                    'neg_peak': neg_peak[0]})
+                                
+                            except Exception as e:
+                                # print(f"Skipping {sess_name} - {map_type} - dir:{dir_} - n_pos:{map_idx} - isi:{time_key} due to error: {e}")
+                                continue
+        
+        # Calculate global color limits
+        if all_matrices:
+            global_clim = np.nanpercentile(np.concatenate([m.flatten() for m in all_matrices]), 95)
+        else:
+            global_clim = 0.1
+            
+        # Second pass: create plots with consistent color scale
+        for plot_info in valid_plots:
+            if plot_idx >= len(axs):
+                break
+                
+            ax = axs[plot_idx]
+            
+            pcm = self.visualize_map_with_peaks_fullportion_ax(plot_info['matrix'], plot_info['baseline'], plot_info['peak'], 
+                                                               plot_info['dir_'], plot_info['pos_peak'], plot_info['neg_peak'], 
+                                                               ax, clims = global_clim, cmap=cmap)
+            
+            # Create title
+            name_title = plot_info['sess_name'].split('VSDI')[1].split('-001')[0] if 'VSDI' in plot_info['sess_name'] else plot_info['sess_name']
+            ax.set_title(f"{name_title} - {plot_info['map_type']} - dir:{plot_info['dir_']} - n_pos:{plot_info['map_idx']} - isi:{plot_info['time_key']}")
+            plot_idx += 1
+
+        # Hide unused axes
+        for j in range(plot_idx, len(axs)):
+            fig.delaxes(axs[j])
+
+        # Add colorbar with proper positioning
+        if plot_idx > 0:
+            # Adjust subplot parameters to make room for colorbar
+            plt.subplots_adjust(right=0.85)
+            
+            # Create colorbar on the right side
+            cbar_ax = fig.add_axes([1.05, 0.6, 0.03, 0.35])  # [left, bottom, width, height]
+            cbar = fig.colorbar(pcm, cax=cbar_ax)
+            cbar.set_label('Signal Intensity', rotation=270, labelpad=50)
+
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
+        
+        return fig, axs
