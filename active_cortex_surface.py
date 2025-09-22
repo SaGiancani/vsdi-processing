@@ -378,7 +378,8 @@ class ActiveCortexSession:
             sub_conds            = zscored_first_data[t10:t11, :, :] - zscored_second_data[t20:t21, :, :] 
             ac.map               = ac.compute_map(sub_conds, time_window = (frames_start,frames_end))
             ac.time_window       = (frames_start, frames_end)
-            ac.blob_binary, ac.blob_values = ac.compute_blob(ac.map, threshold=self.threshold)
+            ac.blob_binary, ac.blob_values = ac.compute_blob(ac.map, threshold = self.threshold)
+            ac.blob_binary2, _             = ac.compute_blob(ac.map, threshold = self.second_threshold) 
 
             dict_subtrs[f'{first_cond}-{second_cond}'] = ((ac, first_cd, second_cd))     
         return dict_subtrs
@@ -432,6 +433,7 @@ class ActiveCortex:
         self.map = None
         self.map_baseline = None
         self.blob_binary = None
+        self.blob_binary2 = None
         self.blob_values = None
         self.behavior = None
         self.maps = None
@@ -453,11 +455,13 @@ class ActiveCortex:
               self.maps,
               self.blobs,
               self.blob_binary, 
+              self.blob_binary2, 
               self.blob_values, 
               self.time_courses,
               self.behavior,
               self.pixel_spacing,
               self.active_surface,
+              self.active_surface2,
               self.second_threshold]
         storage_path = os.path.join(t, 'activecortex')
         tmp = dv.set_storage_folder(name_analysis = os.path.join(storage_path,))
@@ -480,12 +484,14 @@ class ActiveCortex:
         self.maps             = tp[9]
         self.blobs            = tp[10]
         self.blob_binary      = tp[11]
-        self.blob_values      = tp[12]
-        self.time_courses     = tp[13]
-        self.behavior         = tp[14]
-        self.pixel_spacing    = tp[15]
-        self.active_surface   = tp[16]
-        self.second_threshold = tp[17]
+        self.blob_binary2     = tp[12] 
+        self.blob_values      = tp[13]
+        self.time_courses     = tp[14]
+        self.behavior         = tp[15]
+        self.pixel_spacing    = tp[16]
+        self.active_surface   = tp[17]
+        self.active_surface2  = tp[18]
+        self.second_threshold = tp[19]
 
         return
 
@@ -711,12 +717,14 @@ class ActiveCortex:
             sel_correct   = self.compute_zscore(np.nanmean(self.filtered_data[mask], axis = 0))
             map_correct   = self.compute_map(sel_correct, time_window = (t0, t1))
             peaks_correct = (peaks_x[mask], peaks_y[mask])
-            blob_correct, _   = self.compute_blob(map_correct, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) 
+            blob_correct, _    = self.compute_blob(map_correct, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) 
+            blob_correct2, _   = self.compute_blob(map_correct, keep_values_nan = keep_blob_nan, threshold = self.second_threshold) 
 
             sel_incorrect   = self.compute_zscore(np.nanmean(self.filtered_data[~mask], axis = 0))
             map_incorrect   = self.compute_map(sel_incorrect, time_window = (t0, t1))
             peaks_incorrect = (peaks_x[~mask], peaks_y[~mask])
             blob_incorrect, _  = self.compute_blob(map_incorrect, keep_values_nan = keep_blob_nan, threshold = self.statistical_threshold) 
+            blob_incorrect2, _ = self.compute_blob(map_incorrect, keep_values_nan = keep_blob_nan, threshold = self.second_threshold) 
 
             # Further median filter on contours before plotting them
             # blob_correct    = median_filter(blob_correct, size=(5,5))
@@ -747,6 +755,11 @@ class ActiveCortex:
                 'all': self.blob_binary,
                 'correct': blob_correct,
                 'incorrect': blob_incorrect,
+            },
+            'blob2': {
+                'all': self.blob_binary2,
+                'correct': blob_correct2,
+                'incorrect': blob_incorrect2,
             }
         }
 
@@ -853,6 +866,7 @@ class ActiveCortex:
         self.map           = self.compute_map(self.zscore_cd)
         self.map_baseline  = self.compute_map(self.zscore_cd, time_window=(0, 15))
         self.blob_binary, self.blob_values = self.compute_blob(self.map, threshold=threshold, keep_values_nan=keep_blob_nan)
+        self.blob_binary2, _               = self.compute_blob(self.map, threshold = self.second_threshold) 
         self.blob_binary_baseline, self.blob_values_baseline = self.compute_blob(self.map_baseline, threshold=threshold, keep_values_nan=keep_blob_nan)
 
         if compute_behavior:
