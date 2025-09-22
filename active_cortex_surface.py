@@ -170,12 +170,12 @@ class ActiveCortexSession:
                 utils.stampa(f"[build_conditions] skipping {cond_name}: no data in self.data", logger=self.log)
                 continue
             
-            synaptic_latency = int(np.ceil(synaptic_latency/self.time_bin)) # In frames
+            synaptic_latency_ = int(np.ceil(synaptic_latency/self.time_bin)) # In frames
             utils.stampa(f'Cond: {cond_name} in {self.cond_am}', logger=self.log)
 
             if cond_name in self.cond_am:
                 start_time = self.stimulus_metadata['pos metadata'][cond_name]['start'] 
-                onset_time = self.timing_am_sequence[0] - start_time - synaptic_latency
+                onset_time = self.timing_am_sequence[0] - start_time - synaptic_latency_
 
             if cond_name in self.cond_pos:
                 onset_time = self.timing_single_stroke[0] - synaptic_latency
