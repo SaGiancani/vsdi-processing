@@ -180,6 +180,7 @@ class ActiveCortexSession:
             if cond_name in self.cond_pos:
                 onset_time = self.timing_single_stroke[0] - synaptic_latency
 
+            utils.stampa(f'Cond {cond_name}: {start_time} {onset_time} {self.timing_single_stroke[0]} {synaptic_latency}', logger=self.log)
             data = self.data[cond_name]
             tw = self.time_window_per_cd.get(cond_name, None)
             behavior_dict = self.dict_autoselection.get(cond_name, {})
