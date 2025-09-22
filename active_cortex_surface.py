@@ -172,7 +172,7 @@ class ActiveCortexSession:
             
             synaptic_latency = int(np.ceil(synaptic_latency/self.time_bin)) # In frames
             if cond_name in self.cond_am:
-                start_time    = self.stimulus_metadata['pos metadata'][cond_name]['start'] 
+                start_time = self.stimulus_metadata['pos metadata'][cond_name]['start'] 
                 onset_time = self.timing_am_sequence[0] - start_time - synaptic_latency
 
             if cond_name in self.cond_pos:
@@ -184,6 +184,7 @@ class ActiveCortexSession:
             peaks = self.peaks_distribution.get(cond_name, None)
             tmp_print = len(behavior_dict['autoselection'])
             utils.stampa(f'Lenght behavior list: {tmp_print} and length peaks distribution {len(peaks[0])}', logger=self.log)
+            utils.stampa(f'Cond: {cond_name}, onset time: {onset_time}', logger=self.log)
             ac = ActiveCortex(cond_name=cond_name,
                               data=data,
                               pixel_spacing=self.pixel_spacing,
