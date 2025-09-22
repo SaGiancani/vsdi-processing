@@ -613,7 +613,6 @@ class ActiveCortex:
         If threshold is None uses self.statistical_threshold.
         """
         thr = self.statistical_threshold if threshold is None else float(threshold)
-        self.statistical_threshold = thr
 
         # mask: ignore NaNs
         mask = np.isfinite(map_) & (map_ > thr)
