@@ -178,7 +178,7 @@ class ActiveCortexSession:
                 onset_time = self.timing_am_sequence[0] - start_time - synaptic_latency_
 
             if cond_name in self.cond_pos:
-                onset_time = self.timing_single_stroke[0] - synaptic_latency
+                onset_time = self.timing_single_stroke[0] - synaptic_latency_
 
             utils.stampa(f'Cond {cond_name}: {start_time} {onset_time} {self.timing_single_stroke[0]} {synaptic_latency}', logger=self.log)
             data = self.data[cond_name]
