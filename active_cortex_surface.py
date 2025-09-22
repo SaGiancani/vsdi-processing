@@ -171,6 +171,8 @@ class ActiveCortexSession:
                 continue
             
             synaptic_latency = int(np.ceil(synaptic_latency/self.time_bin)) # In frames
+            utils.stampa(f'Cond: {cond_name} in {self.cond_am}', logger=self.log)
+
             if cond_name in self.cond_am:
                 start_time = self.stimulus_metadata['pos metadata'][cond_name]['start'] 
                 onset_time = self.timing_am_sequence[0] - start_time - synaptic_latency
@@ -184,7 +186,6 @@ class ActiveCortexSession:
             peaks = self.peaks_distribution.get(cond_name, None)
             tmp_print = len(behavior_dict['autoselection'])
             utils.stampa(f'Lenght behavior list: {tmp_print} and length peaks distribution {len(peaks[0])}', logger=self.log)
-            utils.stampa(f'Cond: {cond_name}, onset time: {onset_time}', logger=self.log)
             ac = ActiveCortex(cond_name=cond_name,
                               data=data,
                               pixel_spacing=self.pixel_spacing,
@@ -409,7 +410,7 @@ class ActiveCortex:
                  pixel_spacing = .07,
                  peaks_distribution = None,
                  blank_cd = None,
-                 onset_time = 20, # In frames
+                 onset_time = None, # In frames
                  statistical_threshold = 2.5,
                  second_threshold = 10,
                  behavior_dict = None,
@@ -1023,10 +1024,8 @@ def plot_blob_timecourse_individual(timecourse_results, time_series_info, y_lim=
                 x_tc = np.arange(timecourse_results['timecourse'][condition].shape[1])
                 break
 
-    conditions_to_plot = {
-        'correct': 'green',
-        'incorrect': 'red'
-    }
+    conditions_to_plot = {'correct': 'green',
+                          'incorrect': 'red'}
 
     for condition, color in conditions_to_plot.items():
         time_series_data = timecourse_results['timecourse'][condition]
