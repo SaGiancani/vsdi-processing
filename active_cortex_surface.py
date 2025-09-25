@@ -253,12 +253,14 @@ class ActiveCortexSession:
                 ac.blobs = blobs
 
                 keys = list(cmaps.keys()) if self.behavior_flag else ['all']
-                
+                utils.stampa(f'{keys}', logger=self.log)
                 for key in keys:
                     mappa = cmaps[key]
                     picco = peaks[key]
                     blob  = blobs[key]
                     utils.stampa(f'{key}: {mappa.shape}', logger=self.log)
+                    utils.stampa(f'{key}: {picco}', logger=self.log)
+                    utils.stampa(f'{key}: {blob.shape}', logger=self.log)
                     if mappa is None or np.all(np.isnan(mappa)):
                         continue
                     len_cd = ac.time_courses['n_trials'][key]
@@ -855,8 +857,8 @@ class ActiveCortex:
             tc_correct   = extract_blob_timecourse(z_correct)
             tc_incorrect = extract_blob_timecourse(z_incorrect)
         else:
-            tc_correct   = []
-            tc_incorrect = []
+            tc_correct   = np.array([])
+            tc_incorrect = np.array([])
         
         results = {
             'timecourse': {
