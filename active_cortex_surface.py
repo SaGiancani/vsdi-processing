@@ -373,7 +373,7 @@ class ActiveCortexSession:
 
             a             = self.stimulus_metadata['pos metadata']
             space_step    = a[first_cond]['inter stimulus space']
-            time_stepping = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(dict_components_[first_cond])-1))*self.acquisition_frequency)) 
+            time_stepping = int(np.ceil((1/self.stimulus_metadata['speed'])*(space_step*(len(self.retino_pos_am[first_cond])-1))*self.acquisition_frequency)) 
             frames_start  = time_stepping + a[first_cond]['start']
             utils.stampa(f'Name sub {name_subtrcts}, space stepping {space_step}', logger = self.log)   
 
