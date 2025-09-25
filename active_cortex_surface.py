@@ -250,10 +250,8 @@ class ActiveCortexSession:
                 ac.peaks = peaks
                 ac.blobs = blobs
 
-                if self.behavior_flag:
-                    keys = list(cmaps.keys())
-                else:
-                    keys = ['all']
+                keys = list(cmaps.keys()) if self.behavior_flag else ['all']
+                
                 for key in keys:
                     mappa = cmaps[key]
                     picco = peaks[key]
