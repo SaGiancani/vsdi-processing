@@ -1120,44 +1120,44 @@ if __name__=="__main__":
                         required=False,
                         help='Spatial kernel (std) for gaussian filter')
     
-    parser.add_argument('--denoised', 
-                        dest='denoise_flag',
-                        type=bool,
-                        default= True,
-                        required=False,
-                        help='Switch for denoised data or regular dF/F0')
     parser.add_argument('--no-denoised', 
                         dest='denoise_flag',
                         type=bool,
                         default= False,
                         required=False,
                         help='Switch for denoised data or regular dF/F0')
-    
-    parser.add_argument('--store', 
-                        dest='store_flag',
+    parser.add_argument('--denoised', 
+                        dest='denoise_flag',
                         type=bool,
                         default= True,
                         required=False,
-                        help='Switch for storing output data')
+                        help='Switch for denoised data or regular dF/F0')
+    
     parser.add_argument('--no-store', 
                         dest='store_flag',
                         type=bool,
                         default= False,
                         required=False,
                         help='Switch for storing output data')
-    
-    parser.add_argument('--visualize', 
-                        dest='vis_switch',
+    parser.add_argument('--store', 
+                        dest='store_flag',
                         type=bool,
                         default= True,
                         required=False,
-                        help='Switch for visualizing output data')
+                        help='Switch for storing output data')
+    
     parser.add_argument('--no-visualize', 
                         dest='vis_switch',
                         type=bool,
                         default= False,
                         required=False,
                         help='Switch for storing output data')
+    parser.add_argument('--visualize', 
+                        dest='vis_switch',
+                        type=bool,
+                        default= True,
+                        required=False,
+                        help='Switch for visualizing output data')
         
     parser.add_argument('--behav', 
                         dest='behav_switch',
@@ -1172,16 +1172,16 @@ if __name__=="__main__":
                         required=False,
                         help='Switch for behavioral data')
     
-    parser.add_argument('--spatial_filter', 
-                        dest='spatial_filter_switch',
-                        type=bool,
-                        default= True,
-                        required=False,
-                        help='Switch for filtering data (gaussian and median)')
     parser.add_argument('--no-spatial_filter', 
                         dest='spatial_filter_switch',
                         type=bool,
                         default= False,
+                        required=False,
+                        help='Switch for filtering data (gaussian and median)')
+    parser.add_argument('--spatial_filter', 
+                        dest='spatial_filter_switch',
+                        type=bool,
+                        default= True,
                         required=False,
                         help='Switch for filtering data (gaussian and median)')
 
