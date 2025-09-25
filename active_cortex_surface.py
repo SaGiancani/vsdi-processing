@@ -210,15 +210,15 @@ class ActiveCortexSession:
             if compute_behavior:
                 ac.maps     = ac.compute_behavior_maps()
             else:
-                ac.maps = {'map': {'all': ac.map,
-                                   'correct': None,
-                                   'incorrect': None},
+                ac.maps = {'map':   {'all': ac.map,
+                                     'correct': None,
+                                     'incorrect': None},
                            'peaks': {'all': (map(np.asarray, ac.peaks_distribution)),
                                      'correct': None,
                                      'incorrect': None},
-                           'blob': {'all': ac.blob_binary,
-                                    'correct': None,
-                                    'incorrect': None},
+                           'blob':  {'all': ac.blob_binary,
+                                     'correct': None,
+                                     'incorrect': None},
                            'blob2': {'all': ac.blob_binary2,
                                      'correct': None,
                                      'incorrect': None}}
@@ -256,7 +256,7 @@ class ActiveCortexSession:
                     mappa = cmaps[key]
                     picco = peaks[key]
                     blob  = blobs[key]
-
+                    utils.stampa(f'{key}: {mappa.shape}', logger=self.log)
                     if mappa is None or np.all(np.isnan(mappa)):
                         continue
                     len_cd = ac.time_courses['n_trials'][key]
