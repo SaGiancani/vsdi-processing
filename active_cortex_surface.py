@@ -311,31 +311,32 @@ class ActiveCortexSession:
             self.subtraction_acs = self.get_subtractions()
 
         if self.vis_switch:
-            for sub_cond_name, values in self.subtraction_acs.items():
-                ac = values[0]
-                mappa = ac.map
-                picco = ac.peaks
-                blob  = ac.blob_binary  
-                min_bord = np.nanpercentile(mappa, 10)
-                max_bord = np.nanpercentile(mappa, 97)
+            if len(self.subtraction_acs) > 0:
+                for sub_cond_name, values in self.subtraction_acs.items():
+                    ac = values[0]
+                    mappa = ac.map
+                    picco = ac.peaks
+                    blob  = ac.blob_binary  
+                    min_bord = np.nanpercentile(mappa, 10)
+                    max_bord = np.nanpercentile(mappa, 97)
 
-                if mappa is None or np.all(np.isnan(mappa)):
-                    continue
-                dv.plot_averaged_map(f"{sub_cond_name}",
-                                        blob,
-                                        None,
-                                        picco,
-                                        mappa,
-                                        None,
-                                        min_bord, max_bord,
-                                        'k',
-                                        f'{self.id_name}',
-                                        'k',
-                                        name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
-                                        store_path=self.storing_folder)
-                
-            if self.store_switch:
-                ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
+                    if mappa is None or np.all(np.isnan(mappa)):
+                        continue
+                    dv.plot_averaged_map(f"{sub_cond_name}",
+                                            blob,
+                                            None,
+                                            picco,
+                                            mappa,
+                                            None,
+                                            min_bord, max_bord,
+                                            'k',
+                                            f'{self.id_name}',
+                                            'k',
+                                            name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
+                                            store_path=self.storing_folder)
+                    
+                if self.store_switch:
+                    ac.store_activecortex(os.path.join(self.storing_folder, self.id_name, ac.cond_name))
         return
 
     def get_subtractions(self):
