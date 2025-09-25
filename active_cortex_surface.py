@@ -209,6 +209,20 @@ class ActiveCortexSession:
             
             if compute_behavior:
                 ac.maps     = ac.compute_behavior_maps()
+            else:
+                ac.maps = {'map': {'all': ac.map,
+                                   'correct': None,
+                                   'incorrect': None},
+                           'peaks': {'all': (map(np.asarray, ac.peaks_distribution)),
+                                     'correct': None,
+                                     'incorrect': None},
+                           'blob': {'all': ac.blob_binary,
+                                    'correct': None,
+                                    'incorrect': None},
+                           'blob2': {'all': ac.blob_binary2,
+                                     'correct': None,
+                                     'incorrect': None}}
+                
             # Compute the time courses
             ac.time_courses = ac.compute_blob_timecourse()        
             conditions[cond_name] = ac
