@@ -258,9 +258,6 @@ class ActiveCortexSession:
                     mappa = cmaps[key]
                     picco = peaks[key]
                     blob  = blobs[key]
-                    utils.stampa(f'{key}: {mappa.shape}', logger=self.log)
-                    utils.stampa(f'{key}: {picco}', logger=self.log)
-                    utils.stampa(f'{key}: {blob.shape}', logger=self.log)
                     if mappa is None or np.all(np.isnan(mappa)):
                         continue
                     len_cd = ac.time_courses['n_trials'][key]
