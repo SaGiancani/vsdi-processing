@@ -210,10 +210,12 @@ class ActiveCortexSession:
             if compute_behavior:
                 ac.maps     = ac.compute_behavior_maps()
             else:
+                peaks_x, peaks_y = map(np.asarray, ac.peaks_distribution)
+                peaks_all = (peaks_x, peaks_y)                
                 ac.maps = {'map':   {'all': ac.map,
                                      'correct': None,
                                      'incorrect': None},
-                           'peaks': {'all': (map(np.asarray, ac.peaks_distribution)),
+                           'peaks': {'all': peaks_all,
                                      'correct': None,
                                      'incorrect': None},
                            'blob':  {'all': ac.blob_binary,
