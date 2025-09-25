@@ -345,6 +345,7 @@ class ActiveCortexSession:
         single_pos          = list(set([i for v in self.retino_pos_am.values() for i in v]))
         dict_components_    = self.retino_pos_am
         utils.stampa(f'Dictionary of AM single pos components: {self.retino_pos_am}', logger = self.log)                                                               
+        utils.stampa(f'Dictionary of single pos: {single_pos}', logger = self.log)                                                               
         for i in single_pos:
             dict_components_[i] = [i]
         
