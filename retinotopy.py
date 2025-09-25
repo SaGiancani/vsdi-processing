@@ -6,6 +6,8 @@ import middle_process as md
 import numpy as np
 import pandas as pd
 import process_vsdi as process
+from scipy.stats import ttest_rel
+from statsmodels.stats.multitest import multipletests
 import trajectory as trj
 
 from scipy.ndimage.filters import gaussian_filter
@@ -1478,6 +1480,8 @@ class PeakSet:
                                      'y_median': np.nanmedian(y),
                                      'x_width': np.nanpercentile(x, 75),
                                      'y_width': np.nanpercentile(y, 75),
+                                     'x_std': np.nanstd(x),
+                                     'y_std': np.nanstd(y),                         
                                      'x': x,
                                      'y': y})
 
@@ -1501,6 +1505,36 @@ class PeakSet:
             df.to_csv(filepath, index=False)
 
         return df
+
+    def separability_test_single_pos(self):
+        point_on_trajectory, distributions_pos, map_shape = get_retinotopic_single_pos(self.data, self.list_pos)
+
+        xs_real = list(list(zip(*point_on_trajectory))[0])
+        ys_real = list(list(zip(*point_on_trajectory))[1])
+        # Linear fitting on the retino coordinates: more accurate angle of rotation estimation
+        line_traj_x, line_traj_y = trj.get_trajectory(xs_real, ys_real, (0, map_shape[1]-1))
+        _, _, theta = trj.rotate_distribution(line_traj_x, line_traj_y)
+        print(theta)
+
+        unit, center = trj.get_unit_n_center(distributions_pos, self.stim_meta, self.list_pos, theta)
+
+        norm_distribution_pos = [trj.distribution_coords_normalize(i, unit, center, theta) for i in distributions_pos]
+
+        couples, steps = utils.get_consecutive_pairs(self.cond_dict, self.stim_meta)
+        list_ps = {}
+        for ((cd1, cd2), step) in zip(couples, steps):
+            id1 = self.list_pos.index(cd1)
+            id2 = self.list_pos.index(cd2)
+
+            ids_to_take     = np.nanmin([len(norm_distribution_pos[id1][0]), len(norm_distribution_pos[id2][0])])
+            t_stat, p_ttest = ttest_rel(np.array(norm_distribution_pos[id1][0][:ids_to_take]), np.array(norm_distribution_pos[id2][0][:ids_to_take]), nan_policy='omit')
+            list_ps[f'{cd1}-{cd2}'] = [p_ttest, step]
+        
+        list_ps_ = [p[0] for p in list_ps.values() if not np.isnan(p[0])]
+        list_cd_ = [k for k in list_ps.keys()]
+        _, corrected_pvals_ttest_, _, _ = multipletests(list_ps_, alpha=0.05, method='holm')
+        corrected_pvals_ttest = {k: [v, s] for k, v, s in zip(list_cd_, corrected_pvals_ttest_, steps)}
+        return corrected_pvals_ttest
 
 def get_retinotopic_features(FOI, min_lim = 90, max_lim = 100, circular_mask_dim = 100, mask_switch = True, adaptive_thresh = True, thresh_gaus = 97.72, std_gaus = 15, kernel_median = 3):
     num_for_nan = np.nanpercentile(FOI, 20)

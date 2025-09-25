@@ -273,6 +273,23 @@ def get_conditions_correspondance(path):
     return {i: j['conditions'] for i, j in list(a['pos metadata'].items())}
 
 
+def get_consecutive_pairs(cond_dict, stimulus_metadata):
+    unique_pairs = set()
+    a = stimulus_metadata['pos metadata']
+
+    for key, components in cond_dict.items():
+        space_step = float(a[key]['inter stimulus space'])
+        for i in range(len(components) - 1):
+            pair = tuple(sorted((components[i], components[i+1])))
+            pair = pair + (space_step,)
+            unique_pairs.add(pair)
+
+    # Convert set to list if needed
+    result_ = list(unique_pairs)
+    result = [(i, j) for i, j, k in result_]
+    steps = [k for _, _, k in result_]
+    return result, steps
+
 def find_subsets(data):
     '''
     Description:
