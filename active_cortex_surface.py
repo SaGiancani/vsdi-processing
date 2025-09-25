@@ -25,6 +25,7 @@ class ActiveCortexSession:
                  retino_path      = None,
                  blank_name       = 'blank',
                  trial_metadata_flag = True,
+                 behavior_flag    = False,
                  zero_frames      = 10,
                  green_name       = '',
                  filter_kernel    = 5,
@@ -55,6 +56,7 @@ class ActiveCortexSession:
         self.denoise_switch        = denoise_flag
         self.vis_switch            = vis_switch
         self.store_switch          = store_flag
+        self.behavior_flag         = behavior_flag
         self.pretriggerz_flag      = pretrigger_zero
         self.filter_flag           = spatial_filter # Does not work for zmaps_flag
         self.filter_kernel         = filter_kernel # Does not work for zmaps_flag
@@ -74,7 +76,7 @@ class ActiveCortexSession:
         self.timing_single_stroke  = (self.stimulus_metadata['single stroke']['bottom limit'], self.stimulus_metadata['single stroke']['upper limit'])
         self.timing_am_sequence    = (self.stimulus_metadata['multiple stroke']['bottom limit'], self.stimulus_metadata['multiple stroke']['upper limit'])
 
-        self.data_loader         = retino.RetinoLoaderManager(self.path_session,  flag_denoise=self.denoise_switch, storage_path=self.retin_folder, pretrigger_flag = self.pretriggerz_flag)
+        self.data_loader           = retino.RetinoLoaderManager(self.path_session,  flag_denoise=self.denoise_switch, storage_path=self.retin_folder, pretrigger_flag = self.pretriggerz_flag)
         utils.stampa(f'Retinotopy data loaded successfully!', logger=self.log)
 
         self.id_name             = self.data_loader.id_name 
@@ -83,8 +85,8 @@ class ActiveCortexSession:
         self.peaks_distribution  = self.get_peaks_distribution()
         utils.stampa(f'{self.time_window_per_cd}', logger=self.log)
 
-        self.cond_am = list(self.data_loader.cond_am)   
-        self.cond_pos = list(self.data_loader.cond_pos)
+        self.cond_am    = list(self.data_loader.cond_am)   
+        self.cond_pos   = list(self.data_loader.cond_pos)
         self.list_conds = self.cond_am + self.cond_pos + [blank_name]
         self.retino_pos_am = utils.get_conditions_correspondance(self.path_session)
         utils.stampa(f'Dictionary of conditions: {self.retino_pos_am}', logger = self.log)    
@@ -98,14 +100,14 @@ class ActiveCortexSession:
             files_denoise        = os.listdir(directory_path)
             self.data            = utils.load_all_files(directory_path, files_denoise, particle = 'rem_', log = self.log)
         else:
-            blank_data =  np.array([process.deltaf_up_fzero(i, zero_frames, deblank = True, blank_sign = None) for i in self.data[blank_name]])
+            blank_data    =  np.array([process.deltaf_up_fzero(i, zero_frames, deblank = True, blank_sign = None) for i in self.data[blank_name]])
             average_blank = np.nanmean(blank_data, axis = 0)
-            dict_values = {}
+            dict_values   = {}
             for k, v in self.data.values():
-                p_dffz      =  np.array([process.deltaf_up_fzero(i,
-                                                                 zero_frames, 
-                                                                 deblank = True, 
-                                                                 blank_sign = average_blank) for i in v])
+                p_dffz    =  np.array([process.deltaf_up_fzero(i,
+                                                               zero_frames, 
+                                                               deblank = True, 
+                                                               blank_sign = average_blank) for i in v])
                 dict_values[k] = p_dffz
             self.data = dict_values
         utils.stampa(f'VSDI data loaded successfully!', logger=self.log)
@@ -120,7 +122,7 @@ class ActiveCortexSession:
             tmp_blnk = gaussian_filter(tmp_blnk, sigma = (0, args.gaussian_kernel, args.gaussian_kernel, args.gaussian_kernel)) 
         
         self.blank_cd          = tmp_blnk
-        self.regular_conds_acs = self.get_conditions()
+        self.regular_conds_acs = self.get_conditions(compute_behavior=self.behavior_flag)
         self.subtraction_acs   = self.get_subtractions()
 
     def get_peaks_distribution(self):
@@ -204,8 +206,9 @@ class ActiveCortexSession:
                                  threshold=self.threshold,
                                  keep_blob_nan=keep_blob_nan,
                                  compute_behavior=compute_behavior)
-
-            ac.maps         = ac.compute_behavior_maps()
+            
+            if compute_behavior:
+                ac.maps     = ac.compute_behavior_maps()
             # Compute the time courses
             ac.time_courses = ac.compute_blob_timecourse()        
             conditions[cond_name] = ac
@@ -671,7 +674,6 @@ class ActiveCortex:
         # length checks: we require same length
         if len(autoselect_bool) != len(corrects_bool):
             raise ValueError(f"[{self.cond_name}] length mismatch: autoselection ({len(autoselect_bool)}) vs corrects ({len(corrects_bool)})")
-
         if blk_names and len(blk_names) != len(autoselect_bool):
             # warn but allow (order must be preserved — better to raise)
             raise ValueError(f"[{self.cond_name}] length mismatch: blk_names ({len(blk_names)}) vs trials ({len(autoselect_bool)})")
@@ -776,16 +778,26 @@ class ActiveCortex:
         """
         if self.zscored_data is None:
             raise RuntimeError(f"[{self.cond_name}] zscored_data is None — run compute_zscore first.")
-        if self.behavior is None or 'corrects' not in self.behavior:
-            raise RuntimeError(f"[{self.cond_name}] behavior info missing — run extract_behavior first.")
         if self.blob_binary is None:
             raise RuntimeError(f"[{self.cond_name}] blob_binary is None — compute blob first.")
-        
-        # Get behavioral mask
-        mask = self.behavior['corrects']
+
+        if self.behavior is None or 'corrects' not in self.behavior:
+            mask = [1] * self.filtered_data.shape[0]
+            mask = np.array(mask, dtype=bool)
+        else:
+            # Get behavioral mask
+            mask = self.behavior['corrects']
+
         if mask is None or len(mask) != self.filtered_data.shape[0]:
             raise ValueError(f"[{self.cond_name}] behavior mask length mismatch with trial count.")
         
+        # Compute z-scores for each trial (not averaged)
+        z_all = self.zscored_data
+        
+        # Separate correct and incorrect trials
+        z_correct   = z_all[mask] if np.any(mask) else np.array([])
+        z_incorrect = z_all[~mask] if np.any(~mask) else np.array([])
+
         # Compute z-scores for each trial (not averaged)
         z_all = self.zscored_data
         
@@ -1128,6 +1140,13 @@ if __name__=="__main__":
                         default= True,
                         required=False,
                         help='Switch for visualizing output data')
+        
+    parser.add_argument('--behav', 
+                        dest='behav_switch',
+                        type=bool,
+                        default= True,
+                        required=False,
+                        help='Switch for behavioral data')
     
     parser.add_argument('--spatial_filter', 
                         dest='spatial_filter_switch',
@@ -1144,15 +1163,16 @@ if __name__=="__main__":
 
     session_deriv   = args.path_md
     session_acs     = ActiveCortexSession(session_deriv, 
-                                          threshold = args.threshold,
-                                          spatial_filter= args.spatial_filter_switch,
-                                          store_flag=args.store_flag, 
-                                          denoise_flag = args.denoise_flag, 
-                                          filter_kernel = args.median_kernel,
-                                          gaussian_kernel = args.gaussian_kernel,
-                                          vis_switch = args.vis_switch,
-                                          second_threshold= args.second_threshold,
-                                          logger=log)
+                                          threshold        = args.threshold,
+                                          spatial_filter   = args.spatial_filter_switch,
+                                          store_flag       = args.store_flag, 
+                                          denoise_flag     = args.denoise_flag, 
+                                          filter_kernel    = args.median_kernel,
+                                          gaussian_kernel  = args.gaussian_kernel,
+                                          vis_switch       = args.vis_switch,
+                                          behavior_flag    = args.behav_switch,
+                                          second_threshold = args.second_threshold,
+                                          logger           = log)
 
     # tmp_blnk        = np.nanmean(session_acs.data['blank'], axis =0)    
     utils.stampa(f'Active cortex analysis for session {session_acs.id_name} elaborated in {datetime.datetime.now().replace(microsecond=0)-start_process_time}!\n', logger=log)                                
