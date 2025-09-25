@@ -24,7 +24,6 @@ class ActiveCortexSession:
                  spatial_filter   = True,
                  retino_path      = None,
                  blank_name       = 'blank',
-                 trial_metadata_flag = True,
                  behavior_flag    = False,
                  zero_frames      = 10,
                  green_name       = '',
@@ -92,7 +91,7 @@ class ActiveCortexSession:
         utils.stampa(f'Dictionary of conditions: {self.retino_pos_am}', logger = self.log)    
         utils.stampa(f'{self.list_conds}', logger=self.log)
 
-        self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = trial_metadata_flag, get_md_data = not self.denoise_switch)
+        self.data, self.dict_autoselection = get_md_files(self.path_to_derivatives, self.list_conds, behavior_flag = self.behavior_flag, get_md_data = not self.denoise_switch)
         
         if self.denoise_switch:
             # Get denoised selected trials
