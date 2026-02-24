@@ -255,8 +255,13 @@ class ActiveCortexSession:
                 utils.stampa(f'{keys}', logger=self.log)
                 for key in keys:
                     mappa = cmaps[key]
-                    picco = peaks[key]
                     blob  = blobs[key]
+                    if key == 'all':
+                        picco       = peaks['correct']
+                        second_dist = peaks['incorrect']
+                    else:
+                        picco       = peaks[key]
+                        second_dist = None
                     if mappa is None or np.all(np.isnan(mappa)):
                         continue
                     len_cd = ac.time_courses['n_trials'][key]
@@ -270,6 +275,7 @@ class ActiveCortexSession:
                                          'k',
                                          f'{self.id_name} - trials: {len_cd}',
                                          'k',
+                                         second_distribution_positions = second_dist, 
                                          second_thresh = self.second_threshold,
                                          name_analysis_=os.path.join(self.id_name, ac.cond_name, 'SurfaceMap'),
                                          store_path=self.storing_folder)
