@@ -857,11 +857,14 @@ def plot_retinotopic_positions(dictionar, titles = ['Inferred centroids', 'Singl
     return
 
 def plot_averaged_map(name_cond, blob, 
-                      retino_pos, distribution_positions, 
+                      retino_pos, 
+                      distribution_positions, 
                       map, center, 
                       min_bord, max_bord,
                       color, session_name, 
-                      col_distr, kern_median = 5,
+                      col_distr, 
+                      second_distribution_positions = None,
+                      kern_median = 5,
                       second_thresh = None, name_analysis_ = 'RetinotopicPositions', 
                       store_path = STORAGE_PATH, store_pic = True):
     # Plotting retinotopic positions over averaged maps
@@ -890,6 +893,8 @@ def plot_averaged_map(name_cond, blob,
         ax.scatter(retino_pos[0], retino_pos[1],color='r', marker = '+', s=150)
     if distribution_positions is not None:
         ax.scatter(distribution_positions[0], distribution_positions[1], color=col_distr, marker = '.', s=150)
+    if second_distribution_positions is not None:
+        ax.scatter(second_distribution_positions[0], second_distribution_positions[1], color=col_distr, marker = 'x', s=150)
     if center is not None:
         ax.vlines(center[0], 0, map.shape[0], color = color, lw= 3, ls='--', alpha=1)
     ax.set_title(session_name + ' condition: ' + name_cond )
@@ -1118,6 +1123,7 @@ def plot_two_distributions(
     label1='Dist 1', label2='Dist 2',
     xlim=None,  # <-- NEW
     ylim=None,  # <-- NEW
+    percentage = True,
     save_figure = True):
     """
     Plots two histograms normalized to % of total per dataset,
@@ -1133,14 +1139,17 @@ def plot_two_distributions(
 
     counts1, _ = np.histogram(data1, bins=edges)
     counts2, _ = np.histogram(data2, bins=edges)
-    counts1 = counts1 / len(data1) * 100
-    counts2 = counts2 / len(data2) * 100
+    constant   = 25
+    if percentage:
+        counts1 = counts1 / len(data1) * 100
+        counts2 = counts2 / len(data2) * 100
+        constant = 100
 
     mu1, std1 = norm.fit(data1)
     mu2, std2 = norm.fit(data2)
     x = np.linspace(combined.min(), combined.max(), 500)
-    pdf1 = norm.pdf(x, mu1, std1) * bin_width * 100
-    pdf2 = norm.pdf(x, mu2, std2) * bin_width * 100
+    pdf1 = norm.pdf(x, mu1, std1) * bin_width * constant
+    pdf2 = norm.pdf(x, mu2, std2) * bin_width * constant
 
     plt.bar(centers, counts1, width=bin_width, alpha=0.5, color=color1, label=label1)
     plt.bar(centers, counts2, width=bin_width, alpha=0.5, color=color2, label=label2)
@@ -1161,6 +1170,59 @@ def plot_two_distributions(
     if save_figure:
         plt.savefig(f'{label1}_{label2}.svg', dpi=300)
         plt.savefig(f'{label1}_{label2}.png', dpi=300)
+    plt.show()
+
+
+def plot_distributions(
+    data1,
+    bins='auto',
+    colors= ['skyblue', 'salmon'],
+    labels= ['dist1', 'dist2'],
+    xlim=None,  # <-- NEW
+    ylim=None,  # <-- NEW
+    percentage = True,
+    fig_title = 'fig_title',
+    save_figure = True):
+    """
+    Plots two histograms normalized to % of total per dataset,
+    with Gaussian fits scaled to match percentages.
+    """
+    combined = np.concatenate(data1)
+    if bins == 'auto':
+        bins = freedman_diaconis_bins(combined)
+
+    edges = np.linspace(combined.min(), combined.max(), bins + 1)
+    bin_width = edges[1] - edges[0]
+    centers = (edges[:-1] + edges[1:]) / 2
+
+    for n, i in enumerate(data1):
+        counts1, _ = np.histogram(i, bins=edges)
+        constant   = 25
+        if percentage:
+            counts1 = counts1 / len(i) * 100
+            constant = 100
+
+        mu1, std1 = norm.fit(i)
+        x = np.linspace(combined.min(), combined.max(), 500)
+        pdf1 = norm.pdf(x, mu1, std1) * bin_width * constant
+
+        plt.bar(centers, counts1, width=bin_width, alpha=0.5, color=colors[n], label=labels[n])
+
+        plt.plot(x, pdf1, color=colors[n], lw=2)
+
+    plt.xlabel("Value")
+    plt.ylabel("Percentage per bin (%)")
+    plt.legend()
+    plt.title(f"Two Normalized Distributions with Gaussian Fits (bins={bins})")
+
+    if xlim is not None:   # <-- apply fixed limits
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
+
+    if save_figure:
+        plt.savefig(f'{fig_title}.svg', dpi=300)
+        plt.savefig(f'{fig_title}.png', dpi=300)
     plt.show()
 
 
