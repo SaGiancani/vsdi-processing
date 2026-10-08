@@ -378,7 +378,7 @@ class Session:
             size_df_f0 = np.shape(df_f0)
             # For sake of storing coherently, the F/F0 has to be demeaned: dF/F0. 
             # But the one for normalization is kept without demean
-            sig = sig - 1
+            sig -= 1
             self.counter_blank = size_df_f0[0]
             mask = self.get_selection_trials(condition, sig)
             self.conditions = conditions
@@ -396,7 +396,7 @@ class Session:
             print(f'Shape z_score {z.shape}')
             self.z_score = np.reshape(z, (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # Subtraction for 1 equivalent to deblanking (F0) -dF/F0-
-            df_f0 = df_f0 - 1
+            df_f0 -= 1
             self.avrgd_df_fz = np.reshape(np.nanmean(df_f0[indeces_select, :, :, :], axis=0), (1, tmp.shape[0], tmp.shape[1], tmp.shape[2]))
             # Average time course over the condition
             tmp_ = np.nanmean(sig[indeces_select, :], axis=0)
@@ -428,10 +428,13 @@ class Session:
                 print(np.nanmean([v.onset_stim - v.start_stim for v in trials.values()]))
                 end_of_cond = zero_of_cond + foi_of_cond
             temp_raw = raws[indeces_select, :, :, :]
-            t_ = np.array([process.deltaf_up_fzero(i, zero_of_cond, deblank = True, blank_sign=None) for i in temp_raw])
-            #z = process.zeta_score(self.avrgd_df_fz[-1, :, :, :], None, None, full_seq = True)
+            
+            n_sel = len(indeces_select)
+            t_ = np.empty((n_sel, raws.shape[1], raws.shape[2], raws.shape[3]), dtype=np.float32)
+            for k, idx in enumerate(indeces_select):
+                t_[k] = process.deltaf_up_fzero(raws[idx], zero_of_cond, deblank=True, blank_sign=None)
             z = process.zeta_score(t_, self.f_f0_blank, self.stde_f_f0_blank)
-             #def zeta_score(sig_cond, sig_blank, std_blank, zero_frames = 20):
+            del t_
 
             self.z_score = np.concatenate((self.z_score, z.reshape(1, z.shape[0], z.shape[1], z.shape[2])), axis=0) 
 
@@ -984,6 +987,7 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                     raws = raws[0:-2, :, :, :]
                     delta_f = delta_f[0:-2, :, :, :]
                     sig = sig[0:-2, :]
+            del BLK
     else:
         for i, blk_name in enumerate(blks):
             start_time = datetime.datetime.now().replace(microsecond=0)
