@@ -420,6 +420,8 @@ def whole_time_sequence(data,
                         window_maximi = 20, 
                         coord_title_row = None,
                         font_size = 20,
+                        scalebar_color = 'k',
+                        scalebar_in_frame = 0,
                         color_contour = 'k',
                         white_background = True):
 
@@ -642,13 +644,13 @@ def whole_time_sequence(data,
                 elif centroids_labeling == 'hlines':
                     ax.hlines(k[1], 0, blurred.shape[1], color = cc, lw= width_line)      
 
-        if (pixel_spacing is not None) and (i == len(data)-1):
+        if (pixel_spacing is not None) and (i == scalebar_in_frame):
             #fig, ax = plt.subplots()
             fontprops = fm.FontProperties(size=14)
             scalebar  = AnchoredSizeBar(ax.transData,
                                         round(2/pixel_spacing), '2mm', 'lower right', #'upper right' 
                                         pad=0.1,
-                                        color='k',
+                                        color=scalebar_color,
                                         frameon=False,
                                         size_vertical=5,
                                         fontproperties=fontprops)
