@@ -524,7 +524,8 @@ class BlkFile:
 			y_bnnd_size = y_size//self.spatial_binning
 			tmp = np.zeros((t_size_binned, y_bnnd_size, x_bnnd_size))
 			for i in range(t_size_binned):
-				tmp[i, :, :] = cv.resize(np.array(b[i, :, :], dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
+				tmp[i, :, :] = cv.resize(np.array(b[i, :, :], dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_AREA)
+				#tmp[i, :, :] = cv.resize(np.array(b[i, :, :], dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
 				#tmp[i, :, :] = cv.resize(b[i, :, :], (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_CUBIC)
 			b = tmp
 		#print('binning time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
