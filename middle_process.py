@@ -910,9 +910,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         filename_particle = filename_particle)
 
                     header_blk = BLK.header
-                    raws = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                    delta_f = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                    sig = np.empty((len(blks), header['n_frames']))
+                    raws = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']), dtype=np.float32)
+                    delta_f = np.empty((len(blks), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']), dtype=np.float32)
+                    sig = np.empty((len(blks), header['n_frames']), dtype=np.float32)
                     roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
                 else:
                     BLK = blk_file.BlkFile(
@@ -975,9 +975,9 @@ def signal_extraction(header, blks, blank_s, blnk_switch, base_report, blank_id,
                         filename_particle = filename_particle)
 
                     header_blk = BLK.header
-                    raws = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                    delta_f = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']))
-                    sig = np.empty((len(blks-1), header['n_frames']))
+                    raws = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']), dtype=np.float32)
+                    delta_f = np.empty((len(blks-1), header['n_frames'], header['original_height']//header['spatial_bin'], header['original_width']//header['spatial_bin']), dtype=np.float32)
+                    sig = np.empty((len(blks-1), header['n_frames']), dtype=np.float32)
                     roi_mask = blk_file.circular_mask_roi(header['original_width']//header['spatial_bin'], header['original_height']//header['spatial_bin'])
                 else:
                     # Discarding one element in the trial dimension, since the blk was deleted
@@ -1266,7 +1266,7 @@ def get_zscore(dict_data, mean_zero, std_zero, logger = None):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Launching autoselection pipeline')
-    
+    #sbatch runpy_giancani.sh middle_process.py --path /envau/work/neopto/DATA_AnDO/exp-Wheel_VSDI/sub-M1/sess-20160706/ --cid 33 --cid 34 --cid 35 --cid 36 --cid 37 --cid 38 --cid 39 --cid 40 --cid 41 --cid 42 --blank_id 43 --particle stm_C --dblnk --store --no-logs_data --vis --zero 37
     parser.add_argument('--path', 
                         dest='path_session',
                         type=str,
