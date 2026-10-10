@@ -511,11 +511,11 @@ class BlkFile:
 			t_size_binned = int( np.ceil( float(t_size) / self.temporal_binning ) )
 			# print 't_size_binned if: ', t_size_binned
 			# b = np.zeros( [ t_size_binned, a.shape[1], a.shape[2] ] )
-			b = np.zeros((t_size_binned, y_size, x_size), dtype='float64')
+			b = np.zeros((t_size_binned, y_size, x_size), dtype='float32')
 			for t in range(t_size_binned):
 				ind_min = t*self.temporal_binning
 				ind_max = min((t+1)*self.temporal_binning, t_size )
-				b[t,:,:] = self.image[ind_min:ind_max,:,:].mean(0).astype('float64')
+				b[t,:,:] = self.image[ind_min:ind_max,:,:].mean(0).astype('float32')
 		else:
 			t_size_binned = t_size
 
@@ -524,12 +524,12 @@ class BlkFile:
 			y_bnnd_size = y_size//self.spatial_binning
 			tmp = np.zeros((t_size_binned, y_bnnd_size, x_bnnd_size))
 			for i in range(t_size_binned):
-				tmp[i, :, :] = cv.resize(np.array(b[i, :, :], dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_AREA)
+				tmp[i, :, :] = cv.resize(np.array(b[i, :, :], dtype='float32'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_AREA)
 				#tmp[i, :, :] = cv.resize(np.array(b[i, :, :], dtype='float64'), (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_LINEAR)
 				#tmp[i, :, :] = cv.resize(b[i, :, :], (x_bnnd_size, y_bnnd_size), interpolation=cv.INTER_CUBIC)
 			b = tmp
 		#print('binning time: ',str(datetime.datetime.now().replace(microsecond=0)-global_timer))
-		return b.astype('float64')
+		return b.astype('float32')
 
 
 	def motion_index(self):
